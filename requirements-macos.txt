@@ -1,0 +1,3 @@
+# Core Text and WebKit checks (macOS only), on top of requirements.txt.
+pyobjc-framework-CoreText==12.2.2
+pyobjc-framework-WebKit==12.2.2

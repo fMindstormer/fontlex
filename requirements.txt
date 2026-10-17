@@ -1,0 +1,5 @@
+# Tested with these versions.
+fonttools==4.67.0
+brotli==1.2.0
+PyYAML==6.0.3
+uharfbuzz==0.56.3
