@@ -1,0 +1,90 @@
+# Fontlex spec: a tiny Python highlighter, compiled into a font.
+#
+# The lexer is a deterministic finite automaton that reads one character at a
+# time. Each state carries a token type, and every character is drawn in the
+# color of the state it moves the automaton into. A second pass recolors
+# whole identifiers that match a word list (keywords, builtins).
+
+name: Fontlex Python
+
+# Character classes. First match wins; every other character in the font is
+# in the implicit class `other`. Ranges use a-z syntax; escape a literal dash
+# by putting it first.
+classes:
+  letter: "a-zA-Z_"
+  digit: "0-9"
+  dot: "."
+  dq: '"'
+  sq: "'"
+  backslash: "\\"
+  hash: "#"
+  at: "@"
+
+start: code
+
+# States. `on` maps a class to the next state. Classes not listed either go
+# to `default`, or behave as they would from the state named in `like`.
+states:
+  code:
+    default: code
+    on: {letter: ident, digit: number, dq: dq, sq: sq, hash: comment, at: decorator}
+
+  ident:
+    on: {letter: ident, digit: ident}
+    like: code
+
+  number:
+    token: number
+    on: {digit: number, letter: number, dot: number}
+    like: code
+
+  dq:
+    token: string
+    on: {dq: dq_end, backslash: dq_esc}
+    default: dq
+  dq_esc: {token: string, default: dq}
+  dq_end: {token: string, like: code}
+
+  sq:
+    token: string
+    on: {sq: sq_end, backslash: sq_esc}
+    default: sq
+  sq_esc: {token: string, default: sq}
+  sq_end: {token: string, like: code}
+
+  comment: {token: comment, default: comment}
+
+  decorator:
+    token: decorator
+    on: {letter: decorator, digit: decorator, dot: decorator}
+    like: code
+
+# Whole-word recoloring, applied to maximal runs of glyphs in `state`.
+words:
+  state: ident
+  sets:
+    keyword: ["False", "None", "True", and, as, assert, async, await, break, class,
+              continue, def, del, elif, else, except, finally, for, from,
+              global, if, import, in, is, lambda, match, case, nonlocal, not,
+              or, pass, raise, return, try, while, with, yield, self]
+    builtin: [print, len, range, int, str, float, list, dict, set, tuple,
+              bool, open, enumerate, zip, map, filter, sorted, sum, min, max,
+              abs, isinstance, super, type, object, Exception, ValueError]
+
+# Token colors. Palette 0 is the default; CSS `font-palette: light|dark`
+# picks the matching one, and @font-palette-values can override any color.
+themes:
+  dark:
+    keyword: "#C792EA"
+    builtin: "#82AAFF"
+    string: "#C3E88D"
+    number: "#F78C6C"
+    comment: "#7A8296"
+    decorator: "#FFCB6B"
+  light:
+    keyword: "#8E3FB8"
+    builtin: "#2F5FBF"
+    string: "#3E7D1A"
+    number: "#B5521B"
+    comment: "#7C8290"
+    decorator: "#9A6A00"

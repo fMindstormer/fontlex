@@ -1,0 +1,245 @@
+<title>Fontlex</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Public+Sans:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Layout: one 900px column; the live editor opens the page, then the compiled
+   automaton as a table, then the generated rules and the limits. */
+@font-face {
+  font-family: "Fontlex Python";
+  src: url(data:font/woff2;base64,{{FONT_B64}}) format("woff2");
+  font-display: block;
+}
+:root {
+  --bg: #EDF0F3;
+  --surface: #FAFBFC;
+  --ink: #1B2130;
+  --muted: #5B6476;
+  --rule: #D3D8E0;
+  --accent: #8A5E00;
+  --fp: light;
+  {{TOKENS_LIGHT}}
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+  --code: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --lex: "Fontlex Python", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11141B; --surface: #181C25; --ink: #E4E7EE; --muted: #98A0B1;
+    --rule: #2A303D; --accent: #F2C063; --fp: dark; color-scheme: dark;
+    {{TOKENS_DARK}}
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11141B; --surface: #181C25; --ink: #E4E7EE; --muted: #98A0B1;
+  --rule: #2A303D; --accent: #F2C063; --fp: dark; color-scheme: dark;
+  {{TOKENS_DARK}}
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 400 1rem/1.6 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 900px; margin: 0 auto; padding-block: 2.5rem 4rem; display: grid; gap: 3rem; }
+h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); font-weight: 700; line-height: 1; }
+h2 { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
+p { margin: 0; max-width: 65ch; }
+.lede { font-size: 1.125rem; color: var(--muted); }
+.lede b { color: var(--ink); font-weight: 600; }
+section { display: grid; gap: 1rem; }
+.eyebrow { font: 600 0.75rem/1 var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+header { display: grid; gap: 0.9rem; }
+code, .mono { font-family: var(--code); font-size: 0.9em; }
+
+/* Editor */
+.editor { border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.bar { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; align-items: center; padding: 0.7rem 1rem; border-bottom: 1px solid var(--rule); font-size: 0.875rem; color: var(--muted); }
+.bar .tag { font-family: var(--code); font-size: 0.8rem; color: var(--ink); }
+.bar .spacer { flex: 1; }
+.bar label { display: inline-flex; gap: 0.4rem; align-items: center; cursor: pointer; }
+select, input[type="checkbox"] { accent-color: var(--accent); font: inherit; color: var(--ink); }
+select { background: var(--bg); border: 1px solid var(--rule); border-radius: 6px; padding: 0.15rem 0.4rem; }
+textarea#code {
+  display: block; width: 100%; min-height: 37rem; resize: vertical; border: 0; outline: none;
+  padding: 1rem 1.1rem; margin: 0; background: transparent; color: var(--ink);
+  font: 400 0.95rem/1.55 var(--lex); font-palette: var(--fp);
+  tab-size: 4; white-space: pre; overflow: auto;
+}
+#editor.off #code, #editor.off #one { font-feature-settings: "calt" 0; }
+.custom[hidden] { display: none; }
+.custom { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; padding: 0.6rem 1rem; border-bottom: 1px solid var(--rule); font-size: 0.85rem; }
+.custom label { display: inline-flex; align-items: center; gap: 0.35rem; font-family: var(--code); font-size: 0.8rem; }
+.custom input[type="color"] { width: 1.6rem; height: 1.3rem; padding: 0; border: 1px solid var(--rule); border-radius: 4px; background: none; cursor: pointer; }
+.oneliner { display: flex; flex-wrap: wrap; gap: 0.5rem 0.9rem; align-items: center; padding: 0.75rem 1rem; border-top: 1px solid var(--rule); font-size: 0.875rem; color: var(--muted); }
+.oneliner input {
+  flex: 1 1 18rem; min-width: 0; font: 400 0.95rem/1.4 var(--lex); font-palette: var(--fp);
+  color: var(--ink); background: var(--bg); border: 1px solid var(--rule); border-radius: 6px; padding: 0.4rem 0.6rem;
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; font-family: var(--code); font-size: 0.8rem; color: var(--muted); }
+.legend span::before { content: ""; display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 2px; margin-right: 0.4rem; background: var(--c); vertical-align: 0; }
+
+/* Facts */
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+.facts div { background: var(--surface); padding: 0.85rem 1rem; display: grid; gap: 0.15rem; }
+.facts b { font: 700 1.5rem/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.facts span { font-size: 0.8rem; color: var(--muted); }
+
+/* Transition table */
+.scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; font-family: var(--code); font-size: 0.78rem; width: 100%; }
+th, td { padding: 0.4rem 0.6rem; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--rule); }
+thead th { font-weight: 400; color: var(--muted); position: sticky; top: 0; background: var(--surface); }
+tbody th { font-weight: 400; color: var(--muted); border-right: 1px solid var(--rule); }
+tbody tr:last-child td, tbody tr:last-child th { border-bottom: 0; }
+tr.start th, tr.start td { background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
+td.same { color: var(--muted); opacity: 0.45; }
+td .t { color: var(--c, var(--ink)); }
+.note { font-size: 0.875rem; color: var(--muted); }
+.steps { display: grid; gap: 1.25rem; }
+.step { display: grid; grid-template-columns: 2rem 1fr; gap: 0.25rem 0.75rem; }
+.step > b { font: 700 1.1rem/1.5 var(--display); color: var(--accent); }
+.step > div { display: grid; gap: 0.5rem; min-width: 0; }
+pre { margin: 0; padding: 0.8rem 1rem; overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); font: 400 0.8rem/1.55 var(--code); }
+@media (max-width: 560px) { .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+ul.limits { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.5rem; max-width: 70ch; }
+@media (prefers-reduced-motion: no-preference) { textarea#code { transition: color 0.2s; } }
+</style>
+
+<main>
+  <header>
+    <div class="eyebrow">Prototype · lexer-to-font compiler</div>
+    <h1>Fontlex</h1>
+    <p class="lede">The box below is a plain <code>&lt;textarea&gt;</code> with no highlighting code attached. <b>The colors come from the font.</b> Fontlex compiled a small Python lexer into OpenType substitution rules, so the browser's text shaper runs the lexer every time it draws a line.</p>
+  </header>
+
+  <section aria-label="Live demo">
+    <div class="editor" id="editor">
+      <div class="bar">
+        <span class="tag">example.py</span>
+        <span class="spacer"></span>
+        <label for="hl"><input type="checkbox" id="hl" checked> Font lexer on</label>
+        <label for="pal">Palette
+          <select id="pal">
+            <option value="auto">Match page</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+      </div>
+      <div class="custom" id="custom" hidden></div>
+      <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Python code, highlighted by the font">{{SAMPLE}}</textarea>
+      <div class="oneliner">
+        <label for="one">Same font in a one-line input</label>
+        <input id="one" type="text" spellcheck="false" value="if total > 10: return &quot;big&quot;  # done">
+      </div>
+    </div>
+    <div class="legend" aria-label="Token colors">{{LEGEND}}</div>
+    <p class="note">Edit anything. Turning the font lexer off disables the font's <code>calt</code> feature, and the same text goes back to one color. Custom colors use CSS <code>@font-palette-values</code>, so retheming needs no new font.</p>
+  </section>
+
+  <section aria-labelledby="h-numbers">
+    <h2 id="h-numbers">What got compiled</h2>
+    <div class="facts">
+      <div><b>{{N_STATES}}</b><span>DFA states</span></div>
+      <div><b>{{N_CLASSES}}</b><span>character classes</span></div>
+      <div><b>{{N_RULES}}</b><span>lexer rules emitted ({{N_DROPPED}} dropped)</span></div>
+      <div><b>{{N_WORDS}}</b><span>keywords and builtins</span></div>
+      <div><b>{{N_GLYPHS}}</b><span>variant glyphs added</span></div>
+      <div><b>{{WOFF2_KB}} KB</b><span>font as WOFF2</span></div>
+    </div>
+    <p class="note">Checked by shaping {{N_FUZZ}} random snippets with HarfBuzz, the shaper Chrome and Firefox use, and comparing every glyph to a reference implementation of the lexer: {{N_FUZZ}} of {{N_FUZZ}} matched.</p>
+  </section>
+
+  <section aria-labelledby="h-table">
+    <h2 id="h-table">The lexer, as a transition table</h2>
+    <p>Each row is the state of the previous character. Each column is the class of the next one. The cell is the new state, shown in the color the character will be drawn in.</p>
+    <div class="scroll">{{TABLE}}</div>
+    <p class="note">The highlighted row is the start state. It becomes the fallback rules at the end of the lookup. Faded cells give the same answer as the fallback, so the compiler emits no rule for them.</p>
+  </section>
+
+  <section aria-labelledby="h-how">
+    <h2 id="h-how">How a font can run a lexer</h2>
+    <div class="steps">
+      <div class="step"><b>1</b><div>
+        <p>Every character gets a copy of its glyph for each state it can be in, named like <code>quotedbl.lx_dq_end</code>. Copies are composites that point at the original outline, so they cost a few bytes each.</p>
+      </div></div>
+      <div class="step"><b>2</b><div>
+        <p>A chaining contextual lookup walks the text left to right. Its backtrack context sees glyphs it already replaced, so the previous glyph's copy carries the automaton's state forward. One rule per table cell:</p>
+        <pre>{{FEA_LEX}}</pre>
+      </div></div>
+      <div class="step"><b>3</b><div>
+        <p>A second lookup recolors whole identifiers that spell a keyword. Longer words go first, and one glyph of lookahead stops <code>is</code> from matching inside <code>island</code>:</p>
+        <pre>{{FEA_WORDS}}</pre>
+      </div></div>
+      <div class="step"><b>4</b><div>
+        <p>Each colored copy gets a COLR record that paints the original outline with a palette entry. The font carries a light and a dark palette.</p>
+      </div></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-limits">
+    <h2 id="h-limits">Limits of this prototype</h2>
+    <ul class="limits">
+      <li>State lives only within one shaping run. Browsers start a new run at each line, at a change of script (Cyrillic inside a string, for example) and wherever a fallback font takes over, so multi-line strings and some mixed-script strings lose their state.</li>
+      <li>Coloring is decided as each character is read, with one glyph of lookahead for words. Anything that needs longer lookahead, such as a prefix like <code>f"</code>, needs another pass.</li>
+      <li>Tested in HarfBuzz and Chromium. Safari draws with Core Text, which I have not checked.</li>
+      <li>The base font's own ligatures are removed, because they would replace glyphs the lexer needs to see.</li>
+    </ul>
+  </section>
+</main>
+
+<script>
+(() => {
+  const tokens = {{TOKENS_JSON}};   // [{name, light, dark}] in palette order
+  const editor = document.getElementById('editor');
+  const hl = document.getElementById('hl');
+  const pal = document.getElementById('pal');
+  const custom = document.getElementById('custom');
+  const code = document.getElementById('code');
+  const one = document.getElementById('one');
+  const style = document.createElement('style');
+  document.head.appendChild(style);
+
+  const isDark = () => getComputedStyle(document.documentElement).getPropertyValue('--fp').trim() === 'dark';
+
+  tokens.forEach((t, i) => {
+    const id = 'c-' + t.name;
+    const label = document.createElement('label');
+    label.htmlFor = id;
+    label.innerHTML = '<input type="color" id="' + id + '"> ' + t.name;
+    custom.appendChild(label);
+    label.querySelector('input').addEventListener('input', apply);
+  });
+
+  function seedCustom() {
+    const dark = isDark();
+    tokens.forEach(t => { document.getElementById('c-' + t.name).value = dark ? t.dark : t.light; });
+  }
+
+  function apply() {
+    editor.classList.toggle('off', !hl.checked);
+    custom.hidden = pal.value !== 'custom';
+    let rule = '';
+    let value = 'var(--fp)';
+    if (pal.value === 'light' || pal.value === 'dark') value = pal.value;
+    if (pal.value === 'custom') {
+      const colors = tokens.map((t, i) => i + ' ' + document.getElementById('c-' + t.name).value).join(', ');
+      rule = '@font-palette-values --fontlex-custom { font-family: "Fontlex Python"; base-palette: ' + (isDark() ? 0 : 1) + '; override-colors: ' + colors + '; }';
+      value = '--fontlex-custom';
+    }
+    style.textContent = rule + ' #code, #one { font-palette: ' + value + '; }';
+  }
+
+  pal.addEventListener('change', () => { if (pal.value === 'custom') seedCustom(); apply(); });
+  hl.addEventListener('change', apply);
+  seedCustom();
+  apply();
+})();
+</script>
