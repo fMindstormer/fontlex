@@ -14,6 +14,14 @@ python test_fontlex.py specs/python.yaml build/Fontlex-Python.ttf --base fonts/J
 python demo/build_demo.py specs/python.yaml --base fonts/JetBrainsMono-Regular.ttf --out demo/fontlex-demo.html
 ```
 
+On macOS, also test with Core Text, the shaper behind Safari and native apps:
+
+```sh
+pip install pyobjc-framework-CoreText
+python test_fontlex.py specs/python.yaml build/Fontlex-Python.ttf --base fonts/JetBrainsMono-Regular.ttf \
+    --shaper harfbuzz --shaper coretext
+```
+
 Then use the font in CSS:
 
 ```css
@@ -58,16 +66,23 @@ textarea { font-family: "Fontlex Python", monospace; font-palette: light; }
 
 ## Testing
 
-`test_fontlex.py` shapes hand-written and random strings with HarfBuzz and
-compares each output glyph's state against `Model.lex`, a direct simulation of
-the spec. With `--base`, it also checks that every glyph is positioned exactly
-as the base font positions the same glyph, over the same strings plus random
-strings full of combining marks. It currently passes 21/21 hand cases,
-20,000/20,000 random cases and 40,000/40,000 positioning cases. The positioning
-check also passes with Arial, Times New Roman Italic, STIX Two, SF Pro and
-Trattatello as base fonts. The demo page highlights correctly in Safari 27
-(Core Text) on macOS 27, checked by eye, and was rendered in headless Chromium
-before the positioning fix.
+`test_fontlex.py` shapes hand-written and random strings and compares each
+output glyph's state against `Model.lex`, a direct simulation of the spec.
+With `--base`, it also checks that every glyph is positioned exactly as the
+base font positions the same glyph, over the same strings plus random strings
+full of combining marks. `--shaper` picks HarfBuzz (Chrome, Firefox, Android)
+or Core Text (Safari, native Mac apps); repeat it to run both.
+
+With JetBrains Mono, both shapers pass 22/22 hand cases, 20,000/20,000 random
+cases and 40,000/40,000 positioning cases. Core Text improvises positions for
+marks the base font has no anchor for, and does so only for unsubstituted
+glyphs, so the Core Text check skips those marks and reports how many.
+
+With HarfBuzz, everything also passes with Arial, Times New Roman Italic,
+STIX Two, SF Pro and Trattatello as base fonts. With Core Text, STIX Two,
+SF Pro and Trattatello pass; Arial and Times fail on mixed-script text (see
+below). The demo page highlights correctly in Safari 27 on macOS 27, checked
+by eye, and was rendered in headless Chromium before the positioning fix.
 
 ## Known limits
 
@@ -84,8 +99,15 @@ before the positioning fix.
   a shaper that uses it instead of GPOS loses kerning on lexed glyphs.
 - A font holds at most 65,535 glyphs, and each state costs one variant per
   glyph that can enter it. Large base fonts or many-state specs don't fit.
-- Safari has only been checked by eye on the demo page; nothing compares Core
-  Text's output with the reference lexer.
+- With some base fonts, including Arial and Times, Core Text splits text into
+  separate shaping runs at script changes (Latin, Greek, Cyrillic). The lexer
+  resets at each split, so in Safari `# жук x` stops being a comment at `x`.
+  The font's per-script GSUB/GPOS entries trigger it, but the exact rule isn't
+  known. JetBrains Mono, STIX Two, SF Pro and Trattatello don't trigger it.
+- In Core Text, a mark the base font has no anchor for is drawn unpositioned
+  when it or its base glyph has been lexed, where the base font alone would
+  get Core Text's improvised position. HarfBuzz never improvises when GPOS is
+  present, so there both fonts draw it unpositioned.
 
 ## Research questions this opens
 
