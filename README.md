@@ -17,9 +17,10 @@ python demo/build_demo.py specs/python.yaml --base fonts/JetBrainsMono-Regular.t
 On macOS, also test with Core Text, the shaper behind Safari and native apps:
 
 ```sh
-pip install pyobjc-framework-CoreText
+pip install pyobjc-framework-CoreText pyobjc-framework-WebKit
 python test_fontlex.py specs/python.yaml build/Fontlex-Python.ttf --base fonts/JetBrainsMono-Regular.ttf \
     --shaper harfbuzz --shaper coretext
+python demo/check_webkit.py specs/python.yaml demo/fontlex-demo.html
 ```
 
 Two compiler options:
@@ -125,6 +126,12 @@ was rendered in headless Chromium before the positioning fix.
 
 `demo/build_demo.py` runs the HarfBuzz checks on the font it embeds, puts the
 real pass count on the page, and exits with status 1 if any check fails.
+
+`demo/check_webkit.py` renders the demo page in WebKit, the engine Safari
+uses, in light and dark mode and with each option of the palette menu, and
+checks which theme's colors dominate the code box's pixels. All five cases
+pass; before the menu's CSS was fixed, choosing Light, Dark or Custom had no
+effect on the code box.
 
 ## Known limits
 

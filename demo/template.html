@@ -234,7 +234,8 @@ ul.limits { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.5rem; max-wid
       rule = '@font-palette-values --fontlex-custom { font-family: "Fontlex Python"; base-palette: ' + (isDark() ? 0 : 1) + '; override-colors: ' + colors + '; }';
       value = '--fontlex-custom';
     }
-    style.textContent = rule + ' #code, #one { font-palette: ' + value + '; }';
+    // As specific as the stylesheet's textarea#code rule, and later, so it wins.
+    style.textContent = rule + ' textarea#code, input#one { font-palette: ' + value + '; }';
   }
 
   pal.addEventListener('change', () => { if (pal.value === 'custom') seedCustom(); apply(); });
