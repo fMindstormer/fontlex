@@ -27,8 +27,8 @@ import unicodedata
 import uharfbuzz as hb
 from fontTools.ttLib import TTFont
 
-from fontlex import (DROPPED_TABLES, SUFFIX, WORD_SUFFIX, Model, _unify_gpos_scripts, load_spec,
-                     subset_font)
+from fontlex import (DROPPED_TABLES, START_SUFFIX, SUFFIX, WORD_SUFFIX, Model, _unify_gpos_scripts,
+                     load_spec, subset_font)
 
 HAND_CASES = [
     'def f(x): return x + 1',
@@ -67,13 +67,16 @@ def glyph_info(name: str, start: str):
     if WORD_SUFFIX in name:
         base, wset = name.split(WORD_SUFFIX)
         return "WORD", wset
-    if SUFFIX in name:
-        return name.split(SUFFIX)[1], None
+    for infix in (SUFFIX, START_SUFFIX):
+        if infix in name:
+            return name.split(infix)[1], None
     return start, None
 
 
 def base_name(name: str) -> str:
-    return name.split(WORD_SUFFIX)[0].split(SUFFIX)[0]
+    for infix in (WORD_SUFFIX, START_SUFFIX, SUFFIX):
+        name = name.split(infix)[0]
+    return name
 
 
 def anchored_pairs(tt: TTFont) -> set[tuple[str, str]]:
@@ -264,7 +267,7 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
                 return f"char {i} {text[i]!r} is in the font but was drawn from a fallback font"
             st, ws = glyph_info(order[gid], spec.start)
             if st == "WORD":
-                got = (spec.word_state, ws)
+                got = (spec.word_state or spec.suffix_state, ws)
             else:
                 got = (st, None)
             if got != (exp_state, exp_set):
@@ -328,6 +331,12 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
         if chars and not any(c in alphabet for c in chars):
             alphabet.append(chars[0])
     words = [w for _, ws in spec.word_sets for w in ws]
+    if spec.suffix_sets:
+        # Runs that end in listed suffixes: a start letter, a few letters, a suffix.
+        starts = [c for _, cs in spec.classes for c in cs[:3]]
+        suffixes = [x for _, xs in spec.suffix_sets for x in xs]
+        words += [rng.choice(starts) + "".join(rng.choice(alphabet) for _ in range(rng.randint(0, 3)))
+                  + rng.choice(suffixes) for _ in range(max(len(words), 200))]
 
     def random_text(alpha):
         parts = []

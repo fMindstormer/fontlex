@@ -32,6 +32,22 @@ MINIMAL = {
 }
 
 
+# German-like: capitalized words, colored by listed words and endings.
+NOUNS = {
+    "name": "Fontlex Test Nouns",
+    "classes": {"upper": "A-Z", "lower": "a-z"},
+    "start": "text",      # (yaml.safe_dump sorts keys, so the first state isn't text)
+    "states": {
+        "text": {"default": "text", "on": {"upper": "noun", "lower": "word"}},
+        "noun": {"on": {"upper": "noun", "lower": "noun"}, "like": "text"},
+        "word": {"on": {"upper": "word", "lower": "word"}, "like": "text"},
+    },
+    "words": {"state": "noun", "sets": {"masc": ["Sprung"], "none": ["Die"]}},
+    "suffixes": {"state": "noun", "sets": {"fem": ["ung"], "neut": ["chen", "Ei"]}},
+    "themes": {"light": {"masc": "#2E6FBF", "fem": "#C0392B", "neut": "#2E8B57"}},
+}
+
+
 def load(raw):
     with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as f:
         yaml.safe_dump(raw, f)
@@ -117,6 +133,18 @@ class SpecErrors(unittest.TestCase):
         self.assertSpecError({**MINIMAL, "examples": {"legend": {".": None}, "cases": [["ab", ".x"]]}},
                              "not in legend")
 
+    def test_suffix_state_must_exist(self):
+        raw = {**NOUNS, "suffixes": {"state": "nope", "sets": {"fem": ["ung"]}}}
+        self.assertSpecError(raw, "suffixes.state must name a state")
+
+    def test_suffix_state_not_start(self):
+        raw = {**NOUNS, "suffixes": {"state": "text", "sets": {"fem": ["ung"]}}}
+        self.assertSpecError(raw, "can't be the start state")
+
+    def test_suffix_state_matches_words(self):
+        raw = {**NOUNS, "suffixes": {"state": "word", "sets": {"fem": ["ung"]}}}
+        self.assertSpecError(raw, "suffixes.state must be the same as words.state")
+
     def test_example_unknown_token(self):
         self.assertSpecError({**MINIMAL, "examples": {"legend": {".": None, "z": "zzz"}, "cases": [["a", "z"]]}},
                              "unknown tokens")
@@ -155,6 +183,54 @@ class Lexer(unittest.TestCase):
                 self.assertEqual(m.tokens(text), expected, f"{name}: {text!r}")
 
 
+class Suffixes(unittest.TestCase):
+    def sets(self, text):
+        m = Model(load(NOUNS), CMAP)
+        return [ws for _, ws in m.lex(text)]
+
+    def test_longest_ending_colors_the_whole_word(self):
+        self.assertEqual(self.sets("Zeitung"), ["fem"] * 7)
+        self.assertEqual(self.sets("Maedchen"), ["neut"] * 8)
+
+    def test_listed_word_wins(self):
+        self.assertEqual(self.sets("Sprung"), ["masc"] * 6)
+        self.assertEqual(self.sets("Die Zeitung")[:3], ["none"] * 3)
+
+    def test_word_matches_only_a_whole_word(self):
+        # "Sprung" is listed, but "AbSprung" is a different word: its ending decides.
+        self.assertEqual(self.sets("AbSprung"), ["fem"] * 8)
+
+    def test_ending_can_be_the_whole_word(self):
+        self.assertEqual(self.sets("Ei"), ["neut"] * 2)
+
+    def test_lowercase_words_are_left_alone(self):
+        self.assertEqual(self.sets("ungenau"), [None] * 7)
+
+
+class ListFiles(unittest.TestCase):
+    def test_first_listing_wins(self):
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "over.tsv").write_text("# overrides\nHaus\tnone\nTag\tmasc\n", encoding="utf-8")
+            Path(d, "learned.tsv").write_text("Tag\tfem\nHaus\tneut\nBaum\tmasc\n", encoding="utf-8")
+            raw = changed()
+            raw["words"] = {"state": "ident", "sets": {"keyword": ["if"]},
+                            "files": ["over.tsv", "learned.tsv"]}
+            spec_path = Path(d, "spec.yaml")
+            spec_path.write_text(yaml.safe_dump(raw), encoding="utf-8")
+            spec = load_spec(spec_path)
+        listed = {w: k for k, ws in spec.word_sets for w in ws}
+        self.assertEqual(listed, {"if": "keyword", "Haus": "none", "Tag": "masc", "Baum": "masc"})
+
+    def test_bad_line(self):
+        with tempfile.TemporaryDirectory() as d:
+            Path(d, "bad.tsv").write_text("no tab here\n", encoding="utf-8")
+            raw = {**MINIMAL, "words": {"state": "ident", "files": ["bad.tsv"]}}
+            Path(d, "spec.yaml").write_text(yaml.safe_dump(raw), encoding="utf-8")
+            with self.assertRaises(SpecError) as cm:
+                load_spec(Path(d, "spec.yaml"))
+        self.assertIn("bad.tsv:1: expected entry<TAB>set", str(cm.exception))
+
+
 class Compiler(unittest.TestCase):
     def test_glyph_limit(self):
         raw = changed()
@@ -165,6 +241,24 @@ class Compiler(unittest.TestCase):
         with self.assertRaises(SpecError) as cm:
             compile_font(load(raw), BASE)
         self.assertIn("65535 limit", str(cm.exception))
+
+    def test_compile_and_verify_suffixes(self):
+        from test_fontlex import SHAPERS, verify
+        spec = load(NOUNS)
+        res = compile_font(spec, BASE, unicodes=list(range(0x20, 0x7F)))
+        self.assertEqual((res.stats["words"], res.stats["suffixes"]), (2, 3))
+        import io
+        buf = io.BytesIO()
+        res.font.save(buf)
+        results = verify(spec, buf.getvalue(), BASE, n=300, log=lambda *a: None)
+        for label, (passed, total) in results.items():
+            self.assertEqual(passed, total, label)
+        # And the shaped font itself, on the cases above.
+        order = TTFont(io.BytesIO(buf.getvalue())).getGlyphOrder()
+        glyphs, _ = SHAPERS["harfbuzz"](buf.getvalue()).shape("Die Zeitung AbSprung Sprung Ei")
+        sets = "".join({"masc": "m", "fem": "f", "neut": "n", "none": "_"}[order[g].split(".lxw_")[1]]
+                       if ".lxw_" in order[g] else "." for g, *_ in glyphs)
+        self.assertEqual(sets, "___.fffffff.ffffffff.mmmmmm.nn")
 
     def test_compile_and_verify_minimal(self):
         from test_fontlex import verify

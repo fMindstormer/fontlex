@@ -13,6 +13,7 @@ import base64
 import html
 import io
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -21,7 +22,7 @@ from fontTools import subset
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from fontlex import SUFFIX, compile_font, load_spec  # noqa: E402
+from fontlex import START_SUFFIX, SUFFIX, compile_font, load_spec  # noqa: E402
 from test_fontlex import verify  # noqa: E402
 
 
@@ -48,22 +49,28 @@ def fea_excerpts(spec, res, cmap):
         for w in words:
             if w not in res.stats["skipped_words"]:
                 usable.setdefault(w, sname)
+    ws = spec.word_state
 
-    def word_lines(word):
-        seq = [f"\\{cmap[ord(c)]}{SUFFIX}{spec.word_state}'" for c in word]
-        ign = f"  ignore sub {' '.join(seq)} @WORDLIKE;"
-        sub = "  sub " + " ".join(f"{g} lookup W_{usable[word]}" for g in seq) + ";"
-        assert ign in lines and sub in lines, word
-        return [ign, sub]
+    def word_line(word):
+        glyphs = [f"\\{cmap[ord(word[0])]}{START_SUFFIX}{ws}"]
+        glyphs += [f"\\{cmap[ord(c)]}{SUFFIX}{ws}" for c in word[1:]]
+        line = "  sub " + " ".join(glyphs) + f"' lookup W_{usable[word]};"
+        assert "# " + line in lines, word
+        return line
 
     # A short word that starts a longer one shows why longer words go first.
     pairs = [(long, short) for long in usable for short in usable
              if long != short and long.startswith(short)]
     long, short = max(pairs, key=lambda p: (len(p[0]), p)) if pairs else (max(usable, key=len), None)
-    start = lines.index("lookup WORDS {")
-    shown = [lines[start], lines[start + 1], "  …"] + word_lines(long) + ["  …"]
+
+    def shorten(line):
+        return re.sub(r"\[[^\]]{40,}\]", "[…]", line)
+
+    start = lines.index("lookup START {")
+    words = lines.index("lookup WORDS {")
+    shown = lines[start:start + 4] + [lines[words], shorten(lines[words + 1]), "  …", word_line(long)]
     if short:
-        shown += word_lines(short)
+        shown += ["  …", word_line(short)]
     return lex, "\n".join(shown + ["} WORDS;"]), (long, short)
 
 
@@ -124,10 +131,13 @@ def main():
     fea_lex, fea_words, word_pair = fea_excerpts(spec, res, cmap)
     if word_pair and word_pair[1]:
         long, short = (html.escape(w) for w in word_pair)
-        words_note = (f"Longer words go first, so <code>{long}</code> isn't read as <code>{short}</code>, "
-                      "and one glyph of lookahead stops a word from matching inside a longer identifier:")
+        words_note = ("The first letter of every identifier is marked, and a word's rule runs from that "
+                      f"letter to the identifier's last, so <code>{short}</code> can't match inside "
+                      f"<code>{short}land</code>; a last pass spreads the color back over the word. "
+                      f"Longer words go first, so <code>{long}</code> isn't read as <code>{short}</code>:")
     else:
-        words_note = "One glyph of lookahead stops a word from matching inside a longer identifier:"
+        words_note = ("The first letter of every identifier is marked, and a word's rule runs from that "
+                      "letter to the identifier's last, so a word can't match inside a longer one:")
     # A colored copy of a non-letter glyph, to name in the text.
     example = next(name for name, info in res.glyphmap.items()
                    if not info["set"] and spec.token(info["state"]) in toks and len(info["base"]) > 1)

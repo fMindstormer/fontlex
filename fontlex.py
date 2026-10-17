@@ -61,10 +61,13 @@ from fontTools.ttLib.tables._g_l_y_f import Glyph, GlyphComponent
 OTHER = "other"
 SUFFIX = ".lx_"
 WORD_SUFFIX = ".lxw_"
+START_SUFFIX = ".lxs_"     # the first glyph of a run of the word state
 # The base font's substitution tables. Its ligatures and alternates would
 # break the lexer, and Core Text prefers AAT `morx` over GSUB, so a kept
 # `morx` would bypass the lexer entirely. `feat` only describes `morx`.
 DROPPED_TABLES = ("GSUB", "morx", "mort", "feat")
+# Word and suffix rules per GSUB subtable, small enough for its 16-bit offsets.
+SUFFIX_CHUNK = 1000
 
 
 # --------------------------------------------------------------------------
@@ -100,6 +103,9 @@ class Spec:
     states: dict[str, dict]
     word_state: str | None = None
     word_sets: list[tuple[str, list[str]]] = field(default_factory=list)
+    # Endings that recolor a whole run of the same state, longest first.
+    suffix_state: str | None = None
+    suffix_sets: list[tuple[str, list[str]]] = field(default_factory=list)
     themes: list[tuple[str, dict[str, str]]] = field(default_factory=list)
     # Expected tokens per character for sample lines, checked by the tests.
     examples: list[tuple[str, list[str | None]]] = field(default_factory=list)
@@ -150,8 +156,11 @@ def load_spec(path: str | Path) -> Spec:
               for k, v in states.items()}
     start = str(raw.get("start") or next(iter(states)))
 
+    base_dir = Path(path).parent
     words = raw.get("words") or {}
-    word_sets = [(str(k), [str(w) for w in v]) for k, v in (words.get("sets") or {}).items()]
+    word_sets = _load_sets(words, base_dir)
+    suffixes = raw.get("suffixes") or {}
+    suffix_sets = _load_sets(suffixes, base_dir)
 
     themes = [(str(k), {str(t): str(c) for t, c in (v or {}).items()})
               for k, v in (raw.get("themes") or {}).items()]
@@ -163,6 +172,8 @@ def load_spec(path: str | Path) -> Spec:
         states=states,
         word_state=words.get("state"),
         word_sets=word_sets,
+        suffix_state=suffixes.get("state"),
+        suffix_sets=suffix_sets,
         themes=themes,
         examples=_load_examples(raw.get("examples")),
     )
@@ -198,14 +209,50 @@ def _validate(spec: Spec) -> None:
             raise SpecError("words.state must name a state")
         if spec.word_state == spec.start:
             raise SpecError("words.state can't be the start state")
+    if spec.suffix_sets:
+        if spec.suffix_state not in spec.states:
+            raise SpecError("suffixes.state must name a state")
+        if spec.suffix_state == spec.start:
+            raise SpecError("suffixes.state can't be the start state")
+        if spec.word_sets and spec.suffix_state != spec.word_state:
+            raise SpecError("suffixes.state must be the same as words.state")
     for s in spec.states:
         if not re.fullmatch(r"[A-Za-z0-9_]+", s):
             raise SpecError(f"state name {s!r} must be [A-Za-z0-9_]+")
-    tokens = {spec.token(s) for s in spec.states} | {n for n, _ in spec.word_sets}
+    tokens = ({spec.token(s) for s in spec.states} | {n for n, _ in spec.word_sets}
+              | {n for n, _ in spec.suffix_sets})
     for text, expected in spec.examples:
         unknown = set(expected) - tokens
         if unknown:
             raise SpecError(f"example {text!r}: unknown tokens {sorted(map(str, unknown))}")
+
+
+def _load_sets(section: dict, base_dir: Path) -> list[tuple[str, list[str]]]:
+    """Entries of a `words` or `suffixes` section: inline `sets` ({set: [...]})
+    plus `files`, TSV files of `entry<TAB>set` lines relative to the spec.
+    An entry listed more than once keeps its first set: inline sets come
+    first, then the files in order, so an earlier file can override a later one."""
+    first: dict[str, str] = {}
+    for k, v in (section.get("sets") or {}).items():
+        for w in v:
+            first.setdefault(str(w), str(k))
+    for name in section.get("files") or []:
+        path = base_dir / str(name)
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except OSError as e:
+            raise SpecError(f"can't read {path}: {e.strerror}") from None
+        for n, line in enumerate(lines, 1):
+            if not line.strip() or line.startswith("#"):
+                continue
+            parts = line.split("\t")
+            if len(parts) != 2 or not parts[0] or not parts[1]:
+                raise SpecError(f"{path}:{n}: expected entry<TAB>set")
+            first.setdefault(parts[0], parts[1])
+    sets: dict[str, list[str]] = {}
+    for w, k in first.items():
+        sets.setdefault(k, []).append(w)
+    return list(sets.items())
 
 
 def _load_examples(raw) -> list[tuple[str, list[str | None]]]:
@@ -251,6 +298,15 @@ class Model:
                 self.glyph_class[g] = OTHER
         self.delta = spec.table()
         self.lookahead = {s: st["lookahead"] for s, st in spec.states.items() if st.get("lookahead")}
+        self.words: dict[str, str] = {}
+        for sname, words in spec.word_sets:
+            for w in words:
+                self.words.setdefault(w, sname)
+        self.suffixes: dict[str, str] = {}
+        for sname, sufs in spec.suffix_sets:
+            for x in sufs:
+                self.suffixes.setdefault(x, sname)
+        self.longest_suffix = max(map(len, self.suffixes), default=0)
 
     def lex(self, text: str, missing: frozenset[int] = frozenset()) -> list[tuple[str | None, str | None]]:
         """Per character: (state it is drawn in, or None for unknown chars;
@@ -277,21 +333,22 @@ class Model:
                     drawn[i] = la[states[i + 1]]
             states = drawn
         sets: list[str | None] = [None] * len(text)
-        ws = self.spec.word_state
-        lookup = {}
-        for sname, words in self.spec.word_sets:
-            for w in words:
-                lookup.setdefault(w, sname)
+        ws = self.spec.word_state or self.spec.suffix_state
         i = 0
         while i < len(text):
             if states[i] == ws:
                 j = i
                 while j < len(text) and states[j] == ws:
                     j += 1
-                sname = lookup.get(text[i:j])
+                run = text[i:j]
+                sname = self.words.get(run)
+                # Otherwise the longest listed ending of the run decides.
+                for n in range(min(len(run), self.longest_suffix), 0, -1):
+                    if sname is not None:
+                        break
+                    sname = self.suffixes.get(run[-n:])
                 if sname is not None:
-                    for t in range(i, j):
-                        sets[t] = sname
+                    sets[i:j] = [sname] * (j - i)
                 i = j
             else:
                 i += 1
@@ -299,8 +356,11 @@ class Model:
 
     def tokens(self, text: str) -> list[str | None]:
         """Per character, the token it is colored as: its word set if it is
-        part of a listed word, else its state's token."""
-        return [ws or (self.spec.token(st) if st else None) for st, ws in self.lex(text)]
+        part of a listed word, else its state's token; None if no theme
+        gives that token a color (a `none` set, say)."""
+        colored = {t for _, theme in self.spec.themes for t in theme}
+        out = [ws or (self.spec.token(st) if st else None) for st, ws in self.lex(text)]
+        return [t if t in colored else None for t in out]
 
 
 # --------------------------------------------------------------------------
@@ -370,34 +430,53 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
                 new_glyphs.append((name, g))
                 glyphmap[name] = {"base": g, "state": s, "set": None}
 
+    # Words and suffixes recolor whole runs of one state. Each becomes a rule
+    # at the run's last glyph, and a right-to-left pass spreads its set over
+    # the run. The first glyph of every run gets its own variant, so a word's
+    # rule, which starts there, matches only a whole run.
+    ws = spec.word_state or spec.suffix_state
     word_variant: dict[tuple[str, str], str] = {}   # (set, base) -> name
-    word_glyph_sets: dict[str, list[tuple[str, str]]] = {}
+    start_variant: dict[str, str] = {}              # base -> name
+    usable_words: list[tuple[str, str, list[str]]] = []      # (entry, set, bases)
+    usable_suffixes: list[tuple[str, str, list[str]]] = []
     skipped_words: list[str] = []
-    usable_words: list[tuple[str, str, list[str]]] = []   # (word, set, bases)
-    seen_words: set[str] = set()
-    for sname, words in spec.word_sets:
-        pairs = []
-        for w in words:
-            if w in seen_words:
-                continue
-            bases = [cmap.get(ord(c)) for c in w]
-            if not w or any(b is None or (spec.word_state, b) not in variant for b in bases):
-                skipped_words.append(w)
-                continue
-            # The run must actually be reachable in the word state.
-            if [st for st, _ in model.lex(w)] != [spec.word_state] * len(w):
-                skipped_words.append(w)
-                continue
-            seen_words.add(w)
-            usable_words.append((w, sname, bases))  # type: ignore[arg-type]
-            for b in bases:
-                if (sname, b) not in word_variant:
-                    name = f"{b}{WORD_SUFFIX}{sname}"
-                    word_variant[(sname, b)] = name
-                    pairs.append((variant[(spec.word_state, b)], name))
-                    new_glyphs.append((name, b))
-                    glyphmap[name] = {"base": b, "state": spec.word_state, "set": sname}
-        word_glyph_sets[sname] = pairs
+    skipped_suffixes: list[str] = []
+    if ws:
+        opening = {k for s in spec.states if s != ws for k in spec.class_names if delta[s][k] == ws}
+        for g in base_glyphs:
+            if (ws, g) in variant and model.glyph_class[g] in opening:
+                name = f"{g}{START_SUFFIX}{ws}"
+                start_variant[g] = name
+                new_glyphs.append((name, g))
+                glyphmap[name] = {"base": g, "state": ws, "set": None}
+
+        def usable(listed, words):
+            out, skipped, seen = [], [], set()
+            for sname, entries in listed:
+                for x in entries:
+                    if x in seen:
+                        continue
+                    bases = [cmap.get(ord(c)) for c in x]
+                    if (not x or any(b is None or (ws, b) not in variant for b in bases)
+                            or words and (bases[0] not in start_variant
+                                          or [st for st, _ in model.lex(x)] != [ws] * len(x))):
+                        skipped.append(x)
+                        continue
+                    seen.add(x)
+                    out.append((x, sname, bases))
+            return out, skipped
+
+        usable_words, skipped_words = usable(spec.word_sets, True)
+        usable_suffixes, skipped_suffixes = usable(spec.suffix_sets, False)
+        for sname in dict.fromkeys(sname for _, sname, _ in usable_words + usable_suffixes):
+            for g in base_glyphs:
+                if (ws, g) in variant:
+                    name = f"{g}{WORD_SUFFIX}{sname}"
+                    word_variant[(sname, g)] = name
+                    new_glyphs.append((name, g))
+                    glyphmap[name] = {"base": g, "state": ws, "set": sname}
+    set_names = list(dict.fromkeys(sname for sname, _ in word_variant))
+    letters = [g for g in base_glyphs if (ws, g) in variant]
 
     total = len(order) + len(new_glyphs)
     if total > 0xFFFF:
@@ -462,11 +541,13 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
         for nxt, t in la.items():
             if t != s and s in groups and nxt in groups:
                 la_rules.append(f"  sub @S_{s}' lookup LA_{s}_{t} @S_{nxt};")
-    for sname, pairs in word_glyph_sets.items():
-        if not pairs:
-            continue
+    starts = [g for g in letters if g in start_variant]
+    for sname in set_names:
         fea.append(f"lookup W_{sname} {{")
-        fea.append(f"  sub [{_fea_glyphs(p[0] for p in pairs)}] by [{_fea_glyphs(p[1] for p in pairs)}];")
+        fea.append(f"  sub [{_fea_glyphs(variant[(ws, g)] for g in letters)}] "
+                   f"by [{_fea_glyphs(word_variant[(sname, g)] for g in letters)}];")
+        fea.append(f"  sub [{_fea_glyphs(start_variant[g] for g in starts)}] "
+                   f"by [{_fea_glyphs(word_variant[(sname, g)] for g in starts)}];")
         fea.append(f"}} W_{sname};")
     fea.append("")
 
@@ -503,21 +584,45 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
         fea += la_rules
         fea.append("} LOOKAHEAD;")
         features.append("LOOKAHEAD")
-    if usable_words:
-        word_like = [variant[(spec.word_state, g)] for g in base_glyphs
-                     if (spec.word_state, g) in variant]
-        word_like += [n for n in word_variant.values()]
-        fea.append(f"@WORDLIKE = [{_fea_glyphs(word_like)}];")
+    match_rules: list[tuple[list[str], str, str]] = []
+    if set_names:
+        body = [variant[(ws, g)] for g in letters] + [start_variant[g] for g in starts]
+        fea.append(f"@WORDLIKE = [{_fea_glyphs(body + list(word_variant.values()))}];")
+        # Mark the first glyph of every run.
+        fea.append("lookup TO_START {")
+        fea.append(f"  sub [{_fea_glyphs(variant[(ws, g)] for g in starts)}] "
+                   f"by [{_fea_glyphs(start_variant[g] for g in starts)}];")
+        fea.append("} TO_START;")
+        fea.append("lookup START {")
+        fea.append(f"  ignore sub @WORDLIKE @S_{ws}';")
+        fea.append(f"  sub @S_{ws}' lookup TO_START;")
+        fea.append("} START;")
+        # One rule per word and suffix at the run's last glyph, longest first
+        # (a word before a suffix with the same text). Only the boundary rule
+        # goes through feaLib: the others are added after the build as compact
+        # format 1 subtables, since feaLib would make one subtable per rule
+        # and tens of thousands of subtables don't fit in a lookup.
         fea.append("lookup WORDS {")
-        fea.append(f"  ignore sub @WORDLIKE @S_{spec.word_state}';")
-        # Longest first, so 'isinstance' is tried before 'is'.
-        for w, sname, bases in sorted(usable_words, key=lambda x: -len(x[0])):
-            seq = [variant[(spec.word_state, b)] for b in bases]
-            marked = " ".join(f"\\{g}'" for g in seq)
-            fea.append(f"  ignore sub {marked} @WORDLIKE;")
-            fea.append("  sub " + " ".join(f"\\{g}' lookup W_{sname}" for g in seq) + ";")
+        fea.append(f"  ignore sub [{_fea_glyphs(body)}]' @WORDLIKE;")
         fea.append("} WORDS;")
-        features.append("WORDS")
+        entries = [(x, sname, bases, 0) for x, sname, bases in usable_words]
+        entries += [(x, sname, bases, 1) for x, sname, bases in usable_suffixes]
+        for x, sname, bases, is_suffix in sorted(entries, key=lambda e: (-len(e[0]), e[3])):
+            seq = [variant[(ws, b)] for b in bases]
+            first = start_variant.get(bases[0])
+            forms = [[first] + seq[1:]] if not is_suffix else [seq] + ([[first] + seq[1:]] if first else [])
+            match_rules += [(f[:-1], f[-1], f"W_{sname}") for f in forms]
+        # Spread the last glyph's set leftward: reverse chaining runs right to
+        # left, so each glyph sees its already-recolored neighbor.
+        fea.append("lookup PROPAGATE {")
+        for sname in set_names:
+            ahead = _fea_glyphs(word_variant[(sname, g)] for g in letters)
+            for group in (letters, starts):
+                src = [variant[(ws, g)] if group is letters else start_variant[g] for g in group]
+                dst = [word_variant[(sname, g)] for g in group]
+                fea.append(f"  rsub [{_fea_glyphs(src)}]' [{ahead}] by [{_fea_glyphs(dst)}];")
+        fea.append("} PROPAGATE;")
+        features += ["START", "WORDS", "PROPAGATE"]
 
     fea.append("")
     fea.append("feature calt {")
@@ -527,6 +632,16 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
     # Build GSUB only: by default feaLib also rebuilds GPOS and GDEF from the
     # feature file, which has neither, and would delete the base font's.
     addOpenTypeFeaturesFromString(font, fea_text, tables=["GSUB"])
+    if match_rules:
+        names = [line.split()[1] for line in fea if line.startswith("lookup ") and line.endswith("{")]
+        index = {n: i for i, n in enumerate(names)}
+        lookup = font["GSUB"].table.LookupList.Lookup[index["WORDS"]]
+        assert lookup.LookupType == 6 and len(lookup.SubTable) == 1, "unexpected WORDS lookup"
+        lookup.SubTable += _chain_format1(font, [(b, i, index[w]) for b, i, w in match_rules])
+        lookup.SubTableCount = len(lookup.SubTable)
+        fea_text += "\n# WORDS continues with these rules, longest first (built as format 1 subtables):\n"
+        fea_text += "\n".join("#   sub " + " ".join(f"\\{g}" for g in b) + f" \\{i}' lookup {w};"
+                               for b, i, w in match_rules) + "\n"
 
     # 3. Color.
     tokens: list[str] = []
@@ -534,7 +649,7 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
         t = spec.token(s)
         if t and t not in tokens:
             tokens.append(t)
-    for sname, _ in spec.word_sets:
+    for sname, _ in spec.word_sets + spec.suffix_sets:
         if sname not in tokens:
             tokens.append(sname)
     colored_tokens = [t for t in tokens if any(t in th for _, th in spec.themes)]
@@ -565,6 +680,8 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
         "lookahead_rules": len(la_rules),
         "words": len(usable_words),
         "skipped_words": skipped_words,
+        "suffixes": len(usable_suffixes),
+        "skipped_suffixes": skipped_suffixes,
         "tokens": colored_tokens,
         "layout_notes": layout_notes,
     }
@@ -574,6 +691,38 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
 # Tables with an entry per glyph. Left alone, fontTools would copy them
 # through sized for the base font's glyph count, which makes them invalid.
 PER_GLYPH_TABLES = ("hdmx", "LTSH", "vmtx", "VORG", "gvar", "HVAR", "VVAR")
+
+
+def _chain_format1(font: TTFont, rules: list[tuple[list[str], str, int]]) -> list:
+    """Chaining contextual substitution subtables in format 1, SUFFIX_CHUNK
+    rules each, from (backtrack glyphs in text order, input glyph, lookup
+    index) rules. Rules keep their order, which decides which applies first."""
+    out = []
+    for start in range(0, len(rules), SUFFIX_CHUNK):
+        by_input: dict[str, list] = {}
+        for back, glyph, lookup in rules[start:start + SUFFIX_CHUNK]:
+            rule = ot.ChainSubRule()
+            rule.Backtrack = list(reversed(back))       # stored nearest first
+            rule.BacktrackGlyphCount = len(back)
+            rule.Input, rule.InputGlyphCount = [], 1     # the count includes the first glyph
+            rule.LookAhead, rule.LookAheadGlyphCount = [], 0
+            record = ot.SubstLookupRecord()
+            record.SequenceIndex, record.LookupListIndex = 0, lookup
+            rule.SubstLookupRecord, rule.SubstCount = [record], 1
+            by_input.setdefault(glyph, []).append(rule)
+        st = ot.ChainContextSubst()
+        st.Format = 1
+        st.Coverage = ot.Coverage()
+        st.Coverage.glyphs = sorted(by_input, key=font.getGlyphID)
+        st.ChainSubRuleSet = []
+        for glyph in st.Coverage.glyphs:
+            rule_set = ot.ChainSubRuleSet()
+            rule_set.ChainSubRule = by_input[glyph]
+            rule_set.ChainSubRuleCount = len(by_input[glyph])
+            st.ChainSubRuleSet.append(rule_set)
+        st.ChainSubRuleSetCount = len(st.ChainSubRuleSet)
+        out.append(st)
+    return out
 
 
 def _add_glyphs(font: TTFont, new_glyphs: list[tuple[str, str]]) -> None:
