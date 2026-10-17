@@ -329,7 +329,8 @@ class Result:
 
 def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
                  unicodes: list[int] | None = None) -> Result:
-    font = TTFont(str(base_path))
+    # Keep the base font's timestamp, so the same inputs build the same bytes.
+    font = TTFont(str(base_path), recalcTimestamp=False)
     if unicodes is not None:
         subset_font(font, unicodes)
     if "glyf" not in font:
