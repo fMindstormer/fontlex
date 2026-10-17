@@ -12,7 +12,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from fontlex import Model, SpecError, _expand_class, compile_font, load_spec  # noqa: E402
+from fontlex import Model, SpecError, _expand_class, compile_font, load_spec, syllable_breaks  # noqa: E402
 from fontTools.ttLib import TTFont  # noqa: E402
 
 BASE = ROOT / "fonts" / "JetBrainsMono-Regular.ttf"
@@ -205,6 +205,80 @@ class Suffixes(unittest.TestCase):
 
     def test_lowercase_words_are_left_alone(self):
         self.assertEqual(self.sets("ungenau"), [None] * 7)
+
+
+# Syllables from a few Liang patterns, one of each kind the compiler handles:
+# inside a word (a1ba), before any letter (1na), after any letter (an1),
+# anchored at a word's start (.ki2n) and end (ka1n.).
+SYLLABLE_PATTERNS = "a1ba 1na an1 .ki2n ka1n. b1b"
+
+
+def syllable_spec(d, min_left=2, **extra):
+    Path(d, "p.txt").write_text(SYLLABLE_PATTERNS + "\n", encoding="utf-8")
+    raw = {"name": "Fontlex Test Syllables", "classes": {"letter": "a-zA-Z"}, "start": "text",
+           "states": {"text": {"default": "text"}},
+           "syllables": {"letters": ["letter"], "patterns": ["p.txt"], "min_left": min_left,
+                         "min_right": 2, "colors": ["s1", "s2"]},
+           "themes": {"light": {"s1": "#2E6FBF", "s2": "#C0392B"}}, **extra}
+    Path(d, "spec.yaml").write_text(yaml.safe_dump(raw), encoding="utf-8")
+    return load_spec(Path(d, "spec.yaml"))
+
+
+class Syllables(unittest.TestCase):
+    def test_liang_highest_level_wins(self):
+        pats = {"ab": [0, 1, 0], "abc": [0, 2, 0, 0]}
+        self.assertEqual(syllable_breaks("abc", pats, 3), [])      # 2 beats 1: no break
+        self.assertEqual(syllable_breaks("abd", pats, 3), [1])
+
+    def test_edge_minimums(self):
+        with tempfile.TemporaryDirectory() as d:
+            spec = syllable_spec(d)
+            m = Model(spec, CMAP)
+            # "baba": a1ba breaks b-a|ba; min_left/right forbid b|aba and bab|a.
+            self.assertEqual([s for _, s in m.lex("baba")], ["s1", "s1", "s2", "s2"])
+            spec1 = syllable_spec(d, min_left=1)
+            self.assertEqual(syllable_breaks("ana", spec1.syllables.patterns, spec1.syllables.longest), [1])
+
+    def test_errors(self):
+        with tempfile.TemporaryDirectory() as d:
+            syllable_spec(d)
+            good = yaml.safe_load(Path(d, "spec.yaml").read_text())
+            for change, fragment in (({"letters": ["nope"]}, "unknown classes"),
+                                     ({"colors": ["one"]}, "at least two colors"),
+                                     ({"min_left": 3}, "must be 1 or 2"),
+                                     ({"patterns": ["missing.txt"]}, "can't read")):
+                spec_raw = yaml.safe_load(yaml.safe_dump(good))
+                spec_raw["syllables"].update(change)
+                Path(d, "bad.yaml").write_text(yaml.safe_dump(spec_raw), encoding="utf-8")
+                with self.assertRaises(SpecError) as cm:
+                    load_spec(Path(d, "bad.yaml"))
+                self.assertIn(fragment, str(cm.exception))
+            spec_raw = yaml.safe_load(yaml.safe_dump(good))
+            spec_raw["states"]["other"] = {"default": "text"}
+            Path(d, "bad.yaml").write_text(yaml.safe_dump(spec_raw), encoding="utf-8")
+            with self.assertRaises(SpecError) as cm:
+                load_spec(Path(d, "bad.yaml"))
+            self.assertIn("one state", str(cm.exception))
+
+    def test_compile_and_verify(self):
+        from test_fontlex import SHAPERS, verify
+        import io
+        with tempfile.TemporaryDirectory() as d:
+            spec = syllable_spec(d)
+            res = compile_font(spec, BASE, unicodes=list(range(0x20, 0x7F)))
+            buf = io.BytesIO()
+            res.font.save(buf)
+            data = buf.getvalue()
+            results = verify(spec, data, BASE, n=500, log=lambda *a: None)
+            for label, (passed, total) in results.items():
+                self.assertEqual(passed, total, label)
+            order = TTFont(io.BytesIO(data)).getGlyphOrder()
+            m = Model(spec, CMAP)
+            text = "Banane Kinkan ababab Abba"
+            glyphs, _ = SHAPERS["harfbuzz"](data).shape(text)
+            got = [order[g].split(".lxw_")[1] if ".lxw_" in order[g] else None for g, *_ in glyphs]
+            self.assertEqual(got, [s for _, s in m.lex(text)])
+            self.assertIn("s2", got)
 
 
 class ListFiles(unittest.TestCase):

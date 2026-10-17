@@ -27,8 +27,8 @@ import unicodedata
 import uharfbuzz as hb
 from fontTools.ttLib import TTFont
 
-from fontlex import (DROPPED_TABLES, START_SUFFIX, SUFFIX, WORD_SUFFIX, Model, _unify_gpos_scripts,
-                     load_spec, subset_font)
+from fontlex import (DROPPED_TABLES, START_SUFFIX, SUFFIX, SYLLABLE_INFIX, WORD_SUFFIX, Model,
+                     _unify_gpos_scripts, load_spec, subset_font)
 
 HAND_CASES = [
     'def f(x): return x + 1',
@@ -74,7 +74,7 @@ def glyph_info(name: str, start: str):
 
 
 def base_name(name: str) -> str:
-    for infix in (WORD_SUFFIX, START_SUFFIX, SUFFIX):
+    for infix in (WORD_SUFFIX, START_SUFFIX, SYLLABLE_INFIX, SUFFIX):
         name = name.split(infix)[0]
     return name
 
@@ -267,7 +267,7 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
                 return f"char {i} {text[i]!r} is in the font but was drawn from a fallback font"
             st, ws = glyph_info(order[gid], spec.start)
             if st == "WORD":
-                got = (spec.word_state or spec.suffix_state, ws)
+                got = (spec.word_state or spec.suffix_state or spec.start, ws)
             else:
                 got = (st, None)
             if got != (exp_state, exp_set):
@@ -331,6 +331,13 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
         if chars and not any(c in alphabet for c in chars):
             alphabet.append(chars[0])
     words = [w for _, ws in spec.word_sets for w in ws]
+    if spec.syllables:
+        # Pseudo-words glued from the patterns' own letters, in either case,
+        # so the patterns' contexts actually occur.
+        frags = [p.strip(".") for p in sorted(spec.syllables.patterns) if p.strip(".")]
+        words += ["".join(rng.choice(frags) for _ in range(rng.randint(1, 3))).capitalize()
+                  if rng.random() < 0.5 else "".join(rng.choice(frags) for _ in range(rng.randint(1, 3)))
+                  for _ in range(400)]
     if spec.suffix_sets:
         # Runs that end in listed suffixes: a start letter, a few letters, a suffix.
         starts = [c for _, cs in spec.classes for c in cs[:3]]
@@ -358,6 +365,20 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
 
     if spec.examples:
         run("spec examples", spec.examples, check_example)
+
+    # Every glyph the font draws as a colored token needs a color record, or
+    # renderers draw it in the text color (shaping alone can't tell).
+    colored = {t for _, theme in spec.themes for t in theme}
+    layers = tt["COLR"].ColorLayers if "COLR" in tt else {}
+
+    def token_of(name):
+        if WORD_SUFFIX in name:
+            return name.split(WORD_SUFFIX)[1]
+        if SUFFIX in name:
+            return spec.token(name.split(SUFFIX)[1]) if name.split(SUFFIX)[1] in spec.states else None
+        return None
+    needed = [g for g in order if token_of(g) in colored]
+    run("color records", needed, lambda g: None if g in layers else "no COLR record")
     hand = HAND_CASES + [text for text, _ in spec.examples]
 
     fuzz = [random_text(alphabet) for _ in range(n)]

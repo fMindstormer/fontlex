@@ -62,6 +62,10 @@ OTHER = "other"
 SUFFIX = ".lx_"
 WORD_SUFFIX = ".lxw_"
 START_SUFFIX = ".lxs_"     # the first glyph of a run of the word state
+SYLLABLE_INFIX = ".lxp_"   # a letter's place in its word, and its syllable break, while shaping
+# Liang levels for `min_left`/`min_right`: above TeX's patterns (at most 7 in
+# practice), below 9, which a pattern can still use to override them.
+MIN_LEVEL = 8
 # The base font's substitution tables. Its ligatures and alternates would
 # break the lexer, and Core Text prefers AAT `morx` over GSUB, so a kept
 # `morx` would bypass the lexer entirely. `feat` only describes `morx`.
@@ -96,6 +100,47 @@ def _expand_class(pattern: str) -> list[str]:
 
 
 @dataclass
+class Syllables:
+    """Words split into syllables by Liang's hyphenation patterns, colored
+    in turn with `colors`."""
+    letters: list[str]                       # classes whose characters make up words
+    patterns: dict[str, list[int]]           # letters, "." at word edges -> levels
+    colors: list[str]
+    alphabet: set[str] = field(default_factory=set)   # letters the pattern files use
+
+    @property
+    def longest(self) -> int:
+        return max(map(len, self.patterns), default=0)
+
+
+def syllable_breaks(word: str, patterns: dict[str, list[int]], longest: int) -> list[int]:
+    """Liang's algorithm: indices k (0 < k < len(word)) where `word`, in
+    lowercase, has a syllable break before word[k]."""
+    w = "." + word + "."
+    values = [0] * (len(w) + 1)
+    for i in range(len(w)):
+        for j in range(i + 1, min(len(w), i + longest) + 1):
+            levels = patterns.get(w[i:j])
+            if levels:
+                for k, v in enumerate(levels):
+                    if v > values[i + k]:
+                        values[i + k] = v
+    return [k for k in range(1, len(word)) if values[k + 1] % 2]
+
+
+def _parse_pattern(p: str) -> tuple[str, list[int]]:
+    letters = re.sub(r"\d", "", p)
+    levels = [0] * (len(letters) + 1)
+    i = 0
+    for ch in p:
+        if ch.isdigit():
+            levels[i] = int(ch)
+        else:
+            i += 1
+    return letters, levels
+
+
+@dataclass
 class Spec:
     name: str
     classes: list[tuple[str, list[str]]]       # ordered; `other` is implicit
@@ -109,6 +154,7 @@ class Spec:
     themes: list[tuple[str, dict[str, str]]] = field(default_factory=list)
     # Expected tokens per character for sample lines, checked by the tests.
     examples: list[tuple[str, list[str | None]]] = field(default_factory=list)
+    syllables: "Syllables | None" = None
 
     # -- derived ---------------------------------------------------------
     @property
@@ -177,6 +223,8 @@ def load_spec(path: str | Path) -> Spec:
         themes=themes,
         examples=_load_examples(raw.get("examples")),
     )
+    if raw.get("syllables"):
+        spec.syllables = _load_syllables(raw["syllables"], base_dir, classes)
     _validate(spec)
     return spec
 
@@ -219,8 +267,14 @@ def _validate(spec: Spec) -> None:
     for s in spec.states:
         if not re.fullmatch(r"[A-Za-z0-9_]+", s):
             raise SpecError(f"state name {s!r} must be [A-Za-z0-9_]+")
+    if spec.syllables:
+        unknown = set(spec.syllables.letters) - names
+        if unknown:
+            raise SpecError(f"syllables.letters: unknown classes {sorted(unknown)}")
+        if len(spec.states) != 1 or spec.word_sets or spec.suffix_sets:
+            raise SpecError("syllables need a spec with one state and no words or suffixes")
     tokens = ({spec.token(s) for s in spec.states} | {n for n, _ in spec.word_sets}
-              | {n for n, _ in spec.suffix_sets})
+              | {n for n, _ in spec.suffix_sets} | set(spec.syllables.colors if spec.syllables else ()))
     for text, expected in spec.examples:
         unknown = set(expected) - tokens
         if unknown:
@@ -253,6 +307,47 @@ def _load_sets(section: dict, base_dir: Path) -> list[tuple[str, list[str]]]:
     for w, k in first.items():
         sets.setdefault(k, []).append(w)
     return list(sets.items())
+
+
+def _load_syllables(raw: dict, base_dir: Path, classes) -> Syllables:
+    """`syllables: {letters: [classes], patterns: [files], colors: [tokens],
+    min_left: 2, min_right: 2}`. Pattern files are TeX/Liang patterns, one or
+    more per line, % for comments; a pattern listed twice keeps the higher
+    level at each place. min_left/min_right (1 or 2) forbid a break after a
+    word's first letter or before its last, as level-8 patterns at the word
+    edges, which level-9 patterns can override."""
+    letters = [str(c) for c in raw.get("letters") or []]
+    colors = [str(c) for c in raw.get("colors") or []]
+    if not letters or len(colors) < 2:
+        raise SpecError("syllables needs letters (class names) and at least two colors")
+    patterns: dict[str, list[int]] = {}
+
+    def add(p, where):
+        if not re.fullmatch(r"\.?(\d?[^\d.])+\d?\.?", p):
+            raise SpecError(f"{where}: bad pattern {p!r}")
+        key, levels = _parse_pattern(p)
+        old = patterns.get(key)
+        patterns[key] = [max(a, b) for a, b in zip(old, levels)] if old else levels
+
+    for name in raw.get("patterns") or []:
+        path = base_dir / str(name)
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError as e:
+            raise SpecError(f"can't read {path}: {e.strerror}") from None
+        for n, line in enumerate(text.splitlines(), 1):
+            for p in line.split("%")[0].split():
+                add(p, f"{path}:{n}")
+    alphabet = {c for p in patterns for c in p} - {"."}
+    chars = {c.lower() for name, cs in classes if name in letters for c in cs}
+    for side in ("min_left", "min_right"):
+        m = int(raw.get(side, 1))
+        if m not in (1, 2):
+            raise SpecError(f"syllables.{side} must be 1 or 2")
+        if m == 2:
+            for c in sorted(chars):
+                add(f".{c}{MIN_LEVEL}" if side == "min_left" else f"{MIN_LEVEL}{c}.", side)
+    return Syllables(letters=letters, patterns=patterns, colors=colors, alphabet=alphabet)
 
 
 def _load_examples(raw) -> list[tuple[str, list[str | None]]]:
@@ -352,7 +447,31 @@ class Model:
                 i = j
             else:
                 i += 1
+        if self.spec.syllables:
+            sets = self._syllables(text, missing)
         return list(zip(states, sets))
+
+    def _syllables(self, text: str, missing: frozenset[int]) -> list[str | None]:
+        """Each run of letters, split by the patterns, colored in turn."""
+        syl = self.spec.syllables
+        letters = set(syl.letters)
+        sets: list[str | None] = [None] * len(text)
+        i = 0
+        while i < len(text):
+            g = self.cmap.get(ord(text[i]))
+            if i in missing or self.glyph_class.get(g) not in letters:
+                i += 1
+                continue
+            j = i
+            while j < len(text) and j not in missing and self.glyph_class.get(self.cmap.get(ord(text[j]))) in letters:
+                j += 1
+            breaks = set(syllable_breaks(text[i:j].lower(), syl.patterns, syl.longest))
+            n = 0
+            for k in range(i, j):
+                n += (k - i) in breaks
+                sets[k] = syl.colors[n % len(syl.colors)]
+            i = j
+        return sets
 
     def tokens(self, text: str) -> list[str | None]:
         """Per character, the token it is colored as: its word set if it is
@@ -478,6 +597,42 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
     set_names = list(dict.fromkeys(sname for sname, _ in word_variant))
     letters = [g for g in base_glyphs if (ws, g) in variant]
 
+    # Syllables: each letter's place in its word and the break before it,
+    # while the pattern lookups run, then its color.
+    syl = spec.syllables
+    syl_letters: list[str] = []
+    syl_key: dict[str, str] = {}                    # letter glyph -> lowercase letter
+    syl_variant: dict[tuple[str, str], str] = {}    # (role, glyph) -> name
+    if syl:
+        # Letters no pattern uses only need to be letters: they share one key.
+        in_patterns = syl.alphabet
+        for cname, chars in spec.classes:
+            if cname in syl.letters:
+                for ch in chars:
+                    g = cmap.get(ord(ch))
+                    if g and model.glyph_class.get(g) == cname:
+                        syl_key.setdefault(g, ch.lower() if ch.lower() in in_patterns else OTHER_LETTER)
+        syl_keys = sorted(set(syl_key.values()))
+        # Letters grouped by key, so each key's variants are contiguous glyphs
+        # and the class definitions that group them stay a few ranges.
+        syl_letters = [g for k in syl_keys for g in base_glyphs if syl_key.get(g) == k]
+        # Undecided inner (i) and last (l) letters also know the letter before
+        # them, so pattern rules can be filed under both (see _syllable_subtables).
+        n = len(syl_keys)
+        roles = (["last", "only", "first"] + [f"i{i}" for i in range(n)] + ["brk", "nobrk"]
+                 + [f"l{i}" for i in range(n)] + ["lastbrk", "lastnobrk"])
+        for g in syl_letters:
+            for role in roles:
+                name = f"{g}{SYLLABLE_INFIX}{role}"
+                syl_variant[(role, g)] = name
+                new_glyphs.append((name, g))
+                glyphmap[name] = {"base": g, "state": spec.start, "set": None}
+            for color in syl.colors:
+                name = f"{g}{WORD_SUFFIX}{color}"
+                syl_variant[(color, g)] = name
+                new_glyphs.append((name, g))
+                glyphmap[name] = {"base": g, "state": spec.start, "set": color}
+
     total = len(order) + len(new_glyphs)
     if total > 0xFFFF:
         raise SpecError(f"the font would need {total} glyphs, over the 65535 limit "
@@ -577,8 +732,12 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
             fea.append(f"  sub @C_{k}' lookup TO_{t0};")
             rules += 1
     fea.append("} LEX;")
-
     features = ["LEX"]
+    if not rules:
+        # A one-state lexer has no rules, and feaLib drops empty lookups,
+        # which would shift the indices of the lookups after it.
+        del fea[fea.index("lookup LEX {"):]
+        features = []
     if la_rules:
         fea.append("lookup LOOKAHEAD {")
         fea += la_rules
@@ -624,6 +783,70 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
         fea.append("} PROPAGATE;")
         features += ["START", "WORDS", "PROPAGATE"]
 
+    if syl:
+        L, keys = syl_letters, syl_keys
+        by_key = {k: [g for g in L if syl_key[g] == k] for k in keys}
+
+        def v(role, gs=L):
+            return _fea_glyphs(syl_variant[(role, g)] for g in gs)
+
+        def each(kinds, gs=L):
+            """All per-previous-letter variants of these kinds, letter by letter."""
+            return [syl_variant[(f"{kind}{i}", g)] for g in gs for kind in kinds for i in range(len(keys))]
+
+        base = _fea_glyphs(L)
+        r = {role: v(role) for role in SYLLABLE_ROLES}
+        inner_und, last_und = each("i"), each("l")
+        fea.append(f"@SYL = [{base}];")
+        fea.append(f"lookup SYL_TO_FIRST {{ sub [{base}] by [{r['first']}]; }} SYL_TO_FIRST;")
+        fea.append(f"lookup SYL_TO_LAST {{ sub [{base}] by [{r['last']}]; "
+                   f"sub [{r['first']}] by [{r['only']}]; }} SYL_TO_LAST;")
+        for i in range(len(keys)):
+            fea.append(f"lookup SYL_TO_PREV_{i} {{ sub [{base}] by [{v(f'i{i}')}]; "
+                       f"sub [{r['last']}] by [{v(f'l{i}')}]; }} SYL_TO_PREV_{i};")
+        # Many-to-one: repeat each target once per previous letter.
+        rep = len(keys)
+        fea.append(f"lookup SYL_BREAK {{ sub [{_fea_glyphs(inner_und)}] by "
+                   f"[{_fea_glyphs(syl_variant[('brk', g)] for g in L for _ in range(rep))}]; "
+                   f"sub [{_fea_glyphs(last_und)}] by "
+                   f"[{_fea_glyphs(syl_variant[('lastbrk', g)] for g in L for _ in range(rep))}]; }} SYL_BREAK;")
+        fea.append(f"lookup SYL_NOBREAK {{ sub [{_fea_glyphs(inner_und)}] by "
+                   f"[{_fea_glyphs(syl_variant[('nobrk', g)] for g in L for _ in range(rep))}]; "
+                   f"sub [{_fea_glyphs(last_und)}] by "
+                   f"[{_fea_glyphs(syl_variant[('lastnobrk', g)] for g in L for _ in range(rep))}]; }} SYL_NOBREAK;")
+        for i, color in enumerate(syl.colors):
+            subs = [f"sub [{r[role]}] by [{v(color)}];" for role in ("first", "only", "brk", "nobrk", "lastbrk", "lastnobrk")]
+            subs += [f"sub [{_fea_glyphs(each(kind))}] by [{_fea_glyphs(syl_variant[(color, g)] for g in L for _ in range(rep))}];"
+                     for kind in ("i", "l")]
+            fea.append(f"lookup SYL_TO_{i} {{ " + " ".join(subs) + f" }} SYL_TO_{i};")
+        # Mark each word's first and last letter. (The letter before may
+        # already be a first one: a lookup sees its own output.)
+        fea.append(f"lookup SYL_FIRST {{ ignore sub [{base} {r['first']}] @SYL'; "
+                   "sub @SYL' lookup SYL_TO_FIRST; } SYL_FIRST;")
+        fea.append(f"lookup SYL_LAST {{ ignore sub [{base} {r['first']}]' [{base} {r['first']}]; "
+                   f"sub [{base} {r['first']}]' lookup SYL_TO_LAST; }} SYL_LAST;")
+        # Then tell every other letter which letter is before it.
+        prev_rules = []
+        for i, k in enumerate(keys):
+            before = _fea_glyphs([syl_variant[("first", g)] for g in by_key[k]] + each("i", by_key[k]))
+            prev_rules.append(f"sub [{before}] [{base} {r['last']}]' lookup SYL_TO_PREV_{i};")
+        fea.append("lookup SYL_PREV { " + " ".join(prev_rules) + " } SYL_PREV;")
+        # The patterns, in one lookup whose subtables go from the highest
+        # level down: a shaper applies the first rule that matches, so the
+        # highest level wins, as in Liang's algorithm. The rules are added
+        # after the build (_syllable_subtables).
+        fea.append(f"lookup SYL_PATTERNS {{ ignore sub \\{L[0]}'; }} SYL_PATTERNS;")
+        # Color: a word starts with the first color, and each break moves on;
+        # a letter whose break no pattern decided has none.
+        no_break = f"{r['nobrk']} {r['lastnobrk']} {_fea_glyphs(inner_und + last_und)}"
+        rules = [f"sub [{r['first']} {r['only']}]' lookup SYL_TO_0;"]
+        n = len(syl.colors)
+        for i, color in enumerate(syl.colors):
+            rules.append(f"sub [{v(color)}] [{r['brk']} {r['lastbrk']}]' lookup SYL_TO_{(i + 1) % n};")
+            rules.append(f"sub [{v(color)}] [{no_break}]' lookup SYL_TO_{i};")
+        fea.append("lookup SYL_COLOR { " + " ".join(rules) + " } SYL_COLOR;")
+        features += ["SYL_FIRST", "SYL_LAST", "SYL_PREV", "SYL_PATTERNS", "SYL_COLOR"]
+
     fea.append("")
     fea.append("feature calt {")
     fea += [f"  lookup {name};" for name in features]
@@ -632,8 +855,21 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
     # Build GSUB only: by default feaLib also rebuilds GPOS and GDEF from the
     # feature file, which has neither, and would delete the base font's.
     addOpenTypeFeaturesFromString(font, fea_text, tables=["GSUB"])
+    # Lookup indices follow the order the feature text defines them in.
+    names = [line.split()[1] for line in fea if line.startswith("lookup ") and "{" in line]
+    if syl:
+        index = {n: i for i, n in enumerate(names)}
+        lookups = font["GSUB"].table.LookupList.Lookup
+        lookup = lookups[index["SYL_PATTERNS"]]
+        # The placeholder's rule has no context, so feaLib made it type 5.
+        assert lookup.LookupType in (5, 6), "unexpected syllable lookup"
+        lookup.LookupType = 6
+        lookup.SubTable = _syllable_subtables(syl, syl_letters, syl_key, syl_keys, syl_variant,
+                                              index["SYL_BREAK"], index["SYL_NOBREAK"], font.getGlyphID)
+        lookup.SubTableCount = len(lookup.SubTable)
+        fea_text += (f"\n# SYL_PATTERNS holds the rules of {len(syl.patterns):,} Liang patterns, "
+                     f"in {lookup.SubTableCount:,} format 2 subtables.\n")
     if match_rules:
-        names = [line.split()[1] for line in fea if line.startswith("lookup ") and line.endswith("{")]
         index = {n: i for i, n in enumerate(names)}
         lookup = font["GSUB"].table.LookupList.Lookup[index["WORDS"]]
         assert lookup.LookupType == 6 and len(lookup.SubTable) == 1, "unexpected WORDS lookup"
@@ -649,7 +885,7 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
         t = spec.token(s)
         if t and t not in tokens:
             tokens.append(t)
-    for sname, _ in spec.word_sets + spec.suffix_sets:
+    for sname in [n for n, _ in spec.word_sets + spec.suffix_sets] + (spec.syllables.colors if syl else []):
         if sname not in tokens:
             tokens.append(sname)
     colored_tokens = [t for t in tokens if any(t in th for _, th in spec.themes)]
@@ -691,6 +927,140 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
 # Tables with an entry per glyph. Left alone, fontTools would copy them
 # through sized for the base font's glyph count, which makes them invalid.
 PER_GLYPH_TABLES = ("hdmx", "LTSH", "vmtx", "VORG", "gvar", "HVAR", "VVAR")
+
+
+SYLLABLE_ROLES = ("first", "only", "last", "brk", "nobrk", "lastbrk", "lastnobrk")
+OTHER_LETTER = "\x00"      # the key of letters no pattern uses
+# Rules per format 2 subtable, small enough for its 16-bit offsets.
+SYLLABLE_CHUNK = 2000
+
+
+def _syllable_subtables(syl: Syllables, letters: list[str], key: dict[str, str], keys: list[str],
+                        variant: dict[tuple[str, str], str], brk: int, nobrk: int, gid) -> list:
+    """The pattern rules, as chaining contextual format 2 subtables, highest
+    level first.
+
+    A rule decides the break before one letter, the input: an inner or last
+    letter not yet decided, whose variant also says which letter is before
+    it. Its context is the pattern's other letters, any variant of each; a
+    pattern anchored at a word edge (".ab", "ab.") needs the letter there to
+    be a first or last one. A shaper only tries the rules filed under its
+    glyph's input class, so classes are kept small: rules with letters before
+    the break get subtables of their own per letter before, filed there by
+    this letter; rules without, by this letter; and patterns ending in a digit
+    ("ab1"), whose input is any letter, per letter before. Each kind of edge
+    anchoring needs its own class definitions, since a glyph is in only one
+    class of each.
+    """
+    by_key: dict[str, list[str]] = {}
+    for g in letters:
+        by_key.setdefault(key[g], []).append(g)
+    kidx = {k: i for i, k in enumerate(keys)}
+    n = len(keys)
+
+    def vs(k, *roles):
+        return [variant[(r, g)] for g in by_key[k] for r in roles]
+
+    def und(k, kind, prev=None):
+        """Undecided variants of letters with key k ("i" inner, "l" last)."""
+        ps = range(n) if prev is None else [prev]
+        return [variant[(f"{kind}{i}", g)] for g in by_key[k] for i in ps]
+
+    def classdef(groups):
+        cd = ot.ClassDef()
+        cd.classDefs = {g: i for i, gs in enumerate(groups, 1) for g in gs}
+        return cd
+
+    def coverage(cd):
+        cov = ot.Coverage()
+        cov.glyphs = sorted(cd.classDefs, key=gid)
+        return cov
+
+    # Letters the pattern files don't use only appear in the edge minimums;
+    # in the font they share one key. A pattern letter the font lacks drops
+    # its pattern.
+    merged: dict[str, list[int]] = {}
+    for p, levels in syl.patterns.items():
+        if any(c not in by_key and c in syl.alphabet for c in p):
+            continue
+        p = "".join(c if c == "." or c in by_key else OTHER_LETTER for c in p)
+        old = merged.get(p)
+        merged[p] = [max(a, b) for a, b in zip(old, levels)] if old else levels
+    rules_by: dict[tuple, dict[int, list]] = {}
+    for p, levels in merged.items():
+        start, end = p.startswith("."), p.endswith(".")
+        for b, lv in enumerate(levels):
+            if not lv or (b == 0 and start) or (b == len(p) and end):
+                continue
+            if 0 < b < len(p) and "." in (p[b - 1], p[b]):
+                continue                    # a word edge, not a break between letters
+            back, inp, ahead = (p[:b], p[b], p[b + 1:]) if b < len(p) else (p, "*", "")
+            back, ahead = back.lstrip("."), ahead.rstrip(".")
+            if any(c not in by_key for c in back + ahead + inp.replace("*", "")):
+                continue                    # uses a letter the font doesn't have
+            kind = "wild" if inp == "*" else "pair" if back else "single"
+            prev = kidx[back[-1]] if kind != "single" else None
+            rules_by.setdefault((kind, start, end, prev), {}).setdefault(lv, []).append((back, inp, ahead))
+
+    # Context classes: one per key, with first or last letters apart when anchored.
+    bt_cds, la_cds = {}, {}
+    for start in (False, True):
+        groups = [vs(k, "first") + und(k, "i") + vs(k, "brk", "nobrk") if not start
+                  else und(k, "i") + vs(k, "brk", "nobrk") for k in keys]
+        bt_cds[start] = classdef(groups + ([vs(k, "first") for k in keys] if start else []))
+    for end in (False, True):
+        groups = [und(k, "i") + vs(k, "brk", "nobrk") + ([] if end else und(k, "l") + vs(k, "lastbrk", "lastnobrk"))
+                  for k in keys]
+        la_cds[end] = classdef(groups + ([und(k, "l") + vs(k, "lastbrk", "lastnobrk") for k in keys] if end else []))
+    in_cds: dict[tuple, tuple] = {}
+
+    def input_classes(kind, end, prev):
+        if (kind, end, prev) not in in_cds:
+            if kind == "wild":
+                groups = [[g for k in keys for g in und(k, "i", prev) + und(k, "l", prev)]]
+            else:
+                groups = [und(k, "i", prev) + ([] if end else und(k, "l", prev)) for k in keys]
+                groups += [und(k, "l", prev) for k in keys] if end else []
+            cd = classdef(groups)
+            in_cds[(kind, end, prev)] = (cd, coverage(cd))
+        return in_cds[(kind, end, prev)]
+
+    def subtable(kind, start, end, prev, rules):
+        in_cd, cov = input_classes(kind, end, prev)
+        sets: dict[int, list] = {}
+        for back, inp, ahead in rules:
+            rule = ot.ChainSubClassRule()
+            bt = [kidx[c] + 1 + (n if start and i == 0 else 0) for i, c in enumerate(back)]
+            la = [kidx[c] + 1 + (n if end and i == len(ahead) - 1 else 0) for i, c in enumerate(ahead)]
+            rule.Backtrack, rule.BacktrackGlyphCount = list(reversed(bt)), len(bt)
+            rule.Input, rule.InputGlyphCount = [], 1
+            rule.LookAhead, rule.LookAheadGlyphCount = la, len(la)
+            rec = ot.SubstLookupRecord()
+            rec.SequenceIndex, rec.LookupListIndex = 0, brk if lv % 2 else nobrk
+            rule.SubstLookupRecord, rule.SubstCount = [rec], 1
+            c = 1 if kind == "wild" else kidx[inp] + 1 + (n if end and not ahead else 0)
+            sets.setdefault(c, []).append(rule)
+        st = ot.ChainContextSubst()
+        st.Format = 2
+        st.Coverage = cov
+        st.BacktrackClassDef, st.InputClassDef, st.LookAheadClassDef = bt_cds[start], in_cd, la_cds[end]
+        st.ChainSubClassSet = []
+        for c in range(max(sets) + 1):
+            cs = None
+            if c in sets:
+                cs = ot.ChainSubClassSet()
+                cs.ChainSubClassRule, cs.ChainSubClassRuleCount = sets[c], len(sets[c])
+            st.ChainSubClassSet.append(cs)
+        st.ChainSubClassSetCount = len(st.ChainSubClassSet)
+        return st
+
+    out = []
+    for lv in sorted({lv for by_level in rules_by.values() for lv in by_level}, reverse=True):
+        for (kind, start, end, prev), by_level in sorted(rules_by.items(), key=lambda kv: str(kv[0])):
+            rules = by_level.get(lv, [])
+            for at in range(0, len(rules), SYLLABLE_CHUNK):
+                out.append(subtable(kind, start, end, prev, rules[at:at + SYLLABLE_CHUNK]))
+    return out
 
 
 def _chain_format1(font: TTFont, rules: list[tuple[list[str], str, int]]) -> list:

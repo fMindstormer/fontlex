@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the demo page's palettes in WebKit, the engine Safari uses.
+"""Check a demo page's palettes in WebKit, the engine Safari uses.
 
 Renders the page in an offscreen WKWebView, switches the page theme and the
 palette menu, snapshots the code box, and checks which theme's token colors
@@ -110,7 +110,11 @@ def main():
     themes = yaml.safe_load(Path(args.spec).read_text())["themes"]
     page = Page(Path(args.page))
     failed = 0
-    for name, script, want, red in scenarios(next(iter(next(iter(themes.values()))))):
+    token = next(iter(next(iter(themes.values()))))
+    for name, script, want, red in scenarios(token):
+        if red and not page.run(f"!!document.getElementById('c-{token}')"):
+            print(f"skip {name}: the page has no custom colors")
+            continue
         page.run(SETTLE + "(() => {" + script + "})();" + RELAYOUT + "1")
         page.spin(0.5)
         rep = page.snapshot_code()
