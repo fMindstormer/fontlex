@@ -52,6 +52,10 @@ HAND_CASES = [
     '\\',
     'q́ = "x̣" + j̈',   # marks with no precomposed glyph
     'a中1 + "😀s" # 中',                # chars the font lacks reset the lexer
+    'x = a / b // comment */ "not a string"',
+    'f(/* block * with ** stars */ 1, `tpl ${x} \\` end`)',
+    '/* unterminated block',
+    '**/ */ /*/ x',
 ]
 
 # Combining marks, and letters that have no precomposed form with them.
@@ -273,6 +277,9 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
     # Random programs over an alphabet that hits every class, plus words.
     rng = random.Random(seed)
     alphabet = list("abdefinstx_XZ0129.\"'\\#@ ()=+:,") + ["é", "π", "ж", "→"]
+    for _, chars in spec.classes:      # hit every class of whatever spec this is
+        if chars and not any(c in alphabet for c in chars):
+            alphabet.append(chars[0])
     words = [w for _, ws in spec.word_sets for w in ws]
 
     def random_text(alpha):
@@ -286,16 +293,37 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
 
     fuzz = [random_text(alphabet) for _ in range(n)]
     marked = [random_text(alphabet + list("qjxy") + MARKS) for _ in range(n)]
+
+    # Every transition of the DFA, which random text rarely reaches when it
+    # takes several characters (`*/`): the shortest text that reaches each
+    # state, then a character of each class, then a random tail.
+    reps: dict[str, list[str]] = {k: [] for k in spec.class_names}
+    for ch in [c for _, cs in spec.classes for c in cs[:5]] + alphabet:
+        g = model.cmap.get(ord(ch))
+        k = model.glyph_class.get(g) if g else None
+        if k and ch not in reps[k]:
+            reps[k].append(ch)
+    delta = spec.table()
+    path = {spec.start: ""}
+    queue = [spec.start]
+    for s in queue:
+        for k in spec.class_names:
+            if reps[k] and delta[s][k] not in path:
+                path[delta[s][k]] = path[s] + reps[k][0]
+                queue.append(delta[s][k])
+    transitions = [path[s] + rng.choice(reps[k]) + random_text(alphabet)[:rng.randint(0, 8)]
+                   for s in path for k in spec.class_names if reps[k] for _ in range(20)]
     for sname in shapers:
         shaper = SHAPERS[sname](font_data)
         run(f"{sname}: hand-written cases", HAND_CASES, lambda t: check(shaper, t))
         run(f"{sname}: random cases", fuzz, lambda t: check(shaper, t))
+        run(f"{sname}: transition cases", transitions, lambda t: check(shaper, t))
         if base:
             ref_shaper = SHAPERS[sname](ref_data)
             pos = lambda t: check_positions(shaper, ref_shaper, t)  # noqa: E731
             run(f"{sname}: positioning, hand-written", HAND_CASES, pos)
             skipped_marks = 0
-            run(f"{sname}: positioning, random", fuzz + marked, pos)
+            run(f"{sname}: positioning, random", fuzz + marked + transitions, pos)
             if skipped_marks:
                 log(f"{sname}: skipped {skipped_marks} improvised positions of marks "
                     "the base font has no anchor for")

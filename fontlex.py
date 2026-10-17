@@ -23,7 +23,13 @@ where each state has a token type, plus optional word lists.
    runs the automaton. Rules whose result equals the start-state transition
    are dropped, because the final no-context rules already produce it.
 
-3. The word lookup. A second contextual lookup recolors maximal runs of glyphs
+3. The lookahead lookup (optional). A state can ask to be drawn as another
+   state when the next glyph lands in a given state, e.g. the first '/' of
+   '//' is drawn as a comment once the second '/' shows it opened one. Each
+   lookup runs over the whole line before the next starts, so this can't
+   disturb the lexer's state chain.
+
+   The word lookup. Another contextual lookup recolors maximal runs of glyphs
    in the word state (identifiers) that spell a listed word, using one glyph
    of lookahead to rule out longer identifiers.
 
@@ -165,8 +171,14 @@ def _validate(spec: Spec) -> None:
         raise SpecError(f"start state {spec.start!r} is not defined")
     for s, st in spec.states.items():
         for key in st:
-            if key not in {"on", "default", "like", "token"}:
+            if key not in {"on", "default", "like", "token", "lookahead"}:
                 raise SpecError(f"state {s!r}: unknown key {key!r}")
+        la = st.get("lookahead") or {}
+        if not isinstance(la, dict):
+            raise SpecError(f"state {s!r}: lookahead must map next states to states")
+        for nxt, t in la.items():
+            if nxt not in spec.states or t not in spec.states:
+                raise SpecError(f"state {s!r}: lookahead {nxt!r}: {t!r} must name two states")
         for k, t in (st.get("on") or {}).items():
             if k not in names:
                 raise SpecError(f"state {s!r}: unknown class {k!r}")
@@ -207,9 +219,11 @@ class Model:
             if g != ".notdef" and g not in self.glyph_class:
                 self.glyph_class[g] = OTHER
         self.delta = spec.table()
+        self.lookahead = {s: st["lookahead"] for s, st in spec.states.items() if st.get("lookahead")}
 
     def lex(self, text: str) -> list[tuple[str | None, str | None]]:
-        """Per character: (DFA state or None for unknown chars, word set)."""
+        """Per character: (state it is drawn in, or None for unknown chars;
+        word set)."""
         states: list[str | None] = []
         prev: str | None = None
         for ch in text:
@@ -221,6 +235,15 @@ class Model:
             cur = self.delta[prev if prev is not None else self.spec.start][self.glyph_class[g]]
             states.append(cur)
             prev = cur
+        # Lookahead looks at the next glyph's state before any lookahead
+        # applies, because the font's lookahead pass reads ahead of itself.
+        if self.lookahead:
+            drawn = list(states)
+            for i in range(len(states) - 1):
+                la = self.lookahead.get(states[i])  # type: ignore[arg-type]
+                if la and states[i + 1] in la:
+                    drawn[i] = la[states[i + 1]]
+            states = drawn
         sets: list[str | None] = [None] * len(text)
         ws = self.spec.word_state
         lookup = {}
@@ -285,6 +308,11 @@ def compile_font(spec: Spec, base_path: str | Path) -> Result:
     for s in spec.states:
         for k in spec.class_names:
             entering[delta[s][k]].add(k)
+    # A glyph that lookahead redraws as state t needs a variant for t too.
+    lookahead = {s: st["lookahead"] for s, st in spec.states.items() if st.get("lookahead")}
+    for s, la in lookahead.items():
+        for t in la.values():
+            entering[t] |= entering[s]
 
     # 1. Variant glyphs, grouped by state so each state's glyph set is one
     #    contiguous run of glyph IDs (keeps coverage tables tiny).
@@ -359,10 +387,12 @@ def compile_font(spec: Spec, base_path: str | Path) -> Result:
     for k in spec.class_names:
         if by_class[k]:
             fea.append(f"@C_{k} = [{_fea_glyphs(by_class[k])}];")
+    groups = set()     # states with a non-empty @S_ group
     for s in spec.states:
         members = base_glyphs if s == spec.start else [v for (st, _), v in variant.items() if st == s]
         if members:
             fea.append(f"@S_{s} = [{_fea_glyphs(members)}];")
+            groups.add(s)
     fea.append("")
 
     for s in spec.states:
@@ -372,6 +402,21 @@ def compile_font(spec: Spec, base_path: str | Path) -> Result:
         fea.append(f"lookup TO_{s} {{")
         fea.append(f"  sub [{_fea_glyphs(p[0] for p in pairs)}] by [{_fea_glyphs(p[1] for p in pairs)}];")
         fea.append(f"}} TO_{s};")
+    def glyph_in(state, g):
+        return g if state == spec.start else variant.get((state, g))
+
+    la_rules = []
+    for s, la in lookahead.items():
+        for t in sorted(set(la.values()) - {s}):
+            pairs = [(glyph_in(s, g), glyph_in(t, g)) for g in base_glyphs if glyph_in(s, g)]
+            if not pairs:
+                continue
+            fea.append(f"lookup LA_{s}_{t} {{")
+            fea.append(f"  sub [{_fea_glyphs(p[0] for p in pairs)}] by [{_fea_glyphs(p[1] for p in pairs)}];")
+            fea.append(f"}} LA_{s}_{t};")
+        for nxt, t in la.items():
+            if t != s and s in groups and nxt in groups:
+                la_rules.append(f"  sub @S_{s}' lookup LA_{s}_{t} @S_{nxt};")
     for sname, pairs in word_glyph_sets.items():
         if not pairs:
             continue
@@ -408,6 +453,11 @@ def compile_font(spec: Spec, base_path: str | Path) -> Result:
     fea.append("} LEX;")
 
     features = ["LEX"]
+    if la_rules:
+        fea.append("lookup LOOKAHEAD {")
+        fea += la_rules
+        fea.append("} LOOKAHEAD;")
+        features.append("LOOKAHEAD")
     if usable_words:
         word_like = [variant[(spec.word_state, g)] for g in base_glyphs
                      if (spec.word_state, g) in variant]
@@ -467,6 +517,7 @@ def compile_font(spec: Spec, base_path: str | Path) -> Result:
         "total_glyphs": len(font.getGlyphOrder()),
         "lex_rules": rules,
         "lex_rules_dropped": dropped,
+        "lookahead_rules": len(la_rules),
         "words": len(usable_words),
         "skipped_words": skipped_words,
         "tokens": colored_tokens,

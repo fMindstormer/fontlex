@@ -1,0 +1,106 @@
+# Fontlex spec: a small JavaScript highlighter, compiled into a font.
+#
+# Same model as python.yaml: a DFA over character classes, where every
+# character takes the color of the state it moves the automaton into, plus
+# word lists recolored as a whole.
+
+name: Fontlex JavaScript
+
+classes:
+  letter: "a-zA-Z_$"
+  digit: "0-9"
+  dot: "."
+  dq: '"'
+  sq: "'"
+  bt: "`"
+  backslash: "\\"
+  slash: "/"
+  star: "*"
+
+start: code
+
+states:
+  code:
+    default: code
+    on: {letter: ident, digit: number, dq: dq, sq: sq, bt: tpl, slash: slash}
+
+  ident:
+    on: {letter: ident, digit: ident}
+    like: code
+
+  number:
+    token: number
+    on: {digit: number, letter: number, dot: number}
+    like: code
+
+  # A '/' in code: division, or the start of a comment. The DFA only knows
+  # once it reads the next character, so `lookahead` redraws this '/' as a
+  # comment when the next character turns out to be in one.
+  slash:
+    on: {slash: line_comment, star: block}
+    like: code
+    lookahead: {line_comment: line_comment, block: block}
+
+  line_comment: {token: comment, default: line_comment}
+
+  block:
+    token: comment
+    on: {star: block_star}
+    default: block
+  block_star:
+    token: comment
+    on: {star: block_star, slash: block_end}
+    default: block
+  block_end: {token: comment, like: code}
+
+  dq:
+    token: string
+    on: {dq: dq_end, backslash: dq_esc}
+    default: dq
+  dq_esc: {token: string, default: dq}
+  dq_end: {token: string, like: code}
+
+  sq:
+    token: string
+    on: {sq: sq_end, backslash: sq_esc}
+    default: sq
+  sq_esc: {token: string, default: sq}
+  sq_end: {token: string, like: code}
+
+  # Template literals, without ${} interpolation: a DFA can't track the
+  # nesting, so an interpolated expression is colored as string.
+  tpl:
+    token: string
+    on: {bt: tpl_end, backslash: tpl_esc}
+    default: tpl
+  tpl_esc: {token: string, default: tpl}
+  tpl_end: {token: string, like: code}
+
+words:
+  state: ident
+  sets:
+    keyword: [async, await, break, case, catch, class, const, continue, debugger,
+              default, delete, do, else, export, extends, finally, for, from,
+              function, if, import, in, instanceof, let, new, of, return,
+              static, super, switch, this, throw, try, typeof, var, void,
+              while, with, yield]
+    constant: ["true", "false", "null", undefined, NaN, Infinity]
+    builtin: [console, Math, JSON, Object, Array, String, Number, Boolean,
+              Promise, Map, Set, Symbol, Error, Date, RegExp, parseInt,
+              parseFloat, document, window, globalThis, require, module]
+
+themes:
+  dark:
+    keyword: "#C792EA"
+    constant: "#F78C6C"
+    builtin: "#82AAFF"
+    string: "#C3E88D"
+    number: "#F78C6C"
+    comment: "#7A8296"
+  light:
+    keyword: "#8E3FB8"
+    constant: "#B5521B"
+    builtin: "#2F5FBF"
+    string: "#3E7D1A"
+    number: "#B5521B"
+    comment: "#7C8290"

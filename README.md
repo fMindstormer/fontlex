@@ -31,13 +31,17 @@ textarea { font-family: "Fontlex Python", monospace; font-palette: light; }
 
 ## The spec
 
-`specs/python.yaml` is a commented example. A spec has:
+`specs/python.yaml` and `specs/javascript.yaml` are commented examples. A
+spec has:
 
 - `classes`: named character classes (`"a-zA-Z_"`). Every other character in
   the base font falls into the implicit class `other`.
 - `states`: a DFA. Each state has an optional `token`, an `on` map from class to
   next state, and either `default` (target for unlisted classes) or `like`
-  (behave as another state for unlisted classes).
+  (behave as another state for unlisted classes). An optional `lookahead`
+  maps a next state to a state to draw this glyph in instead: in
+  `javascript.yaml`, a `/` is redrawn as a comment once the next character
+  shows it opened `//` or `/*`.
 - `words`: word lists recolored when a whole run of glyphs in `words.state`
   spells one of them.
 - `themes`: token colors. Each theme becomes a CPAL palette; themes named
@@ -54,8 +58,12 @@ textarea { font-family: "Fontlex Python", monospace; font-palette: light; }
    table cell becomes `sub @S_<state> @C_<class>' lookup TO_<next>;`. Cells
    that agree with the start state's row are dropped, since the final
    no-context rules produce the same result.
-3. **Word lookup.** Recolors maximal identifier runs that spell a listed word.
-   Longest words first; one glyph of lookahead rejects longer identifiers.
+3. **Lookahead and word lookups.** If the spec uses `lookahead`, one more
+   contextual lookup redraws a glyph based on the state of the glyph after it.
+   GSUB applies each lookup to the whole run before the next, so this can't
+   disturb the lexer. Then the word lookup recolors maximal identifier runs
+   that spell a listed word: longest words first, with one glyph of lookahead
+   to reject longer identifiers.
 4. **Color.** COLR v0 paints each colored variant with the original outline in
    a palette color.
 5. **Positioning.** The base font's GPOS and GDEF are kept, and every variant
@@ -66,23 +74,30 @@ textarea { font-family: "Fontlex Python", monospace; font-palette: light; }
 
 ## Testing
 
-`test_fontlex.py` shapes hand-written and random strings and compares each
-output glyph's state against `Model.lex`, a direct simulation of the spec.
+`test_fontlex.py` shapes hand-written strings, random strings and transition
+cases, and compares each output glyph's state against `Model.lex`, a direct
+simulation of the spec. Transition cases exercise every transition of the DFA:
+for each state and class, the shortest text that reaches the state, then a
+character of the class, then a random tail. Random text alone rarely reaches
+states that take several characters, such as the end of `/* */`.
 With `--base`, it also checks that every glyph is positioned exactly as the
 base font positions the same glyph, over the same strings plus random strings
 full of combining marks. `--shaper` picks HarfBuzz (Chrome, Firefox, Android)
 or Core Text (Safari, native Mac apps); repeat it to run both.
 
-With JetBrains Mono, both shapers pass 22/22 hand cases, 20,000/20,000 random
-cases and 40,000/40,000 positioning cases. Core Text improvises positions for
-marks the base font has no anchor for, and does so only for unsubstituted
-glyphs, so the Core Text check skips those marks and reports how many.
+With JetBrains Mono, both shapers pass everything for both specs: 26/26 hand
+cases, 20,000/20,000 random cases, every transition case (1,980 for Python,
+3,400 for JavaScript) and every positioning case (41,980 and 43,400). Core Text
+improvises positions for marks the base font has no anchor for, and does so
+only for unsubstituted glyphs, so the Core Text check skips those marks and
+reports how many.
 
-With HarfBuzz, everything also passes with Arial, Times New Roman Italic,
-STIX Two, SF Pro and Trattatello as base fonts. With Core Text, STIX Two,
-SF Pro and Trattatello pass; Arial and Times fail on mixed-script text (see
-below). The demo page highlights correctly in Safari 27 on macOS 27, checked
-by eye, and was rendered in headless Chromium before the positioning fix.
+With HarfBuzz, both specs also pass everything with Arial, Times New Roman
+Italic, STIX Two, SF Pro and Trattatello as base fonts. With Core Text (Python
+spec), STIX Two, SF Pro and Trattatello pass; Arial and Times fail on mixed-
+script text (see below). The demo page highlights correctly in Safari 27 on
+macOS 27, checked by eye, and was rendered in headless Chromium before the
+positioning fix.
 
 `demo/build_demo.py` runs the HarfBuzz checks on the font it embeds, puts the
 real pass count on the page, and exits with status 1 if any check fails.
@@ -92,9 +107,12 @@ real pass count on the page, and exits with status 1 if any check fails.
 - State lives within one shaping run. Browsers start new runs at line breaks,
   script changes and font fallback, so multi-line constructs and some
   mixed-script strings reset.
-- Colors are decided left to right with one glyph of lookahead for words.
-  Constructs that need more lookahead (`f"` prefixes, `"""` as a unit) need
+- Colors are decided left to right, with one glyph of lookahead for words and
+  for states that declare `lookahead`. Constructs that need more (`f"` string
+  prefixes, `"""` as a unit, JavaScript regex literals versus division) need
   more passes.
+- A DFA can't track nesting, so JavaScript `${}` interpolation is colored as
+  part of the template string.
 - The base font's substitution tables (GSUB, AAT `morx`) are removed, which
   takes its ligatures, `ccmp`, `locl` and stylistic sets with them.
 - Contextual GPOS lookups in format 1 are only partly aliased; the compiler
