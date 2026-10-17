@@ -1,0 +1,26 @@
+# Demo page content for specs/python.yaml.
+file: example.py
+oneliner: 'if total > 10: return "big"  # done'
+sample: |
+  # This box has no highlighter attached.
+  # Every color comes from the font's own substitution rules.
+  import json
+  from dataclasses import dataclass
+  from pathlib import Path
+
+  @dataclass
+  class Point:
+      x: float = 0.0
+      y: float = 0.0
+
+  def load(path, limit=100):
+      """Read up to `limit` points from a JSON file."""
+      data = json.loads(Path(path).read_text())
+      if not isinstance(data, list):
+          raise ValueError("expected a list, got " + str(type(data)))
+      return [Point(**d) for d in data[:limit]]
+
+  for i, p in enumerate(load('points.json')):
+      if p.x is None or p.y < 0:  # skip "bad" rows, don't stop
+          continue
+      print(i, p.x * 2.5e3, 'it\'s fine', 0xFF)

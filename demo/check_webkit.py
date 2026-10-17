@@ -19,17 +19,21 @@ from WebKit import WKSnapshotConfiguration, WKWebView, WKWebViewConfiguration
 
 THEME = "document.documentElement.dataset.theme = '{}';"
 PALETTE = "const p = document.getElementById('pal'); p.value = '{}'; p.dispatchEvent(new Event('change'));"
-RED_KEYWORDS = ("const k = document.getElementById('c-keyword'); k.value = '#ff0000';"
-                " k.dispatchEvent(new Event('input'));")
+RED_TOKEN = ("const k = document.getElementById('c-{}'); k.value = '#ff0000';"
+             " k.dispatchEvent(new Event('input'));")
 
-# (name, script, theme whose colors should dominate, expect pure-red keywords)
-SCENARIOS = [
-    ("light", THEME.format("light"), "light", False),
-    ("dark", THEME.format("dark"), "dark", False),
-    ("dark-page-light-palette", THEME.format("dark") + PALETTE.format("light"), "light", False),
-    ("light-page-dark-palette", THEME.format("light") + PALETTE.format("dark"), "dark", False),
-    ("custom-red-keywords", THEME.format("light") + PALETTE.format("custom") + RED_KEYWORDS, None, True),
-]
+
+
+def scenarios(token):
+    """(name, script, theme whose colors should dominate, expect pure red)."""
+    return [
+        ("light", THEME.format("light"), "light", False),
+        ("dark", THEME.format("dark"), "dark", False),
+        ("dark-page-light-palette", THEME.format("dark") + PALETTE.format("light"), "light", False),
+        ("light-page-dark-palette", THEME.format("light") + PALETTE.format("dark"), "dark", False),
+        (f"custom-red-{token}", THEME.format("light") + PALETTE.format("custom") + RED_TOKEN.format(token),
+         None, True),
+    ]
 
 # A hidden window doesn't run CSS transitions and repaints lazily, so a color
 # change can be captured half-applied. Turn transitions off and force the
@@ -106,7 +110,7 @@ def main():
     themes = yaml.safe_load(Path(args.spec).read_text())["themes"]
     page = Page(Path(args.page))
     failed = 0
-    for name, script, want, red in SCENARIOS:
+    for name, script, want, red in scenarios(next(iter(next(iter(themes.values()))))):
         page.run(SETTLE + "(() => {" + script + "})();" + RELAYOUT + "1")
         page.spin(0.5)
         rep = page.snapshot_code()

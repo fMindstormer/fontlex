@@ -2,6 +2,10 @@
 """Build the self-contained demo page from a spec and its compiled font.
 
     python demo/build_demo.py specs/python.yaml --base Font.ttf --out demo/fontlex-demo.html
+
+The page's sample code comes from demo/samples/<spec name>.yaml (`file`,
+`sample`, `oneliner`); everything else comes from the spec and the compiled
+font. Compiler options (--unicodes, --unify-scripts) are passed through.
 """
 
 import argparse
@@ -12,34 +16,55 @@ import json
 import sys
 from pathlib import Path
 
+import yaml
+from fontTools import subset
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-from fontlex import compile_font, load_spec  # noqa: E402
+from fontlex import SUFFIX, compile_font, load_spec  # noqa: E402
 from test_fontlex import verify  # noqa: E402
 
-SAMPLE = '''# This box has no highlighter attached.
-# Every color comes from the font's own substitution rules.
-import json
-from dataclasses import dataclass
-from pathlib import Path
 
-@dataclass
-class Point:
-    x: float = 0.0
-    y: float = 0.0
+def fea_excerpts(spec, res, cmap):
+    """Real rules from the generated feature file, for the "how" section."""
+    lines = res.fea.splitlines()
+    body = lines[lines.index("lookup LEX {") + 1:lines.index("} LEX;")]
+    # One context rule per source state, for variety, then the fallbacks.
+    context, seen = [], set()
+    for line in body:
+        if line.startswith("  sub @S_"):
+            state = line.split()[1]
+            if state not in seen:
+                seen.add(state)
+                context.append(line)
+    fallbacks = [line for line in body if line.startswith("  sub @C_")]
+    lex = ("lookup LEX {\n  …\n" + "\n".join(context[:5]) + "\n  …\n  # fallbacks: the start state's row\n"
+           + "\n".join(fallbacks[:3]) + "\n  …\n} LEX;")
 
-def load(path, limit=100):
-    """Read up to `limit` points from a JSON file."""
-    data = json.loads(Path(path).read_text())
-    if not isinstance(data, list):
-        raise ValueError("expected a list, got " + str(type(data)))
-    return [Point(**d) for d in data[:limit]]
+    if "lookup WORDS {" not in lines:
+        return lex, None, None
+    usable = {}
+    for sname, words in spec.word_sets:
+        for w in words:
+            if w not in res.stats["skipped_words"]:
+                usable.setdefault(w, sname)
 
-for i, p in enumerate(load('points.json')):
-    if p.x is None or p.y < 0:  # skip "bad" rows, don't stop
-        continue
-    print(i, p.x * 2.5e3, 'it\\'s fine', 0xFF)
-'''
+    def word_lines(word):
+        seq = [f"\\{cmap[ord(c)]}{SUFFIX}{spec.word_state}'" for c in word]
+        ign = f"  ignore sub {' '.join(seq)} @WORDLIKE;"
+        sub = "  sub " + " ".join(f"{g} lookup W_{usable[word]}" for g in seq) + ";"
+        assert ign in lines and sub in lines, word
+        return [ign, sub]
+
+    # A short word that starts a longer one shows why longer words go first.
+    pairs = [(long, short) for long in usable for short in usable
+             if long != short and long.startswith(short)]
+    long, short = max(pairs, key=lambda p: (len(p[0]), p)) if pairs else (max(usable, key=len), None)
+    start = lines.index("lookup WORDS {")
+    shown = [lines[start], lines[start + 1], "  …"] + word_lines(long) + ["  …"]
+    if short:
+        shown += word_lines(short)
+    return lex, "\n".join(shown + ["} WORDS;"]), (long, short)
 
 
 def main():
@@ -47,21 +72,28 @@ def main():
     ap.add_argument("spec")
     ap.add_argument("--base", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--sample", help="page content (default: demo/samples/<spec name>.yaml)")
     ap.add_argument("--fuzz", type=int, default=20000, help="number of random cases to verify")
+    ap.add_argument("--unicodes", help="passed to the compiler")
+    ap.add_argument("--unify-scripts", action="store_true", help="passed to the compiler")
     args = ap.parse_args()
 
     spec = load_spec(args.spec)
-    res = compile_font(spec, args.base)
+    content = yaml.safe_load(Path(args.sample or ROOT / "demo" / "samples" / f"{Path(args.spec).stem}.yaml")
+                             .read_text())
+    unicodes = subset.parse_unicodes(args.unicodes) if args.unicodes else None
+    res = compile_font(spec, args.base, unify_scripts=args.unify_scripts, unicodes=unicodes)
     buf = io.BytesIO()
     res.font.save(buf)
     # The page reports these numbers, so they come from checking this font.
-    checks = verify(spec, buf.getvalue(), args.base, n=args.fuzz)
+    checks = verify(spec, buf.getvalue(), args.base, n=args.fuzz, unify_scripts=args.unify_scripts)
     fuzz_pass, fuzz_total = checks["harfbuzz: random cases"]
     res.font.flavor = "woff2"
     buf = io.BytesIO()
     res.font.save(buf)
     woff2 = buf.getvalue()
 
+    theme_names = [t for t, _ in spec.themes]
     themes = dict(spec.themes)
     light, dark = themes.get("light", {}), themes.get("dark", {})
     toks = res.stats["tokens"]
@@ -88,47 +120,36 @@ def main():
         rows.append(f"<tr{' class=\"start\"' if s == spec.start else ''}><th>{html.escape(label)}</th>{''.join(cells)}</tr>")
     table = f"<table><thead>{head}</thead><tbody>{''.join(rows)}</tbody></table>"
 
-    # Real excerpts from the generated feature file.
-    lines = res.fea.splitlines()
-    lex_start = lines.index("lookup LEX {")
-    lex_end = lines.index("} LEX;")
-    lex_body = lines[lex_start + 1:lex_end]
-    wanted = [
-        "  sub @S_ident @C_digit' lookup TO_ident;",
-        "  sub @S_dq @C_dq' lookup TO_dq_end;",
-        "  sub @S_dq @C_backslash' lookup TO_dq_esc;",
-        "  sub @S_dq_esc @C_backslash' lookup TO_dq;",
-        "  sub @S_comment @C_dq' lookup TO_comment;",
-        "  sub @C_digit' lookup TO_number;",
-        "  sub @C_dq' lookup TO_dq;",
-        "  sub @C_hash' lookup TO_comment;",
-    ]
-    pick = [l for l in wanted if l in lex_body]
-    assert len(pick) == len(wanted), set(wanted) - set(lex_body)
-    fea_lex = "lookup LEX {\n  …\n" + "\n".join(pick[:5]) + "\n  …\n  # fallbacks: the start state's row\n" + "\n".join(pick[5:]) + "\n  …\n} LEX;"
-
-    def word_lines(word, sname):
-        seq = [f"\\{c}.lx_ident'" for c in word]
-        ign = f"  ignore sub {' '.join(seq)} @WORDLIKE;"
-        sub = "  sub " + " ".join(f"{g} lookup W_{sname}" for g in seq) + ";"
-        assert ign in lines and sub in lines, word
-        return [ign, sub]
-
-    w_start = lines.index("lookup WORDS {")
-    fea_words = "\n".join(["lookup WORDS {", lines[w_start + 1], "  …"]
-                          + word_lines("isinstance", "builtin") + ["  …"]
-                          + word_lines("is", "keyword") + ["} WORDS;"])
+    cmap = res.font.getBestCmap()
+    fea_lex, fea_words, word_pair = fea_excerpts(spec, res, cmap)
+    if word_pair and word_pair[1]:
+        long, short = (html.escape(w) for w in word_pair)
+        words_note = (f"Longer words go first, so <code>{long}</code> isn't read as <code>{short}</code>, "
+                      "and one glyph of lookahead stops a word from matching inside a longer identifier:")
+    else:
+        words_note = "One glyph of lookahead stops a word from matching inside a longer identifier:"
+    # A colored copy of a non-letter glyph, to name in the text.
+    example = next(name for name, info in res.glyphmap.items()
+                   if not info["set"] and spec.token(info["state"]) in toks and len(info["base"]) > 1)
 
     legend = " ".join(f'<span style="--c: var(--t-{t})">{t}</span>' for t in toks)
-    tokens_json = json.dumps([{"name": t, "light": light.get(t, "#888888"), "dark": dark.get(t, "#888888")} for t in toks])
+    tokens_json = json.dumps([{"name": t, "light": light.get(t, "#888888"), "dark": dark.get(t, "#888888")}
+                              for t in toks])
+    lang = spec.name.removeprefix("Fontlex ").strip() or spec.name
 
     st = res.stats
     page = (ROOT / "demo" / "template.html").read_text()
     repl = {
         "{{FONT_B64}}": base64.b64encode(woff2).decode(),
+        "{{FAMILY}}": html.escape(spec.name),
+        "{{LANG}}": html.escape(lang),
+        "{{FILE}}": html.escape(content["file"]),
+        "{{ONELINER}}": html.escape(content["oneliner"]),
+        "{{PALETTE_LIGHT}}": str(theme_names.index("light") if "light" in theme_names else 0),
+        "{{PALETTE_DARK}}": str(theme_names.index("dark") if "dark" in theme_names else 0),
         "{{TOKENS_LIGHT}}": tok_css(light),
         "{{TOKENS_DARK}}": tok_css(dark),
-        "{{SAMPLE}}": html.escape(SAMPLE),
+        "{{SAMPLE}}": html.escape(content["sample"]),
         "{{LEGEND}}": legend,
         "{{N_STATES}}": str(st["states"]),
         "{{N_CLASSES}}": str(st["classes"]),
@@ -140,8 +161,10 @@ def main():
         "{{N_FUZZ}}": f"{fuzz_total:,}",
         "{{N_FUZZ_PASS}}": f"{fuzz_pass:,}",
         "{{TABLE}}": table,
+        "{{VARIANT_EXAMPLE}}": html.escape(example),
         "{{FEA_LEX}}": html.escape(fea_lex),
-        "{{FEA_WORDS}}": html.escape(fea_words),
+        "{{WORDS_NOTE}}": words_note,
+        "{{FEA_WORDS}}": html.escape(fea_words or ""),
         "{{TOKENS_JSON}}": tokens_json,
     }
     for k, v in repl.items():

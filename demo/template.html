@@ -7,7 +7,7 @@
 /* Layout: one 900px column; the live editor opens the page, then the compiled
    automaton as a table, then the generated rules and the limits. */
 @font-face {
-  font-family: "Fontlex Python";
+  font-family: "{{FAMILY}}";
   src: url(data:font/woff2;base64,{{FONT_B64}}) format("woff2");
   font-display: block;
 }
@@ -23,7 +23,7 @@
   --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
   --body: "Public Sans", "Segoe UI", system-ui, sans-serif;
   --code: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  --lex: "Fontlex Python", ui-monospace, Menlo, monospace;
+  --lex: "{{FAMILY}}", ui-monospace, Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -115,13 +115,13 @@ ul.limits { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.5rem; max-wid
   <header>
     <div class="eyebrow">Prototype · lexer-to-font compiler</div>
     <h1>Fontlex</h1>
-    <p class="lede">The box below is a plain <code>&lt;textarea&gt;</code> with no highlighting code attached. <b>The colors come from the font.</b> Fontlex compiled a small Python lexer into OpenType substitution rules, so the browser's text shaper runs the lexer every time it draws a line.</p>
+    <p class="lede">The box below is a plain <code>&lt;textarea&gt;</code> with no highlighting code attached. <b>The colors come from the font.</b> Fontlex compiled a small {{LANG}} lexer into OpenType substitution rules, so the browser's text shaper runs the lexer every time it draws a line.</p>
   </header>
 
   <section aria-label="Live demo">
     <div class="editor" id="editor">
       <div class="bar">
-        <span class="tag">example.py</span>
+        <span class="tag">{{FILE}}</span>
         <span class="spacer"></span>
         <label for="hl"><input type="checkbox" id="hl" checked> Font lexer on</label>
         <label for="pal">Palette
@@ -134,10 +134,10 @@ ul.limits { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.5rem; max-wid
         </label>
       </div>
       <div class="custom" id="custom" hidden></div>
-      <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Python code, highlighted by the font">{{SAMPLE}}</textarea>
+      <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="{{LANG}} code, highlighted by the font">{{SAMPLE}}</textarea>
       <div class="oneliner">
         <label for="one">Same font in a one-line input</label>
-        <input id="one" type="text" spellcheck="false" value="if total > 10: return &quot;big&quot;  # done">
+        <input id="one" type="text" spellcheck="false" value="{{ONELINER}}">
       </div>
     </div>
     <div class="legend" aria-label="Token colors">{{LEGEND}}</div>
@@ -168,14 +168,14 @@ ul.limits { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.5rem; max-wid
     <h2 id="h-how">How a font can run a lexer</h2>
     <div class="steps">
       <div class="step"><b>1</b><div>
-        <p>Every character gets a copy of its glyph for each state it can be in, named like <code>quotedbl.lx_dq_end</code>. Copies are composites that point at the original outline, so they cost a few bytes each.</p>
+        <p>Every character gets a copy of its glyph for each state it can be in, named like <code>{{VARIANT_EXAMPLE}}</code>. Copies are composites that point at the original outline, so they cost a few bytes each.</p>
       </div></div>
       <div class="step"><b>2</b><div>
         <p>A chaining contextual lookup walks the text left to right. Its backtrack context sees glyphs it already replaced, so the previous glyph's copy carries the automaton's state forward. One rule per table cell:</p>
         <pre>{{FEA_LEX}}</pre>
       </div></div>
       <div class="step"><b>3</b><div>
-        <p>A second lookup recolors whole identifiers that spell a keyword. Longer words go first, and one glyph of lookahead stops <code>is</code> from matching inside <code>island</code>:</p>
+        <p>A second lookup recolors whole identifiers that spell a keyword. {{WORDS_NOTE}}</p>
         <pre>{{FEA_WORDS}}</pre>
       </div></div>
       <div class="step"><b>4</b><div>
@@ -187,10 +187,10 @@ ul.limits { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.5rem; max-wid
   <section aria-labelledby="h-limits">
     <h2 id="h-limits">Limits of this prototype</h2>
     <ul class="limits">
-      <li>State lives only within one shaping run. Browsers start a new run at each line, at a change of script (Cyrillic inside a string, for example) and wherever a fallback font takes over, so multi-line strings and some mixed-script strings lose their state.</li>
-      <li>Coloring is decided as each character is read, with one glyph of lookahead for words. Anything that needs longer lookahead, such as a prefix like <code>f"</code>, needs another pass.</li>
-      <li>Tested in HarfBuzz and Chromium. Safari draws with Core Text, which I have not checked.</li>
-      <li>The base font's own ligatures are removed, because they would replace glyphs the lexer needs to see.</li>
+      <li>State lives only within one shaping run. Browsers start a new run at each line and wherever a fallback font takes over, so multi-line strings and comments lose their state. With some base fonts, Safari also starts one at a change of script; the compiler warns about those and can merge their scripts.</li>
+      <li>Coloring is decided as each character is read, with one glyph of lookahead for words and for states that ask for it. Anything that needs more context needs another pass, and a finite automaton can't track nesting.</li>
+      <li>Tested with HarfBuzz (Chrome, Firefox, Android) and Core Text (Safari, native Mac apps), shaping every case through both and comparing each glyph with a reference lexer.</li>
+      <li>The base font's own ligatures and alternates are removed, because they would replace glyphs the lexer needs to see. Its kerning and mark positioning are kept.</li>
     </ul>
   </section>
 </main>
@@ -231,7 +231,7 @@ ul.limits { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.5rem; max-wid
     if (pal.value === 'light' || pal.value === 'dark') value = pal.value;
     if (pal.value === 'custom') {
       const colors = tokens.map((t, i) => i + ' ' + document.getElementById('c-' + t.name).value).join(', ');
-      rule = '@font-palette-values --fontlex-custom { font-family: "Fontlex Python"; base-palette: ' + (isDark() ? 0 : 1) + '; override-colors: ' + colors + '; }';
+      rule = '@font-palette-values --fontlex-custom { font-family: "{{FAMILY}}"; base-palette: ' + (isDark() ? {{PALETTE_DARK}} : {{PALETTE_LIGHT}}) + '; override-colors: ' + colors + '; }';
       value = '--fontlex-custom';
     }
     // As specific as the stylesheet's textarea#code rule, and later, so it wins.
