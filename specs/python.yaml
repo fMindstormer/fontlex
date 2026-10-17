@@ -88,3 +88,16 @@ themes:
     number: "#B5521B"
     comment: "#7C8290"
     decorator: "#9A6A00"
+
+# Lines with the token expected for each character ('.' = uncolored),
+# checked by the tests against the lexer this spec defines.
+examples:
+  legend: {".": null, n: number, s: string, c: comment, d: decorator, k: keyword, b: builtin}
+  cases:
+    - ['def f(x): return x + 1', 'kkk.......kkkkkk.....n']
+    - ['island is is_ok isinstance', '.......kk.......bbbbbbbbbb']
+    - ['s = "a # b" # c "d"', '....sssssss.ccccccc']
+    - ['t = ''it\''s'' + 2', '....sssssss...n']
+    - ['@app.route("/")', 'dddddddddd.sss.']
+    - ['x1 = 0x1F + 3.14', '.....nnnn...nnnn']
+    - ['print(len(None))', 'bbbbb.bbb.kkkk..']

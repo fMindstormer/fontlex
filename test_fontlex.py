@@ -110,6 +110,7 @@ def anchored_pairs(tt: TTFont) -> set[tuple[str, str]]:
 class HarfBuzz:
     name = "harfbuzz"
     improvises_marks = False
+    falls_back_clusters = False
 
     def __init__(self, data: bytes, variations: dict[str, float] | None = None):
         self.font = hb.Font(hb.Face(hb.Blob(data)))
@@ -134,8 +135,11 @@ class HarfBuzz:
 class CoreText:
     name = "coretext"
     improvises_marks = True
+    # A character followed by a mark the font lacks is drawn, with the mark,
+    # from a fallback font.
+    falls_back_clusters = True
 
-    def __init__(self, data: bytes):
+    def __init__(self, data: bytes, variations: dict[str, float] | None = None):
         try:
             import CoreText as CT
             from Foundation import NSAttributedString, NSData
@@ -147,6 +151,10 @@ class CoreText:
             sys.exit("Core Text could not load the font")
         # Size the font at one unit per em so positions come out in font units.
         upem = TTFont(io.BytesIO(data))["head"].unitsPerEm
+        if variations:
+            # Core Text keys variation axes by the tag read as a 32-bit integer.
+            axes = {int.from_bytes(tag.encode(), "big"): value for tag, value in variations.items()}
+            desc = CT.CTFontDescriptorCreateCopyWithAttributes(desc, {CT.kCTFontVariationAttribute: axes})
         self.font = CT.CTFontCreateWithFontDescriptor(desc, upem, None)
         self.ps_name = CT.CTFontCopyPostScriptName(self.font)
 
@@ -206,6 +214,7 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
         ref_gdef = ref["GDEF"].table if "GDEF" in ref else None
         ref_classes = ref_gdef.GlyphClassDef.classDefs if ref_gdef and ref_gdef.GlyphClassDef else None
     skipped_marks = 0
+    skipped_fallback = 0
 
     def is_mark(text, glyphs, names, i):
         # Like the shapers: GDEF glyph classes if the font has them, else the
@@ -229,8 +238,19 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
     def name_in(names, gid):
         return None if gid is None else names[gid]
 
+    def cluster_fallback(text):
+        """Indices of characters whose cluster has a mark the font lacks."""
+        out = set()
+        for i, ch in enumerate(text):
+            j = i + 1
+            while j < len(text) and unicodedata.category(text[j]).startswith("M"):
+                if ord(text[j]) not in model.cmap:
+                    out.add(i)
+                j += 1
+        return frozenset(out)
+
     def check(shaper, text):
-        expect = model.lex(text)
+        expect = model.lex(text, cluster_fallback(text) if shaper.falls_back_clusters else frozenset())
         glyphs, _ = shaper.shape(text)
         if len(glyphs) != len(text):
             return f"glyph count {len(glyphs)} != {len(text)}"
@@ -252,12 +272,27 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
         return None
 
     def check_positions(shaper, ref_shaper, text):
-        nonlocal skipped_marks
+        nonlocal skipped_marks, skipped_fallback
         (got, got_w), (want, want_w) = shaper.shape(text), ref_shaper.shape(text)
         got_g = [name_in(order, g) for g, *_ in got]
         got_g = [None if g is None else base_name(g) for g in got_g]
         want_g = [name_in(ref_order, g) for g, *_ in want]
         if got_g != want_g:
+            if shaper.falls_back_clusters:
+                # Core Text may fall back differently for a cluster with a
+                # mark the font lacks; then later positions shift by the
+                # fallback font's widths and can't be compared.
+                affected = set()
+                for i in cluster_fallback(text):
+                    affected.add(i)
+                    j = i + 1
+                    while j < len(text) and unicodedata.category(text[j]).startswith("M"):
+                        affected.add(j)
+                        j += 1
+                rest = lambda gl, names: [(names[k], g[1]) for k, g in enumerate(gl) if g[1] not in affected]  # noqa: E731
+                if rest(got, got_g) == rest(want, want_g):
+                    skipped_fallback += 1
+                    return None
             return f"glyphs {got_g} != base font's {want_g}"
         skipped_last = False
         for i, (a, b) in enumerate(zip(got, want)):
@@ -282,7 +317,7 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
             if err:
                 fails += 1
                 if fails <= 10:
-                    log(f"FAIL {t!r}: {err}")
+                    log(f"FAIL {(t[0] if isinstance(t, tuple) else t)!r}: {err}")
         log(f"{label}: {len(texts) - fails}/{len(texts)} pass")
         results[label] = (len(texts) - fails, len(texts))
 
@@ -302,6 +337,19 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
             else:
                 parts.append("".join(rng.choice(alpha) for _ in range(rng.randint(1, 4))))
         return "".join(parts)
+
+    # The spec's own examples: does the lexer color the language as intended?
+    def check_example(case):
+        text, expected = case
+        got = model.tokens(text)
+        if got != expected:
+            i = next(k for k, (a, b) in enumerate(zip(got, expected)) if a != b)
+            return f"char {i} {text[i]!r}: lexes as {got[i]}, example expects {expected[i]}"
+        return None
+
+    if spec.examples:
+        run("spec examples", spec.examples, check_example)
+    hand = HAND_CASES + [text for text, _ in spec.examples]
 
     fuzz = [random_text(alphabet) for _ in range(n)]
     marked = [random_text(alphabet + list("qjxy") + MARKS) for _ in range(n)]
@@ -327,26 +375,29 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
                    for s in path for k in spec.class_names if reps[k] for _ in range(20)]
     for sname in shapers:
         shaper = SHAPERS[sname](font_data)
-        run(f"{sname}: hand-written cases", HAND_CASES, lambda t: check(shaper, t))
+        run(f"{sname}: hand-written cases", hand, lambda t: check(shaper, t))
         run(f"{sname}: random cases", fuzz, lambda t: check(shaper, t))
         run(f"{sname}: transition cases", transitions, lambda t: check(shaper, t))
         if base:
             ref_shaper = SHAPERS[sname](ref_data)
             pos = lambda t: check_positions(shaper, ref_shaper, t)  # noqa: E731
-            run(f"{sname}: positioning, hand-written", HAND_CASES, pos)
-            skipped_marks = 0
+            run(f"{sname}: positioning, hand-written", hand, pos)
+            skipped_marks = skipped_fallback = 0
             run(f"{sname}: positioning, random", fuzz + marked + transitions, pos)
             if skipped_marks:
                 log(f"{sname}: skipped {skipped_marks} improvised positions of marks "
                     "the base font has no anchor for")
+            if skipped_fallback:
+                log(f"{sname}: skipped {skipped_fallback} strings that fall back differently "
+                    "around marks the font lacks")
             # Variable fonts: variants must vary like their base glyphs too.
-            if sname == "harfbuzz" and "fvar" in tt:
+            if "fvar" in tt:
                 sample = (fuzz + marked)[::8]
                 for axis in tt["fvar"].axes:
                     for value in (axis.minValue, axis.maxValue):
                         loc = {axis.axisTag: value}
-                        a, b = HarfBuzz(font_data, loc), HarfBuzz(ref_data, loc)
-                        run(f"harfbuzz: positioning at {axis.axisTag}={value:g}", sample,
+                        a, b = SHAPERS[sname](font_data, loc), SHAPERS[sname](ref_data, loc)
+                        run(f"{sname}: positioning at {axis.axisTag}={value:g}", sample,
                             lambda t, a=a, b=b: check_positions(a, b, t))
     return results
 

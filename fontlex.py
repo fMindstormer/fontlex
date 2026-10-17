@@ -101,6 +101,8 @@ class Spec:
     word_state: str | None = None
     word_sets: list[tuple[str, list[str]]] = field(default_factory=list)
     themes: list[tuple[str, dict[str, str]]] = field(default_factory=list)
+    # Expected tokens per character for sample lines, checked by the tests.
+    examples: list[tuple[str, list[str | None]]] = field(default_factory=list)
 
     # -- derived ---------------------------------------------------------
     @property
@@ -162,6 +164,7 @@ def load_spec(path: str | Path) -> Spec:
         word_state=words.get("state"),
         word_sets=word_sets,
         themes=themes,
+        examples=_load_examples(raw.get("examples")),
     )
     _validate(spec)
     return spec
@@ -198,6 +201,32 @@ def _validate(spec: Spec) -> None:
     for s in spec.states:
         if not re.fullmatch(r"[A-Za-z0-9_]+", s):
             raise SpecError(f"state name {s!r} must be [A-Za-z0-9_]+")
+    tokens = {spec.token(s) for s in spec.states} | {n for n, _ in spec.word_sets}
+    for text, expected in spec.examples:
+        unknown = set(expected) - tokens
+        if unknown:
+            raise SpecError(f"example {text!r}: unknown tokens {sorted(map(str, unknown))}")
+
+
+def _load_examples(raw) -> list[tuple[str, list[str | None]]]:
+    """`examples: {legend: {code: token}, cases: [[text, codes], ...]}`, where
+    `codes` has one legend character per character of `text`. A legend
+    entry with no token (null) marks uncolored characters."""
+    if not raw:
+        return []
+    legend = raw.get("legend") or {}
+    out = []
+    for case in raw.get("cases") or []:
+        if not (isinstance(case, list) and len(case) == 2):
+            raise SpecError(f"example {case!r} must be [text, codes]")
+        text, codes = str(case[0]), str(case[1])
+        if len(codes) != len(text):
+            raise SpecError(f"example {text!r}: {len(codes)} codes for {len(text)} characters")
+        bad = set(codes) - set(legend)
+        if bad:
+            raise SpecError(f"example {text!r}: codes {sorted(bad)} not in legend")
+        out.append((text, [legend[c] for c in codes]))
+    return out
 
 
 # --------------------------------------------------------------------------
@@ -223,14 +252,15 @@ class Model:
         self.delta = spec.table()
         self.lookahead = {s: st["lookahead"] for s, st in spec.states.items() if st.get("lookahead")}
 
-    def lex(self, text: str) -> list[tuple[str | None, str | None]]:
+    def lex(self, text: str, missing: frozenset[int] = frozenset()) -> list[tuple[str | None, str | None]]:
         """Per character: (state it is drawn in, or None for unknown chars;
-        word set)."""
+        word set). `missing` lists more indices to treat as not in the font,
+        e.g. ones the shaper draws from a fallback font anyway."""
         states: list[str | None] = []
         prev: str | None = None
-        for ch in text:
+        for i, ch in enumerate(text):
             g = self.cmap.get(ord(ch))
-            if g is None or g not in self.glyph_class:
+            if g is None or g not in self.glyph_class or i in missing:
                 states.append(None)
                 prev = None
                 continue
@@ -266,6 +296,11 @@ class Model:
             else:
                 i += 1
         return list(zip(states, sets))
+
+    def tokens(self, text: str) -> list[str | None]:
+        """Per character, the token it is colored as: its word set if it is
+        part of a listed word, else its state's token."""
+        return [ws or (self.spec.token(st) if st else None) for st, ws in self.lex(text)]
 
 
 # --------------------------------------------------------------------------
@@ -373,7 +408,7 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
     alias: dict[str, list[str]] = {}
     for name, base in new_glyphs:
         alias.setdefault(base, []).append(name)
-    layout_notes = _alias_layout(font, alias)
+    layout_notes = _alias_layout(font, alias) + _alias_kern(font, alias)
     if unify_scripts:
         layout_notes += _unify_gpos_scripts(font)
     elif _splits_script_runs(font):
@@ -597,6 +632,39 @@ def _add_glyphs(font: TTFont, new_glyphs: list[tuple[str, str]]) -> None:
         font["post"].formatType = 2.0
         if not hasattr(font["post"], "mapping"):   # absent after subsetting
             font["post"].mapping = {}
+
+
+def _alias_kern(font: TTFont, alias: dict[str, list[str]]) -> list[str]:
+    """Give the legacy `kern` table a pair for every variant of each kerned pair.
+
+    Shapers fall back to `kern` when GPOS has no kerning (HarfBuzz) or the
+    font has no GPOS. A format 0 subtable's 16-bit length caps it at 10,920
+    pairs, so the expanded pairs are split across subtables; shapers apply
+    every subtable, and each pair appears in only one.
+    """
+    if "kern" not in font:
+        return []
+    notes = []
+    max_pairs = (0xFFFF - 14) // 6
+    tables = []
+    for st in font["kern"].kernTables:
+        if getattr(st, "format", None) != 0:
+            notes.append(f"kern subtable format {getattr(st, 'format', '?')} not aliased")
+            tables.append(st)
+            continue
+        pairs = {}
+        for (left, right), value in st.kernTable.items():
+            for l in [left] + alias.get(left, []):
+                for r in [right] + alias.get(right, []):
+                    pairs[(l, r)] = value
+        items = sorted(pairs.items(), key=lambda kv: (font.getGlyphID(kv[0][0]), font.getGlyphID(kv[0][1])))
+        for i in range(0, max(len(items), 1), max_pairs):
+            chunk = copy.copy(st)
+            chunk.kernTable = dict(items[i:i + max_pairs])
+            tables.append(chunk)
+    font["kern"].kernTables = tables
+    font["kern"].nTables = len(tables)
+    return notes
 
 
 def _alias_layout(font: TTFont, alias: dict[str, list[str]]) -> list[str]:

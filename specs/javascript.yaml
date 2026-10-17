@@ -16,30 +16,68 @@ classes:
   backslash: "\\"
   slash: "/"
   star: "*"
+  space: " \t"
+  close: ")"
+  lbracket: "["
+  rbracket: "]"
 
 start: code
 
+# A '/' is division after a value (a name, number, string, regex or closing
+# bracket) and starts a regex literal anywhere else. `code` expects a value;
+# `after` has just seen one. Both stay put across spaces.
 states:
   code:
     default: code
-    on: {letter: ident, digit: number, dq: dq, sq: sq, bt: tpl, slash: slash}
+    on: {letter: ident, digit: number, dq: dq, sq: sq, bt: tpl, slash: re_start,
+         close: after, rbracket: after}
+
+  after:
+    on: {space: after, slash: div}
+    like: code
 
   ident:
-    on: {letter: ident, digit: ident}
+    on: {letter: ident, digit: ident, space: after, slash: div}
     like: code
 
   number:
     token: number
-    on: {digit: number, letter: number, dot: number}
+    on: {digit: number, letter: number, dot: number, space: after, slash: div}
     like: code
 
-  # A '/' in code: division, or the start of a comment. The DFA only knows
-  # once it reads the next character, so `lookahead` redraws this '/' as a
-  # comment when the next character turns out to be in one.
-  slash:
-    on: {slash: line_comment, star: block}
+  # A '/' after a value: division, or the start of a comment. The DFA only
+  # knows once it reads the next character, so `lookahead` redraws this '/'
+  # as a comment when the next character turns out to be in one.
+  div:
+    on: {slash: line_comment, star: vblock}
     like: code
+    lookahead: {line_comment: line_comment, vblock: vblock}
+
+  # A '/' that starts a regex, or a comment.
+  re_start:
+    token: regex
+    on: {slash: line_comment, star: block, backslash: re_esc, lbracket: re_class}
+    default: regex
     lookahead: {line_comment: line_comment, block: block}
+  regex:
+    token: regex
+    on: {slash: re_end, backslash: re_esc, lbracket: re_class}
+    default: regex
+  re_esc: {token: regex, default: regex}
+  # Inside [...], a '/' doesn't end the regex.
+  re_class:
+    token: regex
+    on: {rbracket: regex, backslash: re_class_esc}
+    default: re_class
+  re_class_esc: {token: regex, default: re_class}
+  re_end:
+    token: regex
+    on: {letter: re_flags}
+    like: after
+  re_flags:
+    token: regex
+    on: {letter: re_flags}
+    like: after
 
   line_comment: {token: comment, default: line_comment}
 
@@ -53,19 +91,31 @@ states:
     default: block
   block_end: {token: comment, like: code}
 
+  # The same block comment after a value, so a '/' after it is still
+  # division: a DFA remembers context only by being in a different state.
+  vblock:
+    token: comment
+    on: {star: vblock_star}
+    default: vblock
+  vblock_star:
+    token: comment
+    on: {star: vblock_star, slash: vblock_end}
+    default: vblock
+  vblock_end: {token: comment, like: after}
+
   dq:
     token: string
     on: {dq: dq_end, backslash: dq_esc}
     default: dq
   dq_esc: {token: string, default: dq}
-  dq_end: {token: string, like: code}
+  dq_end: {token: string, like: after}
 
   sq:
     token: string
     on: {sq: sq_end, backslash: sq_esc}
     default: sq
   sq_esc: {token: string, default: sq}
-  sq_end: {token: string, like: code}
+  sq_end: {token: string, like: after}
 
   # Template literals, without ${} interpolation: a DFA can't track the
   # nesting, so an interpolated expression is colored as string.
@@ -74,7 +124,7 @@ states:
     on: {bt: tpl_end, backslash: tpl_esc}
     default: tpl
   tpl_esc: {token: string, default: tpl}
-  tpl_end: {token: string, like: code}
+  tpl_end: {token: string, like: after}
 
 words:
   state: ident
@@ -97,6 +147,7 @@ themes:
     string: "#C3E88D"
     number: "#F78C6C"
     comment: "#7A8296"
+    regex: "#89DDFF"
   light:
     keyword: "#8E3FB8"
     constant: "#B5521B"
@@ -104,3 +155,25 @@ themes:
     string: "#3E7D1A"
     number: "#B5521B"
     comment: "#7C8290"
+    regex: "#0B7A8F"
+
+
+# Lines with the token expected for each character ('.' = uncolored),
+# checked by the tests against the lexer this spec defines.
+examples:
+  legend: {".": null, n: number, s: string, c: comment, r: regex, k: keyword, C: constant, b: builtin}
+  cases:
+    - ['x = a / b / 2', '............n']
+    - ['x = a/b', '.......']
+    - ['f(x) / 2', '.......n']
+    - ['arr[i] / 2', '.........n']
+    - ['s = /ab+c/gi.test(t)', '....rrrrrrrr........']
+    - ['m = s.match(/[/]\d+/)', '............rrrrrrrr.']
+    - ['re = /a\/b/; n = 1', '.....rrrrrr......n']
+    - ['x = y // note', '......ccccccc']
+    - ['x = y /* note */ / 2', '......cccccccccc...n']
+    - ['/* a */ /re/', 'ccccccc.rrrr']
+    - ['"a" / 2', 'sss...n']
+    - ['const t = typeof x', 'kkkkk.....kkkkkk..']
+    - ['if (v === null) return', 'kk........CCCC..kkkkkk']
+    - ['`a ${b} c` / 2', 'ssssssssss...n']
