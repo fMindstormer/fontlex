@@ -5,17 +5,23 @@ Shapes text with HarfBuzz (the shaper Chrome, Firefox and Android use) and
 compares, character by character, the state/word set encoded in each output
 glyph with what the spec's DFA says it should be.
 
-    python test_fontlex.py specs/python.yaml build/Fontlex-Python.ttf [--n 20000]
+With --base, it also checks positioning: the compiled font must place every
+glyph exactly where the base font (minus the tables fontlex drops) places the same base glyph,
+so kerning and mark anchors survive the lexer's substitutions.
+
+    python test_fontlex.py specs/python.yaml build/Fontlex-Python.ttf \
+        [--base fonts/JetBrainsMono-Regular.ttf] [--n 20000]
 """
 
 import argparse
+import io
 import random
 import sys
 
 import uharfbuzz as hb
 from fontTools.ttLib import TTFont
 
-from fontlex import SUFFIX, WORD_SUFFIX, Model, load_spec
+from fontlex import DROPPED_TABLES, SUFFIX, WORD_SUFFIX, Model, load_spec
 
 HAND_CASES = [
     'def f(x): return x + 1',
@@ -38,7 +44,11 @@ HAND_CASES = [
     'a',
     '"',
     '\\',
+    'q\u0301 = "x\u0323" + j\u0308',   # marks with no precomposed glyph
 ]
+
+# Combining marks, and letters that have no precomposed form with them.
+MARKS = ["\u0301", "\u0323", "\u0308", "\u0331"]
 
 
 def glyph_info(name: str, start: str):
@@ -50,10 +60,20 @@ def glyph_info(name: str, start: str):
     return start, None
 
 
+def base_name(name: str) -> str:
+    return name.split(WORD_SUFFIX)[0].split(SUFFIX)[0]
+
+
+def hb_font(data: bytes):
+    return hb.Font(hb.Face(hb.Blob(data)))
+
+
 def shape(hbfont, text):
     buf = hb.Buffer()
     buf.add_str(text)
     buf.guess_segment_properties()
+    # One cluster per character, so a combining mark keeps its own index.
+    buf.cluster_level = hb.BufferClusterLevel.MONOTONE_CHARACTERS
     hb.shape(hbfont, buf, {"calt": True})
     return buf
 
@@ -62,6 +82,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("spec")
     ap.add_argument("font")
+    ap.add_argument("--base", help="base font the spec was compiled from")
     ap.add_argument("--n", type=int, default=20000)
     ap.add_argument("--seed", type=int, default=1)
     args = ap.parse_args()
@@ -70,8 +91,16 @@ def main():
     tt = TTFont(args.font)
     order = tt.getGlyphOrder()
     model = Model(spec, TTFont(args.font).getBestCmap())
-    blob = hb.Blob.from_file_path(args.font)
-    hbfont = hb.Font(hb.Face(blob))
+    hbfont = hb_font(open(args.font, "rb").read())
+    if args.base:
+        ref = TTFont(args.base)
+        for tag in DROPPED_TABLES:
+            if tag in ref:
+                del ref[tag]
+        data = io.BytesIO()
+        ref.save(data)
+        ref_order = ref.getGlyphOrder()
+        ref_font = hb_font(data.getvalue())
 
     def check(text):
         expect = model.lex(text)
@@ -95,34 +124,52 @@ def main():
                 return f"char {i} {text[i]!r}: font says {got}, spec says {(exp_state, exp_set)}"
         return None
 
-    failures = 0
-    for t in HAND_CASES:
-        err = check(t)
-        if err:
-            failures += 1
-            print(f"FAIL {t!r}: {err}")
-    print(f"hand-written cases: {len(HAND_CASES) - failures}/{len(HAND_CASES)} pass")
+    def check_positions(text):
+        got, want = shape(hbfont, text), shape(ref_font, text)
+        got_g = [base_name(order[i.codepoint]) for i in got.glyph_infos]
+        want_g = [ref_order[i.codepoint] for i in want.glyph_infos]
+        if got_g != want_g:
+            return f"glyphs {got_g} != base font's {want_g}"
+        for i, (a, b) in enumerate(zip(got.glyph_positions or [], want.glyph_positions or [])):
+            pa = (a.x_advance, a.y_advance, a.x_offset, a.y_offset)
+            pb = (b.x_advance, b.y_advance, b.x_offset, b.y_offset)
+            if pa != pb:
+                return f"glyph {i} {got_g[i]!r}: position {pa} != base font's {pb}"
+        return None
+
+    def run(label, texts, fn):
+        fails = 0
+        for t in texts:
+            err = fn(t)
+            if err:
+                fails += 1
+                if fails <= 10:
+                    print(f"FAIL {t!r}: {err}")
+        print(f"{label}: {len(texts) - fails}/{len(texts)} pass")
+        return fails
 
     # Random programs over an alphabet that hits every class, plus words.
     rng = random.Random(args.seed)
     alphabet = list("abdefinstx_XZ0129.\"'\\#@ ()=+:,") + ["é", "π", "ж", "→"]
     words = [w for _, ws in spec.word_sets for w in ws]
-    fuzz_fail = 0
-    for _ in range(args.n):
+
+    def random_text(alpha):
         parts = []
         for _ in range(rng.randint(1, 12)):
             if rng.random() < 0.3:
                 parts.append(rng.choice(words))
             else:
-                parts.append("".join(rng.choice(alphabet) for _ in range(rng.randint(1, 4))))
-        text = "".join(parts)
-        err = check(text)
-        if err:
-            fuzz_fail += 1
-            if fuzz_fail <= 10:
-                print(f"FAIL {text!r}: {err}")
-    print(f"random cases: {args.n - fuzz_fail}/{args.n} pass")
-    return 1 if failures or fuzz_fail else 0
+                parts.append("".join(rng.choice(alpha) for _ in range(rng.randint(1, 4))))
+        return "".join(parts)
+
+    fuzz = [random_text(alphabet) for _ in range(args.n)]
+    fails = run("hand-written cases", HAND_CASES, check)
+    fails += run("random cases", fuzz, check)
+    if args.base:
+        marked = [random_text(alphabet + list("qjxy") + MARKS) for _ in range(args.n)]
+        fails += run("positioning, hand-written", HAND_CASES, check_positions)
+        fails += run("positioning, random", fuzz + marked, check_positions)
+    return 1 if fails else 0
 
 
 if __name__ == "__main__":

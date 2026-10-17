@@ -10,7 +10,7 @@ editor plugin, no JavaScript.
 ```sh
 pip install fonttools brotli pyyaml uharfbuzz
 python fontlex.py specs/python.yaml --base fonts/JetBrainsMono-Regular.ttf --out build
-python test_fontlex.py specs/python.yaml build/Fontlex-Python.ttf --n 20000
+python test_fontlex.py specs/python.yaml build/Fontlex-Python.ttf --base fonts/JetBrainsMono-Regular.ttf --n 20000
 python demo/build_demo.py specs/python.yaml --base fonts/JetBrainsMono-Regular.ttf --out demo/fontlex-demo.html
 ```
 
@@ -50,6 +50,9 @@ textarea { font-family: "Fontlex Python", monospace; font-palette: light; }
    Longest words first; one glyph of lookahead rejects longer identifiers.
 4. **Color.** COLR v0 paints each colored variant with the original outline in
    a palette color.
+5. **Positioning.** The base font's GPOS and GDEF are kept, and every variant
+   is added wherever its original glyph appears, so kerning and mark anchors
+   still apply to lexed glyphs.
 
 `build/*.fea` is the generated feature file, if you want to read the rules.
 
@@ -57,8 +60,12 @@ textarea { font-family: "Fontlex Python", monospace; font-palette: light; }
 
 `test_fontlex.py` shapes hand-written and random strings with HarfBuzz and
 compares each output glyph's state against `Model.lex`, a direct simulation of
-the spec. It currently passes 20/20 hand cases and 20,000/20,000 random cases.
-The page has also been rendered in headless Chromium.
+the spec. With `--base`, it also checks that every glyph is positioned exactly
+as the base font positions the same glyph, over the same strings plus random
+strings full of combining marks. It currently passes 21/21 hand cases,
+20,000/20,000 random cases and 40,000/40,000 positioning cases. The positioning
+check also passes with Arial, Times New Roman Italic, STIX Two, SF Pro and
+Trattatello as base fonts. The page has also been rendered in headless Chromium.
 
 ## Known limits
 
@@ -68,7 +75,13 @@ The page has also been rendered in headless Chromium.
 - Colors are decided left to right with one glyph of lookahead for words.
   Constructs that need more lookahead (`f"` prefixes, `"""` as a unit) need
   more passes.
-- The base font's ligatures are removed.
+- The base font's substitution tables (GSUB, AAT `morx`) are removed, which
+  takes its ligatures, `ccmp`, `locl` and stylistic sets with them.
+- Contextual GPOS lookups in format 1 are only partly aliased; the compiler
+  lists them under `layout_notes`. The legacy `kern` table is not aliased, so
+  a shaper that uses it instead of GPOS loses kerning on lexed glyphs.
+- A font holds at most 65,535 glyphs, and each state costs one variant per
+  glyph that can enter it. Large base fonts or many-state specs don't fit.
 - Not yet checked in Safari (Core Text).
 
 ## Research questions this opens
