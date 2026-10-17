@@ -65,7 +65,9 @@ as the base font positions the same glyph, over the same strings plus random
 strings full of combining marks. It currently passes 21/21 hand cases,
 20,000/20,000 random cases and 40,000/40,000 positioning cases. The positioning
 check also passes with Arial, Times New Roman Italic, STIX Two, SF Pro and
-Trattatello as base fonts. The page has also been rendered in headless Chromium.
+Trattatello as base fonts. The demo page highlights correctly in Safari 27
+(Core Text) on macOS 27, checked by eye, and was rendered in headless Chromium
+before the positioning fix.
 
 ## Known limits
 
@@ -82,7 +84,8 @@ Trattatello as base fonts. The page has also been rendered in headless Chromium.
   a shaper that uses it instead of GPOS loses kerning on lexed glyphs.
 - A font holds at most 65,535 glyphs, and each state costs one variant per
   glyph that can enter it. Large base fonts or many-state specs don't fit.
-- Not yet checked in Safari (Core Text).
+- Safari has only been checked by eye on the demo page; nothing compares Core
+  Text's output with the reference lexer.
 
 ## Research questions this opens
 
