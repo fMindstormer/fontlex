@@ -22,6 +22,24 @@ python test_fontlex.py specs/python.yaml build/Fontlex-Python.ttf --base fonts/J
     --shaper harfbuzz --shaper coretext
 ```
 
+Two compiler options:
+
+- `--unicodes U+0020-007E,U+00A0-024F,...` keeps only these characters of the
+  base font. Each state that any character can enter (strings, comments)
+  costs one variant glyph per character, so this is the main lever on glyph
+  count and file size. Keeping Latin, Greek, Cyrillic, combining marks,
+  punctuation, arrows and math operators of JetBrains Mono (865 of its 1,363
+  characters) takes the Python font from 6,076 glyphs and 116 KB of WOFF2 to
+  3,737 glyphs and 63 KB, and the JavaScript font from 8,769 glyphs and 134 KB
+  to 5,434 glyphs and 74 KB. Characters left out fall back to another font,
+  which resets the lexer.
+- `--unify-scripts` merges the base font's per-script positioning into one
+  set used for all text. Core Text otherwise shapes each script as its own run
+  with some fonts, resetting the lexer (see Known limits); the compiler says
+  so in `layout_notes` when a font is affected. The cost: every script gets
+  every script's positioning, so for example Latin anchors now also apply in
+  Cyrillic-led text.
+
 Then use the font in CSS:
 
 ```css
@@ -68,7 +86,9 @@ spec has:
    a palette color.
 5. **Positioning.** The base font's GPOS and GDEF are kept, and every variant
    is added wherever its original glyph appears, so kerning and mark anchors
-   still apply to lexed glyphs.
+   still apply to lexed glyphs. Other per-glyph tables (`hdmx`, `LTSH`, `vmtx`,
+   `VORG`, and `gvar`/`HVAR`/`VVAR` in variable fonts) get entries for the
+   variants too, so they vary with their base glyphs at every instance.
 
 `build/*.fea` is the generated feature file, if you want to read the rules.
 
@@ -82,8 +102,12 @@ character of the class, then a random tail. Random text alone rarely reaches
 states that take several characters, such as the end of `/* */`.
 With `--base`, it also checks that every glyph is positioned exactly as the
 base font positions the same glyph, over the same strings plus random strings
-full of combining marks. `--shaper` picks HarfBuzz (Chrome, Firefox, Android)
-or Core Text (Safari, native Mac apps); repeat it to run both.
+full of combining marks; for a variable font, HarfBuzz also checks it at each
+axis's minimum and maximum. A font compiled with `--unicodes` is detected from
+its cmap and the base font is subset to match; one compiled with
+`--unify-scripts` needs the same flag here. `--shaper` picks HarfBuzz (Chrome,
+Firefox, Android) or Core Text (Safari, native Mac apps); repeat it to run
+both.
 
 With JetBrains Mono, both shapers pass everything for both specs: 26/26 hand
 cases, 20,000/20,000 random cases, every transition case (1,980 for Python,
@@ -93,11 +117,11 @@ only for unsubstituted glyphs, so the Core Text check skips those marks and
 reports how many.
 
 With HarfBuzz, both specs also pass everything with Arial, Times New Roman
-Italic, STIX Two, SF Pro and Trattatello as base fonts. With Core Text (Python
-spec), STIX Two, SF Pro and Trattatello pass; Arial and Times fail on mixed-
-script text (see below). The demo page highlights correctly in Safari 27 on
-macOS 27, checked by eye, and was rendered in headless Chromium before the
-positioning fix.
+Italic, STIX Two, SF Pro and Trattatello as base fonts. With Core Text, STIX
+Two, SF Pro and Trattatello pass, and so do Arial and Times when compiled with
+`--unify-scripts`; without it they fail on mixed-script text (see below). The
+demo page highlights correctly in Safari 27 on macOS 27, checked by eye, and
+was rendered in headless Chromium before the positioning fix.
 
 `demo/build_demo.py` runs the HarfBuzz checks on the font it embeds, puts the
 real pass count on the page, and exits with status 1 if any check fails.
@@ -119,12 +143,18 @@ real pass count on the page, and exits with status 1 if any check fails.
   lists them under `layout_notes`. The legacy `kern` table is not aliased, so
   a shaper that uses it instead of GPOS loses kerning on lexed glyphs.
 - A font holds at most 65,535 glyphs, and each state costs one variant per
-  glyph that can enter it. Large base fonts or many-state specs don't fit.
+  glyph that can enter it. Large base fonts or many-state specs need
+  `--unicodes`: Arial Unicode would need 167,372 glyphs, and fits in 6,428
+  when subset to the ranges above.
 - With some base fonts, including Arial and Times, Core Text splits text into
   separate shaping runs at script changes (Latin, Greek, Cyrillic). The lexer
   resets at each split, so in Safari `# жук x` stops being a comment at `x`.
-  The font's per-script GSUB/GPOS entries trigger it, but the exact rule isn't
-  known. JetBrains Mono, STIX Two, SF Pro and Trattatello don't trigger it.
+  By experiment on macOS 27 (not documented by Apple), it splits when the
+  scripts in the text get different GSUB/GPOS features, or when the font has
+  an `arab` script entry at all. Fontlex's own GSUB lists only `DFLT` and
+  `latn`, since its lexer is the same for every script; the base font's GPOS
+  needs `--unify-scripts`. JetBrains Mono, STIX Two, SF Pro and Trattatello
+  don't trigger it.
 - In Core Text, a mark the base font has no anchor for is drawn unpositioned
   when it or its base glyph has been lexed, where the base font alone would
   get Core Text's improvised position. HarfBuzz never improvises when GPOS is
@@ -137,6 +167,9 @@ real pass count on the page, and exits with status 1 if any check fails.
   automata.) How many lookup passes does a given lexer need?
 - Minimizing glyph count and rule count for a given DFA, for example by merging
   states that are indistinguishable for both color and future transitions.
+  For the two example specs this barely helps: only the `*_end` states of
+  strings merge, and each holds one glyph. Almost all variants belong to
+  states that any character can enter, and those are all distinguishable.
 
 ## License
 

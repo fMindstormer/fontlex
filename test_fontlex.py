@@ -27,7 +27,8 @@ import unicodedata
 import uharfbuzz as hb
 from fontTools.ttLib import TTFont
 
-from fontlex import DROPPED_TABLES, SUFFIX, WORD_SUFFIX, Model, load_spec
+from fontlex import (DROPPED_TABLES, SUFFIX, WORD_SUFFIX, Model, _unify_gpos_scripts, load_spec,
+                     subset_font)
 
 HAND_CASES = [
     'def f(x): return x + 1',
@@ -110,8 +111,10 @@ class HarfBuzz:
     name = "harfbuzz"
     improvises_marks = False
 
-    def __init__(self, data: bytes):
+    def __init__(self, data: bytes, variations: dict[str, float] | None = None):
         self.font = hb.Font(hb.Face(hb.Blob(data)))
+        if variations:
+            self.font.set_variations(variations)
 
     def shape(self, text):
         buf = hb.Buffer()
@@ -173,10 +176,14 @@ SHAPERS = {s.name: s for s in (HarfBuzz, CoreText)}
 
 
 def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, seed=1,
-           log=print) -> dict[str, tuple[int, int]]:
+           log=print, unify_scripts=False) -> dict[str, tuple[int, int]]:
     """Run every check on a compiled font. Returns {label: (passed, total)}.
 
     `base` is the path of the base font; without it, positioning isn't checked.
+    Pass `unify_scripts` if the font was compiled with it, so the base font
+    gets the same GPOS changes before positions are compared. A font compiled
+    with --unicodes is detected from its cmap, and the base font is subset to
+    match.
     """
     tt = TTFont(io.BytesIO(font_data))
     order = tt.getGlyphOrder()
@@ -186,6 +193,11 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
         for tag in DROPPED_TABLES:
             if tag in ref:
                 del ref[tag]
+        kept = sorted(tt.getBestCmap())
+        if kept != sorted(ref.getBestCmap()):
+            subset_font(ref, kept)
+        if unify_scripts:
+            _unify_gpos_scripts(ref)
         data = io.BytesIO()
         ref.save(data)
         ref_order = ref.getGlyphOrder()
@@ -327,6 +339,15 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
             if skipped_marks:
                 log(f"{sname}: skipped {skipped_marks} improvised positions of marks "
                     "the base font has no anchor for")
+            # Variable fonts: variants must vary like their base glyphs too.
+            if sname == "harfbuzz" and "fvar" in tt:
+                sample = (fuzz + marked)[::8]
+                for axis in tt["fvar"].axes:
+                    for value in (axis.minValue, axis.maxValue):
+                        loc = {axis.axisTag: value}
+                        a, b = HarfBuzz(font_data, loc), HarfBuzz(ref_data, loc)
+                        run(f"harfbuzz: positioning at {axis.axisTag}={value:g}", sample,
+                            lambda t, a=a, b=b: check_positions(a, b, t))
     return results
 
 
@@ -337,12 +358,15 @@ def main():
     ap.add_argument("--base", help="base font the spec was compiled from")
     ap.add_argument("--shaper", action="append", choices=SHAPERS,
                     help="shaper to test with; repeat for several (default: harfbuzz)")
+    ap.add_argument("--unify-scripts", action="store_true",
+                    help="the font was compiled with --unify-scripts")
     ap.add_argument("--n", type=int, default=20000)
     ap.add_argument("--seed", type=int, default=1)
     args = ap.parse_args()
 
     results = verify(load_spec(args.spec), open(args.font, "rb").read(), args.base,
-                     args.shaper or ["harfbuzz"], args.n, args.seed)
+                     args.shaper or ["harfbuzz"], args.n, args.seed,
+                     unify_scripts=args.unify_scripts)
     return 0 if all(passed == total for passed, total in results.values()) else 1
 
 
