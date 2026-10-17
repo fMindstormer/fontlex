@@ -32,5 +32,18 @@ for lang in python javascript; do
         "$PY" demo/check_webkit.py specs/$lang.yaml $page
     fi
 done
+echo "== german: compile"
+"$PY" fontlex.py specs/german.yaml --base $BASE --out build > /dev/null
+echo "== german: test ($shapers)"
+"$PY" test_fontlex.py specs/german.yaml build/Fontlex-German.ttf --base $BASE $shapers --n "$N"
+echo "== german: everyday nouns"
+"$PY" german/evaluate.py specs/german.yaml build/Fontlex-German.ttf german/core_nouns.tsv | sed -n 2,4p
+hdt=german/data/hdt/de_hdt-ud-test.conllu pud=german/data/pud/de_pud-ud-test.conllu
+if [ -f $hdt ] && [ -f $pud ]; then
+    echo "== german: treebanks and demo page"
+    "$PY" german/build_page.py --out german/demo.html --test $hdt --test $pud
+else
+    echo "(German treebank scores skipped: run german/fetch_ud.sh german/data)"
+fi
 [ $macos = yes ] || echo "(Core Text and WebKit checks skipped: needs macOS and requirements-macos.txt)"
 echo "all checks passed"

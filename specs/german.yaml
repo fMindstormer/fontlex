@@ -1,0 +1,69 @@
+# Fontlex spec: German nouns colored by grammatical gender, for learners.
+#
+# German capitalizes nouns, so the DFA only has to find capitalized words.
+# Their color comes from two lists learned by german/learn.py from a treebank
+# and a dictionary: whole words, and word endings, where the longest listed
+# ending decides ("-ung" makes "Zeitung" feminine, and a compound takes the
+# gender of its last part). A listed word wins over any ending, so "Sprung"
+# stays masculine. Words neither list decides stay uncolored, as do words
+# listed as `none`.
+
+name: Fontlex German
+
+classes:
+  upper: "A-ZÀ-ÖØ-Þ"
+  lower: "a-zß-öø-ÿ"
+
+start: text
+
+states:
+  text:
+    default: text
+    on: {upper: noun, lower: word}
+  # A word that starts with a capital: a noun, or a name, or the first
+  # word of a sentence.
+  noun:
+    on: {upper: noun, lower: noun}
+    like: text
+  word:
+    on: {upper: word, lower: word}
+    like: text
+
+words:
+  state: noun
+  files: [../german/lexicon/words.tsv]
+
+suffixes:
+  state: noun
+  files: [../german/lexicon/suffixes.tsv]
+
+# The usual learner colors: der blue, die red, das green.
+themes:
+  light:
+    masc: "#1F5FBF"
+    fem: "#C2272D"
+    neut: "#1E8449"
+  dark:
+    masc: "#6FA8FF"
+    fem: "#FF7B7B"
+    neut: "#5FD38D"
+
+# Sentences with the color expected for each character ('.' = uncolored),
+# checked by the tests. Plural-only nouns (Großeltern) and adjectives used as
+# nouns (die Vorsitzende), whose gender follows the person meant, stay
+# uncolored, as does a capitalized function word starting a sentence (Aus).
+examples:
+  legend: {".": null, m: masc, f: fem, n: neut}
+  cases:
+    - ['Die Zeitung liegt auf dem Tisch.', '....fffffff...............mmmmm.']
+    - ['Das Mädchen kauft ein Buch und eine Tasche.', '....nnnnnnn...........nnnn..........ffffff.']
+    - ['Der Haustürschlüssel ist in der Küche.', '....mmmmmmmmmmmmmmmm............fffff.']
+    - ['Meine Freundin wohnt in einer kleinen Wohnung mit zwei Katzen.', '......ffffffff........................fffffff..........ffffff.']
+    - ['Im Sommer fahren wir mit dem Zug ans Meer.', '...mmmmmm....................mmm.....nnnn.']
+    - ['Die Regierung plant neue Gesetze für die Datensicherheit.', '....fffffffff............nnnnnnn.........fffffffffffffff.']
+    - ['Ein Liebling der Kinder ist das Spielzeug.', '....mmmmmmmm.....nnnnnn.........nnnnnnnnn.']
+    - ['Nach der Arbeit trinkt mein Vater gern einen Kaffee.', '.........ffffff.............mmmmm............mmmmmm.']
+    - ['Der Computer und das Internet verändern die Welt.', '....mmmmmmmm.........nnnnnnnn...............ffff.']
+    - ['Am Wochenende besuchen wir unsere Großeltern auf dem Land.', '...nnnnnnnnnn........................................nnnn.']
+    - ['Aus diesem Grund kam der Sprung in der Nacht.', '...........mmmmm.........mmmmmm........fffff.']
+    - ['Die Vorsitzende dankte den Angestellten.', '........................................']

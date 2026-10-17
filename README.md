@@ -8,6 +8,12 @@ editor plugin, no JavaScript.
 `demo/fontlex-demo.html` (Python) and `demo/fontlex-demo-javascript.html` are
 self-contained pages with an editable textarea in the compiled font.
 
+The same machinery works for natural language: `specs/german.yaml` colors
+German nouns by grammatical gender for learners (der blue, die red, das
+green), from lists learned from a treebank and Wiktionary. On held-out
+newspaper text it colors 97% of nouns, 99.5% of them right; see
+[german/README.md](german/README.md) and `german/demo.html`.
+
 ## Quick start
 
 ```sh
@@ -24,8 +30,8 @@ Then use the font in CSS:
 textarea { font-family: "Fontlex Python", monospace; font-palette: light; }
 ```
 
-`./check.sh` builds both fonts and both demo pages and runs every check the
-machine supports. On macOS, `pip install -r requirements-macos.txt` adds the
+`./check.sh` builds all three fonts and the demo pages and runs every check
+the machine supports. On macOS, `pip install -r requirements-macos.txt` adds the
 Core Text (Safari, native apps) and WebKit checks.
 
 ### Compiler options
@@ -39,8 +45,8 @@ Core Text (Safari, native apps) and WebKit checks.
 
   | Font | Full base font | With `--unicodes` |
   |---|---|---|
-  | Python | 6,076 glyphs, 113 KB WOFF2 | 3,737 glyphs, 62 KB |
-  | JavaScript | 12,921 glyphs, 153 KB | 8,092 glyphs, 89 KB |
+  | Python | 6,207 glyphs, 112 KB WOFF2 | 3,868 glyphs, 62 KB |
+  | JavaScript | 13,094 glyphs, 144 KB | 8,265 glyphs, 88 KB |
 
   Characters left out fall back to another font, which resets the lexer.
 - `--unify-scripts` merges the base font's per-script positioning into one
@@ -51,8 +57,8 @@ Core Text (Safari, native apps) and WebKit checks.
 
 ## The spec
 
-`specs/python.yaml` and `specs/javascript.yaml` are commented examples. A
-spec has:
+`specs/python.yaml`, `specs/javascript.yaml` and `specs/german.yaml` are
+commented examples. A spec has:
 
 - `classes`: named character classes (`"a-zA-Z_"`). Every other character in
   the base font falls into the implicit class `other`.
@@ -63,7 +69,13 @@ spec has:
   `javascript.yaml`, a `/` is redrawn as a comment once the next character
   shows it opened `//` or `/*`.
 - `words`: word lists recolored when a whole run of glyphs in `words.state`
-  spells one of them.
+  spells one of them. Lists can be inline (`sets`) or in TSV files of
+  `word<TAB>set` lines (`files`); a word listed twice keeps its first set, so
+  an earlier file can override a later one. A set no theme colors (`none` in
+  the German spec) leaves its words uncolored.
+- `suffixes` (optional): endings that recolor a run of the same state that no
+  listed word matched; the longest listed ending of the run decides. Same
+  `sets` and `files` as `words`.
 - `themes`: token colors. Each theme becomes a CPAL palette; themes named
   `light` and `dark` are tagged so CSS `font-palette: light|dark` picks them.
 - `examples` (optional): lines with the token expected for each character,
@@ -86,15 +98,21 @@ and escapes inside regexes.
    `sub @S_<state> @C_<class>' lookup TO_<next>;`. Cells that agree with the
    start state's row are dropped, since the final no-context rules produce the
    same result.
-3. **Lookahead and word lookups.** If the spec uses `lookahead`, one more
-   contextual lookup redraws a glyph based on the state of the glyph after it.
-   GSUB applies each lookup to the whole run before the next, so this can't
-   disturb the lexer. Then the word lookup recolors maximal identifier runs
-   that spell a listed word: longest words first, with one glyph of lookahead
-   to reject longer identifiers.
-4. **Color.** COLR v0 paints each colored variant with the original outline in
+3. **Lookahead.** If the spec uses `lookahead`, one more contextual lookup
+   redraws a glyph based on the state of the glyph after it. GSUB applies each
+   lookup to the whole run before the next, so this can't disturb the lexer.
+4. **Words and suffixes.** A lookup marks the first glyph of every run of the
+   word state with its own variant. Then each word and suffix becomes one rule
+   at the run's last glyph, longest first: a word's rule starts at the marked
+   first glyph, so it matches only a whole run, while a suffix's doesn't. A
+   reverse chaining lookup, which runs right to left, then spreads the set
+   from the last glyph over the run. These rules are plain glyph sequences,
+   so the compiler packs them into compact format 1 subtables itself (feaLib
+   would make one subtable per rule, and tens of thousands don't fit in a
+   lookup); the German font has 32,000 of them and compiles in 3 seconds.
+5. **Color.** COLR v0 paints each colored variant with the original outline in
    a palette color. Uncolored glyphs follow the CSS text color.
-5. **Positioning and metrics.** The base font's GPOS, GDEF and legacy `kern`
+6. **Positioning and metrics.** The base font's GPOS, GDEF and legacy `kern`
    table are kept, and every variant is added wherever its original glyph
    appears, so kerning and mark anchors still apply to lexed glyphs. Other
    per-glyph tables (`hdmx`, `LTSH`, `vmtx`, `VORG`, and `gvar`/`HVAR`/`VVAR`
@@ -131,16 +149,22 @@ its base glyph has been lexed; and around a mark the font lacks, it falls back
 to another font per character cluster, sometimes differently for the compiled
 and the base font.
 
-Results with JetBrains Mono, both shapers: everything passes for both specs.
-Python: 7/7 examples, 33 hand cases, 20,000 random, 1,980 transition and
-41,980 positioning cases. JavaScript: 14/14 examples, 40 hand cases, 20,000
-random, 7,840 transition and 47,840 positioning cases. Both specs also pass
-everything with Arial, Arial Black, Times New Roman Italic, STIX Two, SF Pro
-and Trattatello as base fonts in HarfBuzz; in Core Text, Arial and Times need
-`--unify-scripts`.
+Results with JetBrains Mono, both shapers: everything passes for all three
+specs. Python: 7/7 examples, 33 hand cases, 20,000 random, 1,980 transition
+and 41,980 positioning cases. JavaScript: 14/14 examples, 40 hand cases,
+20,000 random, 7,840 transition and 47,840 positioning cases. German: 12/12
+examples, 38 hand cases, 20,000 random, 180 transition and 40,180
+positioning cases. Python and JavaScript also pass everything with Arial,
+Arial Black, Times New Roman Italic, STIX Two, SF Pro and Trattatello as base
+fonts in HarfBuzz; in Core Text, Arial and Times need `--unify-scripts`.
+
+How well the German lists match the language is a separate question, which
+`german/evaluate.py` answers against gender-annotated text (see
+[german/README.md](german/README.md)).
 
 `tests/test_spec.py` (`python -m unittest discover tests`) covers spec
-validation errors, the reference lexer and the compiler's glyph-limit error.
+validation errors, the reference lexer, word and suffix lists, and the
+compiler's glyph-limit error.
 
 `demo/build_demo.py` runs the HarfBuzz checks on the font it embeds, puts the
 real pass count on the page, and exits with status 1 if any check fails.
@@ -163,7 +187,7 @@ which theme's colors dominate the code box's pixels.
   only); the compiler lists them under `layout_notes`.
 - A font holds at most 65,535 glyphs. Large base fonts or many-state specs
   need `--unicodes`: Arial Unicode would need 167,372 glyphs, and fits in
-  6,428 when subset to the ranges above.
+  6,559 when subset to the ranges above.
 - With some base fonts, including Arial and Times, Core Text splits text into
   separate shaping runs at script changes, so without `--unify-scripts`
   `# жук x` stops being a comment at `x` in Safari. By experiment on macOS 27
