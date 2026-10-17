@@ -84,6 +84,9 @@ SF Pro and Trattatello pass; Arial and Times fail on mixed-script text (see
 below). The demo page highlights correctly in Safari 27 on macOS 27, checked
 by eye, and was rendered in headless Chromium before the positioning fix.
 
+`demo/build_demo.py` runs the HarfBuzz checks on the font it embeds, puts the
+real pass count on the page, and exits with status 1 if any check fails.
+
 ## Known limits
 
 - State lives within one shaping run. Browsers start new runs at line breaks,

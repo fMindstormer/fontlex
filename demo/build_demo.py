@@ -15,6 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 from fontlex import compile_font, load_spec  # noqa: E402
+from test_fontlex import verify  # noqa: E402
 
 SAMPLE = '''# This box has no highlighter attached.
 # Every color comes from the font's own substitution rules.
@@ -46,11 +47,16 @@ def main():
     ap.add_argument("spec")
     ap.add_argument("--base", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--fuzz", type=int, default=20000, help="number of random cases verified")
+    ap.add_argument("--fuzz", type=int, default=20000, help="number of random cases to verify")
     args = ap.parse_args()
 
     spec = load_spec(args.spec)
     res = compile_font(spec, args.base)
+    buf = io.BytesIO()
+    res.font.save(buf)
+    # The page reports these numbers, so they come from checking this font.
+    checks = verify(spec, buf.getvalue(), args.base, n=args.fuzz)
+    fuzz_pass, fuzz_total = checks["harfbuzz: random cases"]
     res.font.flavor = "woff2"
     buf = io.BytesIO()
     res.font.save(buf)
@@ -131,7 +137,8 @@ def main():
         "{{N_WORDS}}": str(st["words"]),
         "{{N_GLYPHS}}": f"{st['variant_glyphs']:,}",
         "{{WOFF2_KB}}": str(round(len(woff2) / 1024)),
-        "{{N_FUZZ}}": f"{args.fuzz:,}",
+        "{{N_FUZZ}}": f"{fuzz_total:,}",
+        "{{N_FUZZ_PASS}}": f"{fuzz_pass:,}",
         "{{TABLE}}": table,
         "{{FEA_LEX}}": html.escape(fea_lex),
         "{{FEA_WORDS}}": html.escape(fea_words),
@@ -142,7 +149,12 @@ def main():
     assert "{{" not in page, "unfilled placeholder"
     Path(args.out).write_text(page)
     print(f"wrote {args.out} ({len(page) // 1024} KB)")
+    failed = [label for label, (passed, total) in checks.items() if passed != total]
+    if failed:
+        print("checks failed: " + ", ".join(failed), file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -168,24 +168,17 @@ class CoreText:
 SHAPERS = {s.name: s for s in (HarfBuzz, CoreText)}
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("spec")
-    ap.add_argument("font")
-    ap.add_argument("--base", help="base font the spec was compiled from")
-    ap.add_argument("--shaper", action="append", choices=SHAPERS,
-                    help="shaper to test with; repeat for several (default: harfbuzz)")
-    ap.add_argument("--n", type=int, default=20000)
-    ap.add_argument("--seed", type=int, default=1)
-    args = ap.parse_args()
+def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, seed=1,
+           log=print) -> dict[str, tuple[int, int]]:
+    """Run every check on a compiled font. Returns {label: (passed, total)}.
 
-    spec = load_spec(args.spec)
-    tt = TTFont(args.font)
+    `base` is the path of the base font; without it, positioning isn't checked.
+    """
+    tt = TTFont(io.BytesIO(font_data))
     order = tt.getGlyphOrder()
     model = Model(spec, tt.getBestCmap())
-    font_data = open(args.font, "rb").read()
-    if args.base:
-        ref = TTFont(args.base)
+    if base:
+        ref = TTFont(base)
         for tag in DROPPED_TABLES:
             if tag in ref:
                 del ref[tag]
@@ -264,6 +257,8 @@ def main():
             return f"line width {got_w} != base font's {want_w}"
         return None
 
+    results: dict[str, tuple[int, int]] = {}
+
     def run(label, texts, fn):
         fails = 0
         for t in texts:
@@ -271,12 +266,12 @@ def main():
             if err:
                 fails += 1
                 if fails <= 10:
-                    print(f"FAIL {t!r}: {err}")
-        print(f"{label}: {len(texts) - fails}/{len(texts)} pass")
-        return fails
+                    log(f"FAIL {t!r}: {err}")
+        log(f"{label}: {len(texts) - fails}/{len(texts)} pass")
+        results[label] = (len(texts) - fails, len(texts))
 
     # Random programs over an alphabet that hits every class, plus words.
-    rng = random.Random(args.seed)
+    rng = random.Random(seed)
     alphabet = list("abdefinstx_XZ0129.\"'\\#@ ()=+:,") + ["é", "π", "ж", "→"]
     words = [w for _, ws in spec.word_sets for w in ws]
 
@@ -289,23 +284,38 @@ def main():
                 parts.append("".join(rng.choice(alpha) for _ in range(rng.randint(1, 4))))
         return "".join(parts)
 
-    fuzz = [random_text(alphabet) for _ in range(args.n)]
-    marked = [random_text(alphabet + list("qjxy") + MARKS) for _ in range(args.n)]
-    fails = 0
-    for sname in args.shaper or ["harfbuzz"]:
+    fuzz = [random_text(alphabet) for _ in range(n)]
+    marked = [random_text(alphabet + list("qjxy") + MARKS) for _ in range(n)]
+    for sname in shapers:
         shaper = SHAPERS[sname](font_data)
-        fails += run(f"{sname}: hand-written cases", HAND_CASES, lambda t: check(shaper, t))
-        fails += run(f"{sname}: random cases", fuzz, lambda t: check(shaper, t))
-        if args.base:
+        run(f"{sname}: hand-written cases", HAND_CASES, lambda t: check(shaper, t))
+        run(f"{sname}: random cases", fuzz, lambda t: check(shaper, t))
+        if base:
             ref_shaper = SHAPERS[sname](ref_data)
             pos = lambda t: check_positions(shaper, ref_shaper, t)  # noqa: E731
-            fails += run(f"{sname}: positioning, hand-written", HAND_CASES, pos)
+            run(f"{sname}: positioning, hand-written", HAND_CASES, pos)
             skipped_marks = 0
-            fails += run(f"{sname}: positioning, random", fuzz + marked, pos)
+            run(f"{sname}: positioning, random", fuzz + marked, pos)
             if skipped_marks:
-                print(f"{sname}: skipped {skipped_marks} improvised positions of marks "
-                      "the base font has no anchor for")
-    return 1 if fails else 0
+                log(f"{sname}: skipped {skipped_marks} improvised positions of marks "
+                    "the base font has no anchor for")
+    return results
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("spec")
+    ap.add_argument("font")
+    ap.add_argument("--base", help="base font the spec was compiled from")
+    ap.add_argument("--shaper", action="append", choices=SHAPERS,
+                    help="shaper to test with; repeat for several (default: harfbuzz)")
+    ap.add_argument("--n", type=int, default=20000)
+    ap.add_argument("--seed", type=int, default=1)
+    args = ap.parse_args()
+
+    results = verify(load_spec(args.spec), open(args.font, "rb").read(), args.base,
+                     args.shaper or ["harfbuzz"], args.n, args.seed)
+    return 0 if all(passed == total for passed, total in results.values()) else 1
 
 
 if __name__ == "__main__":
