@@ -8,11 +8,18 @@ editor plugin, no JavaScript.
 `demo/fontlex-demo.html` (Python) and `demo/fontlex-demo-javascript.html` are
 self-contained pages with an editable textarea in the compiled font.
 
-The same machinery works for natural language: `specs/german.yaml` colors
-German nouns by grammatical gender for learners (der blue, die red, das
-green), from lists learned from a treebank and Wiktionary. On held-out
-newspaper text it colors 97% of nouns, 99.5% of them right; see
-[german/README.md](german/README.md) and `german/demo.html`.
+The same machinery works for natural language:
+
+- `specs/german.yaml` colors German nouns by grammatical gender for learners
+  (der blue, die red, das green), from lists learned from a treebank and
+  Wiktionary. On held-out newspaper text it colors 97% of nouns, 99.5% of
+  them right; see [german/README.md](german/README.md) and `german/demo.html`.
+- `specs/german-syllables.yaml` colors each word's syllables in turn, blue and
+  red, as German primary schools teach reading, from TeX's hyphenation
+  patterns. It splits 97.5% of held-out first-reader words exactly right, and
+  its colors survive printing; see
+  [german/syllables/README.md](german/syllables/README.md) and
+  `german/syllables/demo.html`.
 
 ## Quick start
 
@@ -30,7 +37,7 @@ Then use the font in CSS:
 textarea { font-family: "Fontlex Python", monospace; font-palette: light; }
 ```
 
-`./check.sh` builds all three fonts and the demo pages and runs every check
+`./check.sh` builds all four fonts and the demo pages and runs every check
 the machine supports. On macOS, `pip install -r requirements-macos.txt` adds the
 Core Text (Safari, native apps) and WebKit checks.
 
@@ -78,6 +85,10 @@ commented examples. A spec has:
   `sets` and `files` as `words`.
 - `themes`: token colors. Each theme becomes a CPAL palette; themes named
   `light` and `dark` are tagged so CSS `font-palette: light|dark` picks them.
+- `syllables` (optional, instead of a lexer): words, made of the characters
+  of `letters` classes, split by TeX/Liang hyphenation patterns (`patterns`
+  files), with `min_left`/`min_right` (1 or 2) forbidding breaks next to a
+  word's edges, and colored with `colors` in turn, one per syllable.
 - `examples` (optional): lines with the token expected for each character,
   written as a code string under a `legend`. The tests check the spec's lexer
   against them, which catches spec bugs that font-versus-spec checks can't.
@@ -118,6 +129,12 @@ and escapes inside regexes.
    per-glyph tables (`hdmx`, `LTSH`, `vmtx`, `VORG`, and `gvar`/`HVAR`/`VVAR`
    in variable fonts) get entries for the variants too.
 
+For `syllables`, the font marks each word's first and last letter, gives
+every other letter a variant that also records the letter before it, runs
+the patterns as class-based rules filed under (this letter, the letter
+before) so each glyph tries only a few, highest level first, and then colors
+the letters, switching color at each break.
+
 The base font's substitution tables (GSUB, AAT `morx`) are replaced: their
 ligatures would hide glyphs from the lexer, and Core Text prefers `morx` over
 GSUB. Fontlex's GSUB lists only the `DFLT` and `latn` scripts, since the lexer
@@ -142,6 +159,8 @@ with `--shaper coretext`, Core Text (Safari, native Mac apps), and checks:
   maximum. A font compiled with `--unicodes` is detected from its cmap; one
   compiled with `--unify-scripts` needs the same flag here.
 - **Examples.** The spec's `examples` against the spec's own lexer.
+- **Color records.** Every glyph meant to be drawn in a token's color has a
+  COLR record (shaping alone can't show a missing color table).
 
 Core Text needs two allowances, both reported with counts: it improvises
 positions for marks the base font has no anchor for, but not once a mark or

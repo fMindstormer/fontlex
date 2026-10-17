@@ -1,0 +1,45 @@
+# Fontlex spec: German syllables in alternating colors, for learning to read.
+#
+# Many German primary schools teach reading with the syllable method
+# (Silbenmethode): each word's syllables alternate blue and red. This font
+# does it in any text box. Syllables come from TeX's German hyphenation
+# patterns, kept from splitting off a word's first or last letter, plus a
+# few patterns that make reading syllables of what hyphenation won't split:
+# A-bend, O-ma, Ra-di-o (german/syllables/reading.pat.txt).
+
+name: Fontlex German Syllables
+
+classes:
+  letter: "a-zA-Zß-öø-ÿÀ-ÖØ-Þ"
+
+start: text
+
+states:
+  text: {default: text}
+
+syllables:
+  letters: [letter]
+  patterns: [../german/syllables/hyph-de-1996.pat.txt, ../german/syllables/reading.pat.txt]
+  min_left: 2
+  min_right: 2
+  colors: [syllable1, syllable2]
+
+themes:
+  light:
+    syllable1: "#1D4ED8"
+    syllable2: "#D62828"
+  dark:
+    syllable1: "#7AA7FF"
+    syllable2: "#FF7B7B"
+
+# Sentences with the color of each character (1 and 2 alternate by syllable,
+# '.' between words), checked by the tests. Written by hand.
+examples:
+  legend: {".": null, "1": syllable1, "2": syllable2}
+  cases:
+    - ['Am Abend malt die kleine Katze mit Oma.', '11.12222.1111.111.111122.11122.111.122.']
+    - ['Die Schmetterlinge fliegen über den Garten.', '111.11111122211122.1111222.1222.111.111222.']
+    - ['Im Radio läuft Musik, und Papa trinkt Kakao.', '11.11221.11111.11222..111.1122.111111.11221.']
+    - ['Mein Bruder hat einen Rucksack für den Kindergarten.', '1111.111222.111.11222.11112222.111.111.111222111222.']
+    - ['Der Elefant isst eine Banane und viel Zucker.', '111.1221111.1111.1122.112211.111.1111.112222.']
+    - ['AUTO und Auto: Großbuchstaben zählen mit.', '1122.111.1122..11112222111222.111222.111.']

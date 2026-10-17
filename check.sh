@@ -45,5 +45,17 @@ if [ -f $hdt ] && [ -f $pud ]; then
 else
     echo "(German treebank scores skipped: run german/fetch_ud.sh german/data)"
 fi
+echo "== german syllables: compile"
+"$PY" fontlex.py specs/german-syllables.yaml --base $BASE --out build > /dev/null
+echo "== german syllables: test ($shapers)"
+"$PY" test_fontlex.py specs/german-syllables.yaml build/Fontlex-German-Syllables.ttf --base $BASE $shapers --n "$N"
+echo "== german syllables: hand-labeled words"
+"$PY" german/syllables/evaluate.py build/Fontlex-German-Syllables.ttf german/syllables/words-heldout.txt
+"$PY" german/syllables/build_page.py --out german/syllables/demo.html > /dev/null
+if [ $macos = yes ]; then
+    echo "== german pages: palettes in WebKit"
+    [ -f german/demo.html ] && "$PY" demo/check_webkit.py specs/german.yaml german/demo.html
+    "$PY" demo/check_webkit.py specs/german-syllables.yaml german/syllables/demo.html
+fi
 [ $macos = yes ] || echo "(Core Text and WebKit checks skipped: needs macOS and requirements-macos.txt)"
 echo "all checks passed"
