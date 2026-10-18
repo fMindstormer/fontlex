@@ -29,11 +29,16 @@ where each state has a token type, plus optional word lists.
    lookup runs over the whole line before the next starts, so this can't
    disturb the lexer's state chain.
 
-   The word lookup. Another contextual lookup recolors maximal runs of glyphs
-   in the word state (identifiers) that spell a listed word, using one glyph
-   of lookahead to rule out longer identifiers.
+4. Words and suffixes (optional). One lookup marks the first glyph of every
+   run of the word state; one rule per listed word or ending, longest first,
+   recolors the run's last glyph (a word's rule starts at the marked first
+   glyph, so it only matches a whole run); a reverse chaining lookup spreads
+   the color back over the run.
 
-4. Color. Each colored variant gets a COLR v0 record that paints the base
+   Syllables (optional, instead). Liang hyphenation patterns, as rules filed
+   under (letter, letter before), then a color that switches at each break.
+
+5. Color. Each colored variant gets a COLR v0 record that paints the base
    outline with a CPAL palette entry, one palette per theme.
 
 Usage:
@@ -643,7 +648,7 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
     alias: dict[str, list[str]] = {}
     for name, base in new_glyphs:
         alias.setdefault(base, []).append(name)
-    layout_notes = _alias_layout(font, alias) + _alias_kern(font, alias)
+    layout_notes = alias_layout(font, alias) + _alias_kern(font, alias)
     if unify_scripts:
         layout_notes += _unify_gpos_scripts(font)
     elif _splits_script_runs(font):
@@ -839,12 +844,12 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
         # Color: a word starts with the first color, and each break moves on;
         # a letter whose break no pattern decided has none.
         no_break = f"{r['nobrk']} {r['lastnobrk']} {_fea_glyphs(inner_und + last_und)}"
-        rules = [f"sub [{r['first']} {r['only']}]' lookup SYL_TO_0;"]
+        color_rules = [f"sub [{r['first']} {r['only']}]' lookup SYL_TO_0;"]
         n = len(syl.colors)
         for i, color in enumerate(syl.colors):
-            rules.append(f"sub [{v(color)}] [{r['brk']} {r['lastbrk']}]' lookup SYL_TO_{(i + 1) % n};")
-            rules.append(f"sub [{v(color)}] [{no_break}]' lookup SYL_TO_{i};")
-        fea.append("lookup SYL_COLOR { " + " ".join(rules) + " } SYL_COLOR;")
+            color_rules.append(f"sub [{v(color)}] [{r['brk']} {r['lastbrk']}]' lookup SYL_TO_{(i + 1) % n};")
+            color_rules.append(f"sub [{v(color)}] [{no_break}]' lookup SYL_TO_{i};")
+        fea.append("lookup SYL_COLOR { " + " ".join(color_rules) + " } SYL_COLOR;")
         features += ["SYL_FIRST", "SYL_LAST", "SYL_PREV", "SYL_PATTERNS", "SYL_COLOR"]
 
     fea.append("")
@@ -903,7 +908,7 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
         font["CPAL"] = buildCPAL(palettes, paletteTypes=types)
         font["COLR"] = buildCOLR(color_glyphs, version=0)
 
-    _rename(font, spec.name)
+    set_family_name(font, spec.name)
 
     stats = {
         "states": len(spec.states),
@@ -1187,7 +1192,7 @@ def _alias_kern(font: TTFont, alias: dict[str, list[str]]) -> list[str]:
     return notes
 
 
-def _alias_layout(font: TTFont, alias: dict[str, list[str]]) -> list[str]:
+def alias_layout(font: TTFont, alias: dict[str, list[str]]) -> list[str]:
     """Make GDEF and GPOS treat every variant glyph like its base glyph.
 
     The base font's kerning and mark anchors are keyed by glyph, so without
@@ -1381,7 +1386,8 @@ def _unify_gpos_scripts(font: TTFont) -> list[str]:
     return []
 
 
-def _rename(font: TTFont, family: str) -> None:
+def set_family_name(font: TTFont, family: str) -> None:
+    """Name the font `family` (Regular), so it can't be mistaken for its base font."""
     name = font["name"]
     ps = re.sub(r"[^A-Za-z0-9-]", "", family) + "-Regular"
     for rec_id in (16, 17, 21, 22):

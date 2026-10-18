@@ -4,13 +4,15 @@
         --bold ...-Bold.ttf --italic ...-Italic.ttf --bold-italic ...-BoldItalic.ttf --out build
 
 The lookups run in two groups. Right to left, what lies ahead of each
-character: escapes and the shape of runs (from small windows), whether a
-code span's closing backticks follow, and whether a link destination
-follows a `]`. Then left to right: the scan that settles code spans and link
-destinations, rounds of matching for brackets and for emphasis (matched
+character: which kind of raw HTML or autolink starts at each `<`, escapes
+and the shape of runs (from small windows), whether a code span's closing
+backticks follow, and whether a link destination follows a `]`. Then left
+to right: the scan that settles code spans, raw HTML, autolinks and link
+destinations; rounds of matching for brackets and for emphasis (matched
 pairs drop out of the sequence the next round sees, so a pair is always
-adjacent there), and the paint that gives every glyph its final style.
-Every bound is a constant below.
+adjacent there); the style after each marker; entity references, as
+ligatures; and the paint that gives every glyph its final glyph. build()
+runs the stages in order. Every bound is a constant below.
 """
 
 import argparse
@@ -265,7 +267,6 @@ class MarkdownFont:
         """For each length m, a right-to-left pass gives every run that could
         open a code span of length m ("v", bit): whether a run of exactly m
         backticks follows somewhere to its right."""
-        pl = self.pl
         for m in range(1, MAX_TICKS + 1):
             ticks = self.kinded(lambda k: k[0] == "bt")
 
@@ -526,7 +527,7 @@ class MarkdownFont:
                 _, n, o, c, r = kind[g][:5]
                 groups.setdefault((cc[g], o, n % 3, r >= 2), set()).add(g)
             match, settle = [], []
-            for (base, o_c, n3, r2), closers in sorted(groups.items(), key=str):
+            for (base, _, _, r2), closers in sorted(groups.items(), key=str):
                 probe = next(iter(closers))
                 elig = {g for g in settled if _eligible(cc[g], kind[g], base, kind[probe])}
                 other = settled - elig

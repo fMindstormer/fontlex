@@ -23,7 +23,6 @@ RED_TOKEN = ("const k = document.getElementById('c-{}'); k.value = '#ff0000';"
              " k.dispatchEvent(new Event('input'));")
 
 
-
 def scenarios(token):
     """(name, script, theme whose colors should dominate, expect pure red)."""
     return [

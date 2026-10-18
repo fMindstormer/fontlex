@@ -33,11 +33,12 @@ identical results.
 | 20,000 random lines of Markdown syntax | 19,901 | 19,901 |
 | 10,725 lines of 65 Markdown documents (npm's documentation, Python package READMEs) | 10,725 | 10,725 |
 
-Of the lines past a bound, about half still come out right. The model
-itself matches all 303 spec examples that are inline paragraphs (the other
-three need link reference definitions) and commonmark.js on 220,000 random
-lines (`crosscheck.py`), apart from one place where commonmark.js departs
-from the spec (it counts a no-break space as whitespace inside HTML tags).
+Of the 106 lines past a bound (7 spec examples and 99 random lines), 67 still
+come out right. The model itself matches all 303 spec examples that are
+inline paragraphs (the other three need link reference definitions) and
+commonmark.js on 220,000 random lines (`crosscheck.py`), apart from one
+place where commonmark.js departs from the spec (it counts a no-break space
+as whitespace inside HTML tags).
 
 The font has 46,648 glyphs and is 490 KB as WOFF2. Shaping a line (52
 characters on average, in the documents above) takes 0.11 ms in HarfBuzz and
@@ -58,18 +59,18 @@ records its state, for the next glyph's rule to read. What makes one change
 of direction enough is that a lookup can skip glyphs. With a GDEF mark
 filtering set a lookup sees only some glyphs: the passes that match emphasis
 see only `*` and `_`. In that sequence an opener and its closer are next to
-each other, however much text lies between them, so a left-to-right rule
-can match them by reading one glyph ahead. Nesting is handled in rounds:
-each round is a lookup that pairs every opener with the closer right after
-it (CommonMark's own choice of pairs, even with mixed `*` and `_`, partial
-runs and the rule of three: the rounds agreed with CommonMark's stack
-algorithm on 220,000 random lines), and matched pairs drop out of the
-sequence the next round sees. Brackets are matched the same way. So "a marker is styled only if a
-closing marker exists later" needs no right-to-left pass at all: it becomes
-"the next glyph of the sequence is a closer". What does need one is a
-regular language over a stretch of unbounded length: whether `(...)` after a
-`]` is a valid link destination, whether a `<` starts valid raw HTML or an
-autolink. The font also finds code spans' closing runs right to left,
+each other, however much text lies between them, so a left-to-right rule can
+match them by reading one glyph ahead. Nesting is handled in rounds: each
+round is a lookup that pairs every opener with the closer right after it
+(CommonMark's own choice of pairs, even with mixed `*` and `_`, partial runs
+and the rule of three: the rounds agreed with CommonMark's stack algorithm
+on 220,000 random lines), and matched pairs drop out of the sequence the
+next round sees. Brackets are matched the same way. So "a marker is styled
+only if a closing marker exists later" needs no right-to-left pass at all:
+it becomes "the next glyph of the sequence is a closer". What does need one
+is a regular language over a stretch of unbounded length: whether `(...)`
+after a `]` is a valid link destination, whether a `<` starts valid raw HTML
+or an autolink. The font also finds code spans' closing runs right to left,
 because that is simpler there.
 
 In theory two passes always suffice. Bound the nesting and CommonMark's

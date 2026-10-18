@@ -203,7 +203,7 @@ class FontBuilder:
                 cov.glyphs = sorted(glyphs, key=self.gid)
                 gdef.MarkGlyphSetsDef.Coverage.append(cov)
             gdef.MarkGlyphSetsDef.MarkSetCount = len(gdef.MarkGlyphSetsDef.Coverage)
-        fontlex._alias_layout(font, self.alias)
+        fontlex.alias_layout(font, self.alias)
         if gsub is not None:
             font["GSUB"] = gsub
         ids = {e: i for i, e in enumerate(PALETTE_ENTRIES)}
@@ -217,7 +217,7 @@ class FontBuilder:
         font["post"].formatType = 2.0
         if not hasattr(font["post"], "mapping"):
             font["post"].mapping = {}
-        fontlex._rename(font, family)
+        fontlex.set_family_name(font, family)
         return font
 
 

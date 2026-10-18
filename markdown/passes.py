@@ -214,13 +214,13 @@ class Pipeline:
         inputs: glyph -> symbol. step(state, symbol) -> (kind, new state), where
         the glyph becomes var(glyph, kind) (or `kind` itself if it is a glyph
         name), None to leave the glyph unchanged, or IMPOSSIBLE where it can't
-        occur. Each output must record a
-        single state. A glyph whose left neighbor (among the glyphs the pass
-        sees: its inputs, outputs and `sees`; or all glyphs if not `skeleton`)
-        records no state starts from `init`. `fill_backtrack` may give glyphs
-        between outputs of one state that state too, shrinking the class
-        definition; only safe when every glyph a rule can see to its left is an
-        output. Returns ({(glyph, state): output}, states).
+        occur. Each output must record a single state. A glyph whose left
+        neighbor (among the glyphs the pass sees: its inputs, outputs and
+        `sees`; or all glyphs if not `skeleton`) records no state starts from
+        `init`. `fill_backtrack` may give glyphs between outputs of one state
+        that state too, shrinking the class definition; only safe when every
+        glyph a rule can see to its left is an output. Returns
+        ({(glyph, state): output}, states).
         """
         states, index, out, records = self._explore(inputs, step, init)
         sig = {}

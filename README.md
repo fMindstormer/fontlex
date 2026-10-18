@@ -45,9 +45,11 @@ Then use the font in CSS:
 textarea { font-family: "Fontlex Python", monospace; font-palette: light; }
 ```
 
-`./check.sh` builds all four fonts and the demo pages and runs every check
-the machine supports. On macOS, `pip install -r requirements-macos.txt` adds the
-Core Text (Safari, native apps) and WebKit checks.
+`./check.sh` builds all five fonts and the demo pages and runs every check
+the machine supports; `./check.sh markdown` (or `unit`, `python`,
+`javascript`, `german`, `syllables`) runs some of it. On macOS,
+`pip install -r requirements-macos.txt` adds the Core Text (Safari, native
+apps) and WebKit checks.
 
 ### Compiler options
 
@@ -72,8 +74,8 @@ Core Text (Safari, native apps) and WebKit checks.
 
 ## The spec
 
-`specs/python.yaml`, `specs/javascript.yaml` and `specs/german.yaml` are
-commented examples. A spec has:
+`specs/python.yaml`, `specs/javascript.yaml`, `specs/german.yaml` and
+`specs/german-syllables.yaml` are commented examples. A spec has:
 
 - `classes`: named character classes (`"a-zA-Z_"`). Every other character in
   the base font falls into the implicit class `other`.
@@ -148,7 +150,9 @@ ligatures would hide glyphs from the lexer, and Core Text prefers `morx` over
 GSUB. Fontlex's GSUB lists only the `DFLT` and `latn` scripts, since the lexer
 is the same for every script and shapers fall back to `DFLT`.
 
-`build/*.fea` is the generated feature file, if you want to read the rules.
+The compiler also writes `<name>.fea`, the generated feature file, if you
+want to read the rules, and `<name>.glyphmap.json`, each variant glyph's base
+glyph, state, and word set or syllable color.
 
 ## Testing
 
@@ -176,14 +180,16 @@ its base glyph has been lexed; and around a mark the font lacks, it falls back
 to another font per character cluster, sometimes differently for the compiled
 and the base font.
 
-Results with JetBrains Mono, both shapers: everything passes for all three
+Results with JetBrains Mono, both shapers: everything passes for all four
 specs. Python: 7/7 examples, 33 hand cases, 20,000 random, 1,980 transition
 and 41,980 positioning cases. JavaScript: 14/14 examples, 40 hand cases,
 20,000 random, 7,840 transition and 47,840 positioning cases. German: 12/12
 examples, 38 hand cases, 20,000 random, 180 transition and 40,180
-positioning cases. Python and JavaScript also pass everything with Arial,
-Arial Black, Times New Roman Italic, STIX Two, SF Pro and Trattatello as base
-fonts in HarfBuzz; in Core Text, Arial and Times need `--unify-scripts`.
+positioning cases. German syllables: 6/6 examples, 32 hand cases, 20,000
+random, 40 transition and 40,040 positioning cases. Python and JavaScript
+also pass everything with Arial, Arial Black, Times New Roman Italic, STIX
+Two, SF Pro and Trattatello as base fonts in HarfBuzz; in Core Text, Arial
+and Times need `--unify-scripts`.
 
 How well the German lists match the language is a separate question, which
 `german/evaluate.py` answers against gender-annotated text (see
@@ -248,5 +254,9 @@ which theme's colors dominate the code box's pixels.
 
 The base font is JetBrains Mono (regular, and the bold and italics the
 Markdown font uses), under the SIL Open Font License 1.1 (`fonts/OFL.txt`).
-Fonts built from it are under the same license. `markdown/spec-0.31.2.json`
-holds CommonMark's spec examples, under CC BY-SA 4.0.
+Fonts built from it are under the same license. The German word and ending
+lists are derived from CC BY-SA 4.0 data, so sharing the German gender font
+also takes attribution and CC BY-SA 4.0 (see
+[german/README.md](german/README.md#data-and-licenses)).
+`markdown/spec-0.31.2.json` holds CommonMark's spec examples, under CC BY-SA
+4.0.

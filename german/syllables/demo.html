@@ -15,20 +15,26 @@
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
 main { max-width: 52rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
-h1 { font-size: 2rem; margin: 0 0 .25rem; } h2 { font-size: 1.15rem; margin: 2.25rem 0 .5rem; }
+h1 { font-size: 2rem; margin: 0 0 .25rem; }
+h2 { font-size: 1.15rem; margin: 2.25rem 0 .5rem; }
 .lede { color: var(--muted); margin: 0 0 1.5rem; }
 .editor { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
 .bar { display: flex; gap: 1.25rem; align-items: center; padding: .6rem 1rem; border-bottom: 1px solid var(--rule);
        font-size: .875rem; color: var(--muted); flex-wrap: wrap; }
 .bar label { display: inline-flex; gap: .4rem; align-items: center; }
 select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--rule); border-radius: 6px; }
-textarea#code { display: block; width: 100%; min-height: 14rem; border: 0; outline: none; resize: vertical;
+textarea#code { display: block; width: 100%; min-height: 15rem; border: 0; outline: none; resize: vertical;
   padding: 1rem 1.1rem; background: transparent; color: var(--ink);
-  font: 400 1.35rem/1.75 "Fontlex German Syllables", ui-monospace, monospace; font-palette: var(--fp); }
+  font: 400 1.05rem/1.7 "Fontlex German Syllables", ui-monospace, monospace; font-palette: var(--fp); }
 #editor.off textarea#code { font-feature-settings: "calt" 0; }
-.s1 { color: var(--s1); } .s2 { color: var(--s2); }
+table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .note { color: var(--muted); font-size: .9rem; }
-ul { padding-left: 1.2rem; } li { margin: .25rem 0; }
+code { font: .92em ui-monospace, monospace; }
+ul, ol { padding-left: 1.2rem; } li { margin: .25rem 0; }
+textarea#code { min-height: 14rem; font-size: 1.35rem; line-height: 1.75; }
+.s1 { color: var(--s1); } .s2 { color: var(--s2); }
 </style>
 <main>
   <h1>Fontlex Silben</h1>
@@ -56,7 +62,7 @@ ul { padding-left: 1.2rem; } li { margin: .25rem 0; }
   </ul>
 
   <h2>How accurate it is</h2>
-  <p>On 120 words from first readers that I labeled by hand before testing, the font splits
+  <p>On 120 words from first readers, labeled by hand before any testing, the font splits
   117 exactly as the syllable method does (97.5%). The misses: <i>Ko-a-la</i>, <i>U-ni-form</i>, <i>A-pri-ko-se</i>.
   Measured with the font embedded in this page.</p>
 
@@ -79,7 +85,8 @@ ul { padding-left: 1.2rem; } li { margin: .25rem 0; }
   document.head.appendChild(style);
   function apply() {
     editor.classList.toggle('off', !hl.checked);
-    style.textContent = 'textarea#code { font-palette: ' + (pal.value === 'auto' ? 'var(--fp)' : pal.value) + '; }';
+    const value = pal.value === 'auto' ? 'var(--fp)' : pal.value;
+    style.textContent = 'textarea#code { font-palette: ' + value + '; }';
   }
   hl.addEventListener('change', apply);
   pal.addEventListener('change', apply);

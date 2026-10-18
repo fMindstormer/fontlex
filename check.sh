@@ -1,11 +1,19 @@
 #!/bin/sh
 # Build everything and run every check this machine can run.
-#   ./check.sh            # PYTHON=... to pick the interpreter, N=... random cases
+#   ./check.sh                    # every section
+#   ./check.sh markdown german    # some: unit python javascript german syllables markdown
+#   PYTHON=... to pick the interpreter, N=... random cases
 set -e
 cd "$(dirname "$0")"
 PY=${PYTHON:-python3}
 N=${N:-20000}
 BASE=fonts/JetBrainsMono-Regular.ttf
+SECTIONS="unit python javascript german syllables markdown"
+want=${*:-$SECTIONS}
+for s in $want; do
+    case " $SECTIONS " in *" $s "*) ;; *) echo "unknown section: $s (sections: $SECTIONS)" >&2; exit 2 ;; esac
+done
+wants() { case " $want " in *" $1 "*) return 0 ;; esac; return 1; }
 
 shapers="--shaper harfbuzz"
 macos=no
@@ -14,10 +22,13 @@ if "$PY" -c "import CoreText, WebKit" 2>/dev/null; then
     macos=yes
 fi
 
-echo "== unit tests"
-"$PY" -m unittest discover -s tests
+if wants unit; then
+    echo "== unit tests"
+    "$PY" -m unittest discover -s tests
+fi
 
 for lang in python javascript; do
+    wants $lang || continue
     case $lang in python) font=build/Fontlex-Python ;; javascript) font=build/Fontlex-JavaScript ;; esac
     echo "== $lang: compile"
     "$PY" fontlex.py specs/$lang.yaml --base $BASE --out build > /dev/null
@@ -32,42 +43,56 @@ for lang in python javascript; do
         "$PY" demo/check_webkit.py specs/$lang.yaml $page
     fi
 done
-echo "== german: compile"
-"$PY" fontlex.py specs/german.yaml --base $BASE --out build > /dev/null
-echo "== german: test ($shapers)"
-"$PY" test_fontlex.py specs/german.yaml build/Fontlex-German.ttf --base $BASE $shapers --n "$N"
-echo "== german: everyday nouns"
-"$PY" german/evaluate.py specs/german.yaml build/Fontlex-German.ttf german/core_nouns.tsv | sed -n 2,4p
-hdt=german/data/hdt/de_hdt-ud-test.conllu pud=german/data/pud/de_pud-ud-test.conllu
-if [ -f $hdt ] && [ -f $pud ]; then
-    echo "== german: treebanks and demo page"
-    "$PY" german/build_page.py --out german/demo.html --test $hdt --test $pud
-else
-    echo "(German treebank scores skipped: run german/fetch_ud.sh german/data)"
+
+if wants german; then
+    echo "== german: compile"
+    "$PY" fontlex.py specs/german.yaml --base $BASE --out build > /dev/null
+    echo "== german: test ($shapers)"
+    "$PY" test_fontlex.py specs/german.yaml build/Fontlex-German.ttf --base $BASE $shapers --n "$N"
+    echo "== german: everyday nouns"
+    "$PY" german/evaluate.py specs/german.yaml build/Fontlex-German.ttf german/core_nouns.tsv | sed -n 2,4p
+    hdt=german/data/hdt/de_hdt-ud-test.conllu pud=german/data/pud/de_pud-ud-test.conllu
+    if [ -f $hdt ] && [ -f $pud ]; then
+        echo "== german: treebanks and demo page"
+        "$PY" german/build_page.py --out german/demo.html --test $hdt --test $pud
+        if [ $macos = yes ]; then
+            echo "== german: demo palettes in WebKit"
+            "$PY" demo/check_webkit.py specs/german.yaml german/demo.html
+        fi
+    else
+        echo "(German treebank scores and demo page skipped: run german/fetch_ud.sh german/data)"
+    fi
 fi
-echo "== german syllables: compile"
-"$PY" fontlex.py specs/german-syllables.yaml --base $BASE --out build > /dev/null
-echo "== german syllables: test ($shapers)"
-"$PY" test_fontlex.py specs/german-syllables.yaml build/Fontlex-German-Syllables.ttf --base $BASE $shapers --n "$N"
-echo "== german syllables: hand-labeled words"
-"$PY" german/syllables/evaluate.py build/Fontlex-German-Syllables.ttf german/syllables/words-heldout.txt
-"$PY" german/syllables/build_page.py --out german/syllables/demo.html > /dev/null
-if [ $macos = yes ]; then
-    echo "== german pages: palettes in WebKit"
-    [ -f german/demo.html ] && "$PY" demo/check_webkit.py specs/german.yaml german/demo.html
-    "$PY" demo/check_webkit.py specs/german-syllables.yaml german/syllables/demo.html
+
+if wants syllables; then
+    echo "== german syllables: compile"
+    "$PY" fontlex.py specs/german-syllables.yaml --base $BASE --out build > /dev/null
+    echo "== german syllables: test ($shapers)"
+    "$PY" test_fontlex.py specs/german-syllables.yaml build/Fontlex-German-Syllables.ttf --base $BASE $shapers --n "$N"
+    echo "== german syllables: hand-labeled words"
+    "$PY" german/syllables/evaluate.py build/Fontlex-German-Syllables.ttf german/syllables/words-heldout.txt
+    echo "== german syllables: demo page"
+    "$PY" german/syllables/build_page.py --out german/syllables/demo.html > /dev/null
+    if [ $macos = yes ]; then
+        echo "== german syllables: demo palettes in WebKit"
+        "$PY" demo/check_webkit.py specs/german-syllables.yaml german/syllables/demo.html
+    fi
 fi
-echo "== markdown: compile"
-"$PY" markdown/mdfont.py --base $BASE --bold fonts/JetBrainsMono-Bold.ttf --italic fonts/JetBrainsMono-Italic.ttf \
-    --bold-italic fonts/JetBrainsMono-BoldItalic.ttf --out build > /dev/null
-echo "== markdown: test ($shapers)"
-"$PY" markdown/verify.py build/Fontlex-Markdown.ttf $shapers --n "$N" \
-    --corpus README.md german/README.md german/syllables/README.md markdown/README.md
-echo "== markdown: demo page"
-"$PY" markdown/build_page.py --font build/Fontlex-Markdown.ttf --out markdown/demo.html --n "$N" > /dev/null
-if [ $macos = yes ]; then
-    echo "== markdown: demo page in WebKit"
-    "$PY" markdown/check_webkit.py markdown/demo.html
+
+if wants markdown; then
+    echo "== markdown: compile"
+    "$PY" markdown/mdfont.py --base $BASE --bold fonts/JetBrainsMono-Bold.ttf --italic fonts/JetBrainsMono-Italic.ttf \
+        --bold-italic fonts/JetBrainsMono-BoldItalic.ttf --out build > /dev/null
+    echo "== markdown: test ($shapers)"
+    "$PY" markdown/verify.py build/Fontlex-Markdown.ttf $shapers --n "$N" \
+        --corpus README.md german/README.md german/syllables/README.md markdown/README.md
+    echo "== markdown: demo page"
+    "$PY" markdown/build_page.py --font build/Fontlex-Markdown.ttf --out markdown/demo.html --n "$N" > /dev/null
+    if [ $macos = yes ]; then
+        echo "== markdown: demo page in WebKit"
+        "$PY" markdown/check_webkit.py markdown/demo.html
+    fi
 fi
+
 [ $macos = yes ] || echo "(Core Text and WebKit checks skipped: needs macOS and requirements-macos.txt)"
 echo "all checks passed"

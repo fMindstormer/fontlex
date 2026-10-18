@@ -266,6 +266,7 @@ class Syllables(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             spec = syllable_spec(d)
             res = compile_font(spec, BASE, unicodes=list(range(0x20, 0x7F)))
+            self.assertEqual(res.stats["lex_rules"], 0)     # a one-state lexer has no rules
             buf = io.BytesIO()
             res.font.save(buf)
             data = buf.getvalue()
