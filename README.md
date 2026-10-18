@@ -21,6 +21,14 @@ The same machinery works for natural language:
   [german/syllables/README.md](german/syllables/README.md) and
   `german/syllables/demo.html`.
 
+The sequel, `markdown/`, goes beyond lexing: a font that renders Markdown as
+you type it, with CommonMark's inline rules (emphasis, code spans, links,
+images, autolinks, raw HTML, entities and escapes) run by the shaper, the
+markup hidden and the text styled, in any script the font has. Within its
+bounds it renders every one-line spec example, 20,000 random lines and
+10,725 lines of real documents exactly as CommonMark does; see
+[markdown/README.md](markdown/README.md) and `markdown/demo.html`.
+
 ## Quick start
 
 ```sh
@@ -224,7 +232,12 @@ which theme's colors dominate the code box's pixels.
 
 - Which languages can a font recognize with k chained-contextual lookups of
   bounded context? (Relates to locally testable languages and sliding-window
-  automata.) How many lookup passes does a given lexer need?
+  automata.) How many lookup passes does a given lexer need? For CommonMark's
+  inline syntax the answer is one change of direction, right to left then
+  left to right, and that is the least possible; lookups that skip glyphs
+  (mark filtering sets) let nested pairs be matched left to right in rounds,
+  one per level of nesting. See
+  [markdown/README.md](markdown/README.md#how-many-alternating-passes-does-commonmark-need).
 - Minimizing glyph count for a given DFA. Merging states that are
   indistinguishable for both color and future transitions barely helps the
   example specs: only the one-glyph `*_end` states of strings merge. Almost
@@ -233,5 +246,7 @@ which theme's colors dominate the code box's pixels.
 
 ## License
 
-The base font is JetBrains Mono, under the SIL Open Font License 1.1
-(`fonts/OFL.txt`). Fonts built from it are under the same license.
+The base font is JetBrains Mono (regular, and the bold and italics the
+Markdown font uses), under the SIL Open Font License 1.1 (`fonts/OFL.txt`).
+Fonts built from it are under the same license. `markdown/spec-0.31.2.json`
+holds CommonMark's spec examples, under CC BY-SA 4.0.

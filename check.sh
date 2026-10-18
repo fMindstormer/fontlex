@@ -57,5 +57,17 @@ if [ $macos = yes ]; then
     [ -f german/demo.html ] && "$PY" demo/check_webkit.py specs/german.yaml german/demo.html
     "$PY" demo/check_webkit.py specs/german-syllables.yaml german/syllables/demo.html
 fi
+echo "== markdown: compile"
+"$PY" markdown/mdfont.py --base $BASE --bold fonts/JetBrainsMono-Bold.ttf --italic fonts/JetBrainsMono-Italic.ttf \
+    --bold-italic fonts/JetBrainsMono-BoldItalic.ttf --out build > /dev/null
+echo "== markdown: test ($shapers)"
+"$PY" markdown/verify.py build/Fontlex-Markdown.ttf $shapers --n "$N" \
+    --corpus README.md german/README.md german/syllables/README.md markdown/README.md
+echo "== markdown: demo page"
+"$PY" markdown/build_page.py --font build/Fontlex-Markdown.ttf --out markdown/demo.html --n "$N" > /dev/null
+if [ $macos = yes ]; then
+    echo "== markdown: demo page in WebKit"
+    "$PY" markdown/check_webkit.py markdown/demo.html
+fi
 [ $macos = yes ] || echo "(Core Text and WebKit checks skipped: needs macOS and requirements-macos.txt)"
 echo "all checks passed"
