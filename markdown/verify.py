@@ -43,7 +43,7 @@ class FontView:
         if base.startswith("_"):
             return cm_inline.Role("leak", char=name), None
         if suffix[:1] == "h":    # h, or h<n>: a `>` ending raw HTML that restores the style
-            return cm_inline.Role("html"), base
+            return cm_inline.Role("dim"), base
         if suffix == "im":
             return cm_inline.Role("text", frozenset({"image"})), base
         return cm_inline.Role("text", frozenset(LETTERS[ch] for ch in suffix)), base

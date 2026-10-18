@@ -12,12 +12,14 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "markdown"))
 sys.path.insert(0, str(ROOT))
 import bounds  # noqa: E402
+import cm_block  # noqa: E402
 import cm_inline as cm  # noqa: E402
 import htmlauto  # noqa: E402
 import mdfont  # noqa: E402
 import tails  # noqa: E402
 
 SPEC = json.loads((ROOT / "markdown" / "spec-0.31.2.json").read_text())
+GFM_SPEC = json.loads((ROOT / "markdown" / "gfm-spec-0.29-extensions.json").read_text())
 
 
 class ModelTest(unittest.TestCase):
@@ -45,7 +47,7 @@ class ModelTest(unittest.TestCase):
 
     def test_roles(self):
         r = cm.roles("*a* `b` [c](d) &copy; <e>")
-        kinds = "".join({"text": "t", "hidden": ".", "html": "h", "entity": "E"}[x.kind] for x in r)
+        kinds = "".join({"text": "t", "hidden": ".", "dim": "h", "entity": "E"}[x.kind] for x in r)
         self.assertEqual(kinds, ".t.t.t.t.t....tE.....thhh")
         self.assertEqual(r[1].style, {"em"})
         self.assertEqual(r[5].style, {"code"})
@@ -55,6 +57,58 @@ class ModelTest(unittest.TestCase):
     def test_code_padding(self):
         self.assertEqual(cm.roles("` a `")[1], cm.HIDDEN)
         self.assertEqual(cm.roles("` a `", code_padding=True)[1].style, {"code"})
+
+
+class BlockTest(unittest.TestCase):
+    def test_one_line_documents(self):
+        """Every one-line spec example, as a whole document."""
+        n = 0
+        for e in SPEC:
+            if e["markdown"].count("\n") == 1 and e["markdown"].endswith("\n"):
+                self.assertEqual(cm_block.to_html(e["markdown"][:-1]), e["html"], f"example {e['example']}")
+                n += 1
+        self.assertEqual(n, 290)
+
+    def test_gfm_examples(self):
+        """GFM's strikethrough and autolink examples, paragraph by paragraph
+        (each is one line), and its task list examples item by item."""
+        for e in GFM_SPEC:
+            md = e["markdown"][:-1]
+            if e["extension"] == "tasklist":
+                items = re.findall(r"<li>(<input [^>]*/>) ([^<\n]*)", e["html"])
+                for line, (box, text) in zip(md.split("\n"), items):
+                    html = cm_block.to_html(line.lstrip(), gfm=True)
+                    self.assertIn(f"<li>{box} {text}</li>", html, f"example {e['example']}: {line!r}")
+            else:
+                got = "".join(cm_block.to_html(p, gfm=True) for p in md.split("\n\n"))
+                self.assertEqual(got, e["html"], f"example {e['example']}")
+
+    def test_roles(self):
+        kinds = {"text": ".", "hidden": "_", "dim": "d", "entity": "E", "bullet": "B", "quote": "Q", "rule": "R",
+                 "box": "O", "checked": "X"}
+        for line, want in [("## Title *em* ##", "dd......._.._.dd"), ("- [ ] task", "B._O_....."),
+                           ("> - [x] a", "Q.B......"),            # cmark-gfm: no task inside a quote
+                           ("- [ ] a [x]", "B._X_......"),        # any [x] in the line checks it
+                           ("* * *", "RRRRR"), ("   ---  ", "...RRR.."), ("```js", "ddddd"), ("<div>*a*", "dddddddd"),
+                           ('[a]: /u "t"', "ddddddddddd"), ("1. item", "......."), ("-", "B")]:
+            self.assertEqual("".join(kinds[r.kind] for r in cm_block.roles(line)), want, line)
+        r = cm_block.roles("# a *b*")
+        self.assertEqual((r[2].style, r[5].style), ({"heading"}, {"heading", "em"}))
+        self.assertEqual(cm_block.roles("    x")[4].style, {"code"})
+
+    def test_gfm_inline(self):
+        cases = {
+            "~~a~~ ~b~ ~~~c~~~ ~d~~": "<del>a</del> <del>b</del> ~~~c~~~ ~d~~",
+            "**/*~": "*<em>/</em>~",             # tildes are transparent to flanking
+            "*a ~b* c~": "<em>a ~b</em> c~",
+            "see www.x.com/a_(b)). ok": 'see <a href="http://www.x.com/a_(b)">www.x.com/a_(b)</a>). ok',
+            "[www.x.com](y)": '<a href="y">www.x.com</a>',
+            "x https://a.b/c?d=1. y": 'x <a href="https://a.b/c?d=1">https://a.b/c?d=1</a>. y',
+            "a _b_@c.com d@e.fr.": 'a <em>b</em>@c.com <a href="mailto:d@e.fr">d@e.fr</a>.',
+            "www.x.com/&amp;": '<a href="http://www.x.com/">www.x.com/</a>&amp;',
+        }
+        for md, html in cases.items():
+            self.assertEqual(cm.to_html(md, gfm=True), html, md)
 
 
 class AlgorithmTest(unittest.TestCase):

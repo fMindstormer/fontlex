@@ -1,8 +1,13 @@
 spec-0.31.2.json holds the examples of the CommonMark Spec, version 0.31.2
 (https://spec.commonmark.org/0.31.2/spec.json), by John MacFarlane.
-
-The CommonMark Spec is licensed under the Creative Commons
-Attribution-ShareAlike 4.0 International License:
-https://creativecommons.org/licenses/by-sa/4.0/
-
 The file is reproduced unchanged.
+
+gfm-spec-0.29-extensions.json holds the task list, strikethrough and
+autolink extension examples of the GitHub Flavored Markdown Spec, version
+0.29-gfm (https://github.com/github/cmark-gfm/blob/0.29.0.gfm.13/test/spec.txt),
+by GitHub, based on the CommonMark Spec. Each example's number, markdown and
+HTML are extracted unchanged, with the spec's → written as the tab it stands
+for.
+
+Both specs are licensed under the Creative Commons Attribution-ShareAlike
+4.0 International License: https://creativecommons.org/licenses/by-sa/4.0/
