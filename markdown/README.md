@@ -139,7 +139,10 @@ follows it. Most text goes through untouched, which keeps shaping fast.
   broken by a soft wrap isn't recognized (the demo's box doesn't wrap).
   Chrome shapes each script separately, so `*мир*` right after Latin text, or
   a Latin URL after Cyrillic link text, stays as typed there; Safari renders
-  both. A line in one script renders in both.
+  both. Chrome also cuts at every tab, so a construct with a tab inside stays
+  as typed there; in Safari it renders, though the tab's gap gets no code
+  background or underline. A line in one script, without tabs, renders in
+  both.
 - In Safari a space inside a hidden link destination (before a title) still
   takes a space's width: WebKit gives every space character the font's space
   width.

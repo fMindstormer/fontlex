@@ -88,8 +88,9 @@ textarea#code { min-height: 19rem; white-space: pre; overflow-x: auto; font-size
     <li>Only inline syntax, one line at a time: no headings, lists, code blocks or reference links, and nothing
     that spans lines.</li>
     <li>Browsers break a line into pieces before the font sees it, and the font can't see across them: Safari at
-    soft wraps (so this box doesn't wrap), Chrome where the script changes, so <code>*мир*</code> after Latin
-    text, or a Latin URL after Cyrillic link text, stays as typed there (Safari renders both).</li>
+    soft wraps (so this box doesn't wrap), Chrome where the script changes and at tabs, so <code>*мир*</code>
+    after Latin text, a Latin URL after Cyrillic link text, or emphasis with a tab inside, stays as typed there
+    (Safari renders all three).</li>
     <li>In Safari a space inside a hidden link destination (before a title) still takes a space's width.</li>
     <li>Needs a browser or app that applies OpenType features and color fonts: current Chrome, Firefox and Safari.</li>
   </ul>

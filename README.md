@@ -208,7 +208,9 @@ which theme's colors dominate the code box's pixels.
 ## Known limits
 
 - State lives within one shaping run. Browsers start new runs at line breaks
-  and font fallback, so multi-line strings and comments reset.
+  and font fallback, so multi-line strings and comments reset. Chrome also
+  starts one at every tab: after a tab inside a string or comment, the rest
+  is lexed afresh there (Safari keeps the state across tabs).
 - Colors are decided left to right, with one glyph of lookahead for words and
   for states that declare `lookahead`. Anything needing more context needs
   more passes: `f"` string prefixes and `"""` as a unit in Python; in

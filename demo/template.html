@@ -187,7 +187,7 @@ ul.limits { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.5rem; max-wid
   <section aria-labelledby="h-limits">
     <h2 id="h-limits">Limits of this prototype</h2>
     <ul class="limits">
-      <li>State lives only within one shaping run. Browsers start a new run at each line and wherever a fallback font takes over, so multi-line strings and comments lose their state. With some base fonts, Safari also starts one at a change of script; the compiler warns about those and can merge their scripts.</li>
+      <li>State lives only within one shaping run. Browsers start a new run at each line and wherever a fallback font takes over, so multi-line strings and comments lose their state. Chrome also starts one at every tab, so a tab inside a string or comment resets the lexer there. With some base fonts, Safari also starts one at a change of script; the compiler warns about those and can merge their scripts.</li>
       <li>Coloring is decided as each character is read, with one glyph of lookahead for words and for states that ask for it. Anything that needs more context needs another pass, and a finite automaton can't track nesting.</li>
       <li>Tested with HarfBuzz (Chrome, Firefox, Android) and Core Text (Safari, native Mac apps), shaping every case through both and comparing each glyph with a reference lexer.</li>
       <li>The base font's own ligatures and alternates are removed, because they would replace glyphs the lexer needs to see. Its kerning and mark positioning are kept.</li>
