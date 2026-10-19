@@ -5,3 +5,4 @@ __pycache__/
 german/data/
 build/*.fea
 build/*.glyphmap.json
+french/data/

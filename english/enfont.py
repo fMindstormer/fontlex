@@ -74,6 +74,42 @@ def record(index, lookup_index):
     return r
 
 
+def context_subtables(rules, cd, klass, classes, gid):
+    """Format 2 context subtables for `rules` (first class -> rules), of
+    about SUBTABLE_BYTES each, in order of first class; one class's rules
+    may continue in the next subtable (a shaper tries each subtable whose
+    coverage has the glyph)."""
+    first_glyphs = {}
+    for g, k in klass.items():
+        first_glyphs.setdefault(k, []).append(g)
+    chunks, size = [[]], 0
+    for k in sorted(rules):
+        for r in rules[k]:
+            cost = 8 + 2 * (r.GlyphCount - 1) + 4 * r.SubstCount
+            if chunks[-1] and size + cost > SUBTABLE_BYTES:
+                chunks.append([])
+                size = 0
+            chunks[-1].append((k, r))
+            size += cost
+    subtables = []
+    for chunk in chunks:
+        sets = {}
+        for k, r in chunk:
+            sets.setdefault(k, []).append(r)
+        st = ot.ContextSubst()
+        st.Format = 2
+        st.Coverage = coverage([g for k in sets for g in first_glyphs[k]], gid)
+        st.ClassDef = cd
+        st.SubClassSet = [None] * (len(classes) + 1)
+        for k, rs in sets.items():
+            cs = ot.SubClassSet()
+            cs.SubClassRule, cs.SubClassRuleCount = rs, len(rs)
+            st.SubClassSet[k] = cs
+        st.SubClassSetCount = len(st.SubClassSet)
+        subtables.append(st)
+    return subtables
+
+
 class EnglishFont:
     def __init__(self, base, bold):
         self.b = b = fb.FontBuilder(base)
@@ -204,7 +240,7 @@ class EnglishFont:
             r.SubstLookupRecord = [record(len(keys) - 1, to_cue[kind])]
             r.SubstCount = 1
             cue_rules.setdefault(classes[keys[0]], []).append(r)
-        add(fb.lookup(5, self.context_subtables(cue_rules, cd, klass, classes)))
+        add(fb.lookup(5, context_subtables(cue_rules, cd, klass, classes, gid)))
         # Hint lookups, from any form of a letter.
         hint_lookup = {h: single({src: self.hinted[(g, h)] for g in letters
                                   for src in [g] + [self.form[(g, f)] for f in self.forms]}) for h in HINTS}
@@ -253,46 +289,11 @@ class EnglishFont:
             r.SubstLookupRecord = hint_records(hints)
             r.SubstCount = len(r.SubstLookupRecord)
             rules.setdefault(classes[keys[0]], []).append(r)
-        add(fb.lookup(5, self.context_subtables(rules, cd, klass, classes)))
+        add(fb.lookup(5, context_subtables(rules, cd, klass, classes, gid)))
         # 6. Back to plain letters.
         add(fb.lookup(1, [fb.single({self.form[(g, f)]: g for g in letters for f in self.forms})]))
         gsub = fb.build_gsub(lookups, top=top)
         return b.finish(gsub, family="Fontlex English"), sum(len(v) for v in rules.values())
-
-    def context_subtables(self, rules, cd, klass, classes):
-        """Format 2 context subtables for `rules` (first class -> rules), of
-        about SUBTABLE_BYTES each, in order of first class; one class's rules
-        may continue in the next subtable (a shaper tries each subtable whose
-        coverage has the glyph)."""
-        first_glyphs = {}
-        for g, k in klass.items():
-            first_glyphs.setdefault(k, []).append(g)
-        chunks, size = [[]], 0
-        for k in sorted(rules):
-            for r in rules[k]:
-                cost = 8 + 2 * (r.GlyphCount - 1) + 4 * r.SubstCount
-                if chunks[-1] and size + cost > SUBTABLE_BYTES:
-                    chunks.append([])
-                    size = 0
-                chunks[-1].append((k, r))
-                size += cost
-        subtables = []
-        for chunk in chunks:
-            sets = {}
-            for k, r in chunk:
-                sets.setdefault(k, []).append(r)
-            st = ot.ContextSubst()
-            st.Format = 2
-            st.Coverage = coverage([g for k in sets for g in first_glyphs[k]], self.b.gid)
-            st.ClassDef = cd
-            st.SubClassSet = [None] * (len(classes) + 1)
-            for k, rs in sets.items():
-                cs = ot.SubClassSet()
-                cs.SubClassRule, cs.SubClassRuleCount = rs, len(rs)
-                st.SubClassSet[k] = cs
-            st.SubClassSetCount = len(st.SubClassSet)
-            subtables.append(st)
-        return subtables
 
 
 def main():

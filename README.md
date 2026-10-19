@@ -27,6 +27,13 @@ The same machinery works for natural language:
   record*). A proof of concept, exact on every listed word in HarfBuzz and
   Core Text; see [english/README.md](english/README.md) and
   `english/demo.html`.
+- `french/` does the same for French, from Lexique: silent letters faded,
+  nasal vowels violet, droppable schwas blue, and obligatory liaisons bold
+  green with a tie under the space (*les‿amis*, *vont-ils*), never before an
+  h aspiré (*les héros*). Verbs spelled like nouns read the word before
+  (*le président*, *ils président*). Exact on every listed case in HarfBuzz
+  and Core Text; see [french/README.md](french/README.md) and
+  `french/demo.html`.
 
 The sequel, `markdown/`, goes beyond lexing: a font that renders GitHub
 Flavored Markdown as you type it, line by line. CommonMark's inline rules
@@ -62,9 +69,9 @@ Then use the font in CSS:
 textarea { font-family: "Fontlex Python", monospace; font-palette: light; }
 ```
 
-`./check.sh` builds all seven fonts and the demo pages and runs every check
+`./check.sh` builds all eight fonts and the demo pages and runs every check
 the machine supports; `./check.sh markdown` (or `unit`, `python`,
-`javascript`, `german`, `syllables`, `english`, `theory`) runs some of it.
+`javascript`, `german`, `syllables`, `english`, `french`, `theory`) runs some of it.
 On macOS, `pip install -r requirements-macos.txt` adds the Core Text
 (Safari, native apps) and WebKit checks. The German treebank scores need
 data that isn't in the repository (`german/fetch_ud.sh german/data`);
@@ -79,6 +86,7 @@ page byte for byte, so `git status` afterwards shows nothing.
 | `german/` | German noun gender (lists learned from a treebank and Wiktionary) and `german/syllables/` |
 | `markdown/` | the GitHub Flavored Markdown font: model, compiler, verification, demo |
 | `english/` | the English pronunciation-hint font: aligner, lexicon, compiler, verification, demo, review sheet |
+| `french/` | the French pronunciation-hint font, with liaison: aligner, lexicon, compiler, verification, demo |
 | `theory/` | what font compilation can reach, with two experiments |
 | `fonts/` | base fonts (JetBrains Mono, Noto Sans subset) and their licenses |
 | `build/` | the compiled fonts, TTF and WOFF2 |
@@ -310,3 +318,7 @@ The project's own code and documentation are under the MIT License
   (`english/lexicon/CMUDICT-LICENSE.txt`); words chosen by wordfreq's
   frequency ranking (data CC BY-SA 4.0); the noun/verb pair list is taken from
   Wikipedia's "Initial-stress-derived noun" (CC BY-SA 4.0).
+- **French lexicon** (`french/lexicon/`): derived from Lexique 3.83 and, for
+  h aspiré, French Wiktionary, both CC BY-SA 4.0, so sharing the French font
+  also takes attribution and CC BY-SA 4.0 (see
+  [french/README.md](french/README.md#licenses)).

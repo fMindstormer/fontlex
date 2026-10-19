@@ -1,0 +1,45 @@
+# Words after which liaison is obligatory before a vowel or h muet, one space on: their
+# last letter is said and links ("les‿amis", "nous‿avons", "un‿homme").
+# Determiners, pronouns before a verb, monosyllabic prepositions and adverbs, numbers.
+les
+des
+ces
+mes
+tes
+ses
+nos
+vos
+leurs
+aux
+un
+aucun
+mon
+ton
+son
+quels
+quelles
+quelques
+plusieurs
+certains
+certaines
+deux
+trois
+six
+dix
+vingt
+vingts
+cent
+cents
+nous
+vous
+ils
+elles
+on
+en
+dans
+chez
+sans
+sous
+très
+tout
+quand
