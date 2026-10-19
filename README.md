@@ -20,6 +20,11 @@ The same machinery works for natural language:
   its colors survive printing; see
   [german/syllables/README.md](german/syllables/README.md) and
   `german/syllables/demo.html`.
+- `english/` hints at how English words are pronounced, for learners: the
+  stressed vowel bold and red, reduced vowels gray, silent letters faded,
+  for the 5,000 most frequent words, from the CMU Pronouncing Dictionary. A
+  proof of concept, exact on every listed word in HarfBuzz and Core Text;
+  see [english/README.md](english/README.md) and `english/demo.html`.
 
 The sequel, `markdown/`, goes beyond lexing: a font that renders GitHub
 Flavored Markdown as you type it, line by line. CommonMark's inline rules

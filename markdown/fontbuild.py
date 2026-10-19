@@ -64,6 +64,7 @@ class FontBuilder:
         self.alias = {}       # base glyph -> styled variants, for GPOS
         self.colr = {}        # glyph -> [(layer glyph, palette entry or None for text color)]
         self.upem = self.font["head"].unitsPerEm
+        self.palettes = PALETTES     # {light, dark: {entry: color}}; another font may set its own
         self.base_names = list(self.order)   # the base font's glyphs and add_base_glyph's
         gdef = self.font["GDEF"].table
         self.base_class = dict(gdef.GlyphClassDef.classDefs)
@@ -369,8 +370,9 @@ class FontBuilder:
             fontlex._unify_gpos_scripts(font)
         if gsub is not None:
             font["GSUB"] = gsub
-        ids = {e: i for i, e in enumerate(PALETTE_ENTRIES)}
-        font["CPAL"] = buildCPAL([[_rgba(PALETTES[p][e]) for e in PALETTE_ENTRIES] for p in PALETTES],
+        entries = list(self.palettes["light"])
+        ids = {e: i for i, e in enumerate(entries)}
+        font["CPAL"] = buildCPAL([[_rgba(self.palettes[p][e]) for e in entries] for p in self.palettes],
                                  paletteTypes=[1, 2])
         font["COLR"] = buildCOLR({g: [(l, 0xFFFF if e is None else ids[e]) for l, e in layers]
                                   for g, layers in self.colr.items()}, version=0)
