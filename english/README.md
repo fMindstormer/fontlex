@@ -7,9 +7,10 @@ word, **silent letters** fade: the *k* of *knife*, the *gh* of *night*, the
 *b* of *debt*, the final *e* of *make*. The text stays as typed; copy it and
 you get plain letters. `english/demo.html` is a text box in the font.
 
-It knows the 5,000 most frequent English words that the CMU Pronouncing
-Dictionary has (American English). By wordfreq's counts they make up about
-87% of running text. Other words are drawn plain.
+It knows the 30,000 most frequent English words that the CMU Pronouncing
+Dictionary has (American English). By wordfreq's counts they make up 96.4%
+of running text (the first 5,000 make up 86.8%, 20,000 make up 95.1%).
+Other words are drawn plain.
 
 ## Results
 
@@ -18,12 +19,24 @@ lexicon's hint for it:
 
 | Text | Checked | Right, HarfBuzz | Right, Core Text |
 |---|---|---|---|
-| Every listed word alone, capitalized, in capitals, in punctuation and in a sentence; with a curly apostrophe; inside longer words and made-up words (must stay plain) | 31,060 | 31,060 | 31,060 |
+| Every listed word alone, capitalized, in capitals, in punctuation and in a sentence; with a curly apostrophe; inside longer words and made-up words (must stay plain) | 156,553 | 156,553 | 156,553 |
 | Lines of this project's English READMEs (`README.md`, `markdown/`, `theory/`) | 743 | 743 | 743 |
 
-The font has 1,850 glyphs and is 84 KB as WOFF2. It shapes a line in about
-0.08 ms in HarfBuzz, twice a plain Noto Sans, and as fast as Noto Sans in Core
-Text. In WebKit the hints render in both palettes and survive soft wrapping,
+The glyph count doesn't depend on the word list: 1,850 glyphs for any size.
+The rules do:
+
+| Words | Rules (words with hints) | WOFF2 | ms a line, HarfBuzz | ms a line, Core Text |
+|---|---|---|---|---|
+| none (plain Noto Sans) | | | 0.05 | 0.07 |
+| 5,000 | 3,736 | 83 KB | 0.12 | 0.09 |
+| 20,000 | 16,659 | 168 KB | 0.23 | 0.13 |
+| 30,000 | 25,649 | 226 KB | 0.20 | 0.15 |
+
+The times are the best of five runs over this project's README lines, on a
+heavily loaded machine, so only their ratios mean much: about four times a
+plain font in HarfBuzz, twice in Core Text. A shaper tries a word's rules
+one after another among those for its first letter, which is most of the
+cost; keying the rules on the first two letters would cut it. In WebKit the hints render in both palettes and survive soft wrapping,
 because each hint depends only on its own word.
 
 ## Where the hints come from
@@ -33,8 +46,8 @@ because each hint depends only on its own word.
 - **Units of spelling.** The word is cut into graphemes: single letters, plus
   listed letter groups that spell one sound. These are consonant digraphs
   (*sh*, *ph*, *ck*), doubled consonants, vowel teams (*ee*, *ou*, *ai*),
-  r-colored vowels (*er*, *ir*, *ear*) and *ti*/*ci*/*si* for "sh" in
-  *nation*.
+  r-colored vowels (*er*, *ir*, *ear*; *ur* also for the "yer" of *figure*)
+  and *ti*/*ci*/*si* for "sh" in *nation*.
 - **Learned costs.** Each grapheme gets 0, 1 or 2 phonemes, with costs learned
   by hard EM over the 30,000 most frequent words. The search starts from
   which letters plausibly spell which sounds.
@@ -54,8 +67,8 @@ names them, but they are choices:
 - *ue* in *guess* and *ui* in *build* are vowel teams;
 - *eo* in *people* is *e* plus a silent *o*.
 
-71 of the most frequent forms don't align and are left out. They are mostly
-letters and abbreviations (*mr*, *tv*, *uk*).
+271 of the most frequent forms don't align and are left out: nearly all
+letters, abbreviations and initialisms (*mr*, *tv*, *bbc*, *usb*).
 
 ## How the font does it
 
@@ -64,8 +77,8 @@ Four GSUB passes, built by `enfont.py` on Noto Sans and Noto Sans Bold:
 1. Right to left, each word's last letter becomes a "final" variant. A word
    is letters, with apostrophes between letters.
 2. Left to right, each word's first letter becomes an "initial" variant.
-3. Then one context rule per listed word that has hints (3,736 of the
-   5,000). Each rule is class-based, so case is ignored, and runs from an
+3. Then one context rule per listed word that has hints (25,649 of the
+   30,000). Each rule is class-based, so case is ignored, and runs from an
    initial letter to a final one, so it matches whole words only. It applies
    the stress, reduced or silent lookup at each hinted letter. The colors are
    COLR layers with light and dark palettes.
@@ -77,9 +90,11 @@ letter, and the glyph count doesn't grow with the word list.
 
 ## Next steps
 
-- **More words.** 20,000 words cover about 96% of running text and 30,000
-  about 97%. The rule tables should grow about linearly: roughly 0.5 MB of
-  rules for 30,000 words, to be measured.
+- **Faster matching.** Mark each word's first letter with a variant that
+  also records the second letter, so a word is tried only against the rules
+  for its first two letters.
+- **Words not in the 30,000**: the next 20,000 would add about 1.6% of
+  running text (CMUdict lists fewer of them; many are names).
 - **Check the alignments.** Have a teacher or a phonics word list go over
   the hints for the most frequent words. The alignment was only spot-checked.
 - **Homographs from context.** *a record* vs *to record*: the previous word
@@ -97,7 +112,7 @@ letter, and the glyph count doesn't grow with the word list.
 ```sh
 pip install -r english/requirements.txt
 curl -LO https://raw.githubusercontent.com/cmusphinx/cmudict/master/cmudict.dict
-python english/align.py cmudict.dict --words 5000 --out english/lexicon    # the lexicon is checked in
+python english/align.py cmudict.dict --words 30000 --out english/lexicon    # the lexicon is checked in
 python english/enfont.py --base fonts/NotoSans-Regular.ttf --bold fonts/NotoSans-Bold.ttf --out build
 python english/verify.py build/Fontlex-English.ttf --shaper harfbuzz --shaper coretext --corpus README.md
 python english/build_page.py --font build/Fontlex-English.ttf --out english/demo.html

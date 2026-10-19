@@ -174,27 +174,34 @@ class EnglishFont:
         first_glyphs = {}
         for g, k in klass.items():
             first_glyphs.setdefault(k, []).append(g)
-        subtables, chunk, size = [], [], 0
-        firsts = sorted(rules)
-        for k in firsts + [None]:
-            cost = 0 if k is None else sum(6 + 2 * (r.GlyphCount - 1) + 4 * r.SubstCount for r in rules[k])
-            if k is None or (chunk and size + cost > SUBTABLE_BYTES):
-                st = ot.ContextSubst()
-                st.Format = 2
-                st.Coverage = coverage([g for c in chunk for g in first_glyphs[c]], gid)
-                st.ClassDef = cd
-                st.SubClassSet = [None] * (len(classes) + 1)
-                for c in chunk:
-                    s = ot.SubClassSet()
-                    s.SubClassRule = rules[c]
-                    s.SubClassRuleCount = len(rules[c])
-                    st.SubClassSet[c] = s
-                st.SubClassSetCount = len(st.SubClassSet)
-                subtables.append(st)
-                chunk, size = [], 0
-            if k is not None:
-                chunk.append(k)
-                size += cost
+        # Rules go into subtables of about SUBTABLE_BYTES, in order of their
+        # first class; one class's rules may continue in the next subtable
+        # (a shaper tries each subtable whose coverage has the glyph).
+        flat = [(k, r) for k in sorted(rules) for r in rules[k]]
+        chunks, size = [[]], 0
+        for k, r in flat:
+            cost = 8 + 2 * (r.GlyphCount - 1) + 4 * r.SubstCount
+            if chunks[-1] and size + cost > SUBTABLE_BYTES:
+                chunks.append([])
+                size = 0
+            chunks[-1].append((k, r))
+            size += cost
+        subtables = []
+        for chunk in chunks:
+            sets = {}
+            for k, r in chunk:
+                sets.setdefault(k, []).append(r)
+            st = ot.ContextSubst()
+            st.Format = 2
+            st.Coverage = coverage([g for k in sets for g in first_glyphs[k]], gid)
+            st.ClassDef = cd
+            st.SubClassSet = [None] * (len(classes) + 1)
+            for k, rs in sets.items():
+                cs = ot.SubClassSet()
+                cs.SubClassRule, cs.SubClassRuleCount = rs, len(rs)
+                st.SubClassSet[k] = cs
+            st.SubClassSetCount = len(st.SubClassSet)
+            subtables.append(st)
         add(fb.lookup(5, subtables))
         # 4. Back to plain letters.
         add(fb.lookup(1, [fb.single({self.form[(g, f)]: g for g in letters for f in FORMS})]))

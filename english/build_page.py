@@ -22,7 +22,7 @@ from fontTools.ttLib import TTFont  # noqa: E402
 
 SAMPLE = """English spelling often hides the sound of a word. Which letters are silent in knife, write, island, listen, castle and honest? Where does the stress fall in photograph and photography, or in comfortable, chocolate and different?
 
-This font shows it as you read: the stressed vowel is bold and red, reduced vowels are gray, and silent letters fade. It knows the 5,000 most common words; others stay as they are. Type anything in this box."""
+This font shows it as you read: the stressed vowel is bold and red, reduced vowels are gray, and silent letters fade. It knows the 30,000 most common words; others stay as they are. Type anything in this box."""
 
 PAGE = """<!doctype html>
 <html lang="en">
@@ -53,7 +53,7 @@ textarea#code { min-height: 16rem; font-family: "Fontlex English", system-ui, sa
   with its sounds, letter groups such as <i>sh</i>, <i>ee</i> and <i>tion</i>'s <i>ti</i> taken as one
   spelling of one sound, so a letter that spells no sound is silent: the <i>k</i> of <i>knife</i>, the
   <i>gh</i> of <i>night</i>, the <i>b</i> of <i>debt</i>. The font lists the {{WORDS}} most frequent words
-  that the dictionary has, about 87% of running English text; any other word is drawn plain.</p>
+  that the dictionary has, about 96% of running English text; any other word is drawn plain.</p>
 
   <h2>How exact it is</h2>
   <table>

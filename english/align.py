@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Align English spellings with their CMUdict pronunciations, letter by letter.
 
-    python english/align.py CMUDICT --words 5000 --out english/lexicon
+    python english/align.py CMUDICT --words 30000 --out english/lexicon
 
 Each word is cut into graphemes (a letter, or a listed digraph such as `sh`,
 `ee`, `er`) and each grapheme is given 0, 1 or 2 phonemes; the costs of
@@ -44,9 +44,9 @@ CONSONANTS = {
 }
 # Pairs of phonemes one grapheme can spell.
 PAIRS = {
-    "x": ["K S", "G Z", "K SH", "G ZH"], "u": ["Y UW", "Y UH", "Y AH", "W AH", "W IH", "W EH", "W AY"],
-    "o": ["W AH", "W AA"], "eu": ["Y UW"], "ew": ["Y UW"], "ue": ["Y UW"], "qu": ["K W"],
-    "l": ["AH L"], "m": ["AH M"], "n": ["AH N"], "r": ["ER R"], "i": ["Y AH", "Y UW", "IY AH", "AY AH"],
+    "x": ["K S", "G Z", "K SH", "G ZH"], "u": ["Y UW", "Y UH", "Y AH", "W AH", "W IH", "W EH", "W AY", "AH W", "UW W"],
+    "o": ["W AH", "W AA"], "ur": ["Y ER"], "eu": ["Y UW"], "ew": ["Y UW"], "ue": ["Y UW"], "qu": ["K W"],
+    "l": ["AH L"], "m": ["AH M", "M AH"], "n": ["AH N"], "v": ["AH V"], "r": ["ER R"], "i": ["Y AH", "Y UW", "IY AH", "AY AH"],
     "e": ["Y UW", "IY AH"], "a": ["EY AH", "AH L"], "y": ["W AY"],
     "j": ["HH"], "c": ["K S", "T S"], "z": ["T S"], "ai": ["AY AH"], "wh": ["HH W"],
 }
@@ -81,7 +81,7 @@ def plausible(g, phones):
     if len(g) == 2 and g[0] == g[1]:
         return p in CONSONANTS.get(g[0], "").split()
     table = {"ph": "F", "th": "TH DH", "sh": "SH", "ch": "CH K SH", "ck": "K", "ng": "NG N", "wh": "W HH",
-             "gh": "F G", "tch": "CH", "dg": "JH", "ti": "SH CH", "ci": "SH", "si": "SH ZH"}
+             "gh": "F G", "tch": "CH", "dg": "JH", "ti": "SH CH ZH", "ci": "SH", "si": "SH ZH"}
     return p in table.get(g, "").split()
 
 
@@ -201,7 +201,7 @@ def read_cmudict(path):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("cmudict")
-    ap.add_argument("--words", type=int, default=5000)
+    ap.add_argument("--words", type=int, default=30000)
     ap.add_argument("--out", required=True)
     ap.add_argument("--show", type=int, default=0, help="print this many alignments")
     args = ap.parse_args()
@@ -225,8 +225,11 @@ def main():
     with open(out / "words.tsv", "w", encoding="utf-8") as f:
         for w, h, p, _ in rows:
             f.write(f"{w}\t{h}\t{p}\n")
-    print(f"wrote {out / 'words.tsv'}: {len(rows)} words; {len(failed)} skipped (no alignment), "
-          f"e.g. {' '.join(failed[:20])}")
+    alpha = [w for w in wordfreq.top_n_list("en", 200000) if re.fullmatch(r"[a-z]+(?:'[a-z]+)?", w)]
+    total = sum(wordfreq.word_frequency(w, "en") for w in alpha)
+    covered = sum(wordfreq.word_frequency(w, "en") for w, *_ in rows)
+    print(f"wrote {out / 'words.tsv'}: {len(rows)} words, {covered / total:.1%} of running text; "
+          f"{len(failed)} skipped (no alignment), e.g. {' '.join(failed[:20])}")
     for w, h, p, a in rows[:args.show]:
         print(f"  {w:14} {h:14} {' '.join(g + '=' + ('-'.join(ph) or '_') for g, ph in a)}")
     return 0
