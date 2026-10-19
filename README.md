@@ -21,13 +21,23 @@ The same machinery works for natural language:
   [german/syllables/README.md](german/syllables/README.md) and
   `german/syllables/demo.html`.
 
-The sequel, `markdown/`, goes beyond lexing: a font that renders Markdown as
-you type it, with CommonMark's inline rules (emphasis, code spans, links,
-images, autolinks, raw HTML, entities and escapes) run by the shaper, the
-markup hidden and the text styled, in any script the font has. Within its
-bounds it renders every one-line spec example, 20,000 random lines and
-10,725 lines of real documents exactly as CommonMark does; see
-[markdown/README.md](markdown/README.md) and `markdown/demo.html`.
+The sequel, `markdown/`, goes beyond lexing: a font that renders GitHub
+Flavored Markdown as you type it, line by line. CommonMark's inline rules
+(emphasis, code spans, links, images, autolinks, raw HTML, entities and
+escapes), GitHub's strikethrough, bare URLs and emails, and each line's block
+markup (headings, quotes, lists, task boxes, rules) are run by the shaper,
+with the markup hidden and the text styled, in any script the font has. It
+comes monospaced and proportional. Within its bounds it renders every
+one-line spec example, 20,000 random lines and 10,723 lines of real
+documents exactly as GitHub does; see [markdown/README.md](markdown/README.md)
+and `markdown/demo.html`.
+
+[theory/README.md](theory/README.md) works out what font compilation can
+reach: exactly the finite-state (rational) functions of a run, with glyph
+ids, lookup headers and the engine's work budget as the real limits. Fonts
+can't count, but `theory/depth.py` matches brackets 4,000 deep. It also
+covers what follows from fonts being programs, including a HarfBuzz 13+ bug
+that this project's fonts uncovered (`theory/hbcache.py`).
 
 ## Quick start
 
@@ -246,6 +256,9 @@ which theme's colors dominate the code box's pixels.
   (mark filtering sets) let nested pairs be matched left to right in rounds,
   one per level of nesting. See
   [markdown/README.md](markdown/README.md#how-many-alternating-passes-does-commonmark-need).
+  In general a font computes exactly the rational functions of a run, and
+  bounded non-regular ones by many small passes; see
+  [theory/README.md](theory/README.md).
 - Minimizing glyph count for a given DFA. Merging states that are
   indistinguishable for both color and future transitions barely helps the
   example specs: only the one-glyph `*_end` states of strings merge. Almost

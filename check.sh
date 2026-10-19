@@ -1,14 +1,14 @@
 #!/bin/sh
 # Build everything and run every check this machine can run.
 #   ./check.sh                    # every section
-#   ./check.sh markdown german    # some: unit python javascript german syllables markdown
+#   ./check.sh markdown german    # some: unit python javascript german syllables markdown theory
 #   PYTHON=... to pick the interpreter, N=... random cases
 set -e
 cd "$(dirname "$0")"
 PY=${PYTHON:-python3}
 N=${N:-20000}
 BASE=fonts/JetBrainsMono-Regular.ttf
-SECTIONS="unit python javascript german syllables markdown"
+SECTIONS="unit python javascript german syllables markdown theory"
 want=${*:-$SECTIONS}
 for s in $want; do
     case " $SECTIONS " in *" $s "*) ;; *) echo "unknown section: $s (sections: $SECTIONS)" >&2; exit 2 ;; esac
@@ -100,6 +100,13 @@ if wants markdown; then
         echo "== markdown: demo page in WebKit"
         "$PY" markdown/check_webkit.py markdown/demo.html
     fi
+fi
+
+if wants theory; then
+    echo "== theory: bracket matching as deep as the rounds ($shapers)"
+    "$PY" theory/depth.py --distinct --rounds 10 300 $shapers
+    echo "== theory: HarfBuzz's coverage cache (ids 32512-32767 read aaa where HarfBuzz 13+ has the bug)"
+    "$PY" theory/hbcache.py
 fi
 
 [ $macos = yes ] || echo "(Core Text and WebKit checks skipped: needs macOS and requirements-macos.txt)"
