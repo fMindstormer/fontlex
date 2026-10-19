@@ -28,7 +28,10 @@ font in a text box.
 
 Bold and italic come from JetBrains Mono's own bold and italic; code, link,
 image and HTML styles, bullets, bars, boxes and rules are color glyphs
-(COLR) with light and dark palettes.
+(COLR) with light and dark palettes. A proportional edition, Fontlex
+Markdown Sans, sets the text in Noto Sans and code in JetBrains Mono, so a
+text box looks like the rendered page; the demo's menu switches between
+them.
 
 ## Results
 
@@ -58,7 +61,44 @@ where the two disagree with each other or with the spec (cmark-gfm's core
 follows an older CommonMark; commonmark.js counts a no-break space as
 whitespace inside HTML tags).
 
-The font has 63,367 glyphs (of OpenType's 65,535) and is 722 KB as WOFF2.
+Both editions give exactly these results. The font has 63,367 glyphs (of
+OpenType's 65,535) and is 722 KB as WOFF2; the proportional edition has
+54,841 and is 743 KB.
+
+## The proportional edition
+
+Every character the text can hold is copied for each style (bold, italic,
+code, link, ...) and for each state of the passes that read it, about 37
+times, so the base font's size decides whether the font fits in 65,535
+glyphs. `sans_base.py` makes the base from Google Fonts' variable Noto Sans:
+the four styles, subset to the 761 characters Noto Sans and JetBrains Mono
+share (Latin, Greek, Cyrillic and common punctuation; JetBrains Mono's box
+drawing and APL symbols are left out, and come from another font). Code is
+drawn with JetBrains Mono's outlines in its four styles at 90% (GitHub sets
+code at 85% of the text size), without the text's kerning. Noto Sans's own
+kerning and mark positioning carry over to every styled glyph. Bullets,
+boxes, bars and rules are a figure wide.
+
+Three things only showed up with the second base font:
+
+- **HarfBuzz 14 never matches a glyph with id 32,512 to 32,767 in a context
+  lookup of format 1 or 2.** Its per-subtable coverage cache
+  (`hb_cache_t<14, 1, 8>`) stores 7 bits per byte and starts each byte as
+  0xFF, but checks for an empty slot only when the stored bits fill the
+  byte; and it stores only ids below 16,384. So an id whose bits above the
+  lowest 8 are 127 reads an empty slot as a hit, saying "not covered". The
+  mono edition had no such glyph by chance; the proportional one had six,
+  one of them the `>` that ends raw HTML. `fontbuild.py` now inserts empty
+  glyphs before the first such glyph, moving it and every later glyph past
+  the window (244 glyphs here).
+- Noto Sans gives Devanagari different GPOS features from other scripts, and
+  then Core Text shapes each script as its own run, which restarts the
+  passes at every change between Latin, Greek and Cyrillic. The scripts'
+  features are unified, as `fontlex.py --unify-scripts` does.
+- A task box is drawn on the character inside its brackets, usually a
+  space, and WebKit gives a space character a space's width whatever the
+  font says. So the box takes a space's width and reaches back over the
+  hidden `[` before it, which takes the rest of the box's width.
 
 ## How many alternating passes does CommonMark need?
 
@@ -224,7 +264,12 @@ python markdown/mdfont.py --base fonts/JetBrainsMono-Regular.ttf --bold fonts/Je
     --italic fonts/JetBrainsMono-Italic.ttf --bold-italic fonts/JetBrainsMono-BoldItalic.ttf --out build
 python markdown/verify.py build/Fontlex-Markdown.ttf --shaper harfbuzz --shaper coretext --n 20000 \
     --corpus README.md
-python markdown/build_page.py --font build/Fontlex-Markdown.ttf --out markdown/demo.html
+python markdown/sans_base.py NOTO_DIR --out fonts      # Google Fonts' ofl/notosans: already in fonts/
+python markdown/mdfont.py --base fonts/NotoSans-Regular.ttf --bold fonts/NotoSans-Bold.ttf \
+    --italic fonts/NotoSans-Italic.ttf --bold-italic fonts/NotoSans-BoldItalic.ttf \
+    --mono fonts/JetBrainsMono-{Regular,Bold,Italic,BoldItalic}.ttf --family "Fontlex Markdown Sans" --out build
+python markdown/build_page.py --font build/Fontlex-Markdown.ttf --sans build/Fontlex-MarkdownSans.ttf \
+    --out markdown/demo.html
 python markdown/check_webkit.py markdown/demo.html        # macOS
 npm install --prefix /tmp/cm commonmark@0.31.2               # to check the model itself
 python markdown/crosscheck.py /tmp/cm/node_modules/commonmark --n 100000
@@ -236,12 +281,14 @@ python markdown/crosscheck.py /tmp/cm/node_modules/commonmark --mode block --n 5
 python markdown/crosscheck.py /tmp/cm/node_modules/commonmark --mode gfm --n 50000
 ```
 
-The build takes about a minute; `./check.sh markdown` builds, verifies and
-makes the demo page.
+Each build takes about a minute; `./check.sh markdown` builds and verifies
+both editions and makes the demo page.
 
 ## Licenses
 
 `spec-0.31.2.json` holds the examples of the CommonMark Spec 0.31.2 by John
 MacFarlane, and `gfm-spec-0.29-extensions.json` those of the GitHub Flavored
-Markdown Spec's extensions, both under CC BY-SA 4.0 (see `SPEC-LICENSE.txt`). The base fonts,
-JetBrains Mono in four styles, are under the SIL Open Font License.
+Markdown Spec's extensions, both under CC BY-SA 4.0 (see `SPEC-LICENSE.txt`).
+The base fonts are under the SIL Open Font License: JetBrains Mono in four
+styles (`fonts/OFL.txt`), and Noto Sans, instanced and subset in four styles
+(`fonts/OFL-NotoSans.txt`).

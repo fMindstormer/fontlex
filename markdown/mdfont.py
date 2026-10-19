@@ -50,6 +50,7 @@ MAX_LINKS_INSIDE = 3  # links inside one pair of brackets, for the no-links-in-l
 LEVELS = 3            # emphasis inside links and images, nested this deep
 PARENS = 3            # parentheses nested in a link destination
 URL_PARENS = 3        # how far a bare URL's `(` and `)` are counted out of balance
+CODE_SCALE = 0.9      # code's size in the proportional edition (GitHub's is 85% of a system font)
 
 STRUCTURAL = "\\`*_~[]!()\"'<>&"
 TAIL = "()\"'<>] \t"          # what the link destination automaton reads
@@ -89,7 +90,7 @@ def flanking(c, before, after):
 
 
 class MarkdownFont:
-    def __init__(self, base, bold, italic, bold_italic):
+    def __init__(self, base, bold, italic, bold_italic, mono=None):
         self.b = fb.FontBuilder(base)
         if 9 not in self.b.font.getBestCmap():
             self.b.add_base_glyph("tab", 9, self.b.advance(self.b.font.getBestCmap()[32]))
@@ -101,7 +102,10 @@ class MarkdownFont:
         for cp, g in sorted(cmap.items()):
             self.chars.setdefault(g, chr(cp))
         self.text = sorted(self.chars, key=self.b.gid)      # every glyph text can hold
-        self.b.add_color_styles(self.text)
+        if mono:    # code in a monospaced family's four styles, as GitHub draws it
+            for suffix, path in zip(("m", "mb", "mi", "mbi"), mono):
+                self.b.import_by_char(suffix, path, self.text, CODE_SCALE, fallback=suffix[1:])
+        self.b.add_color_styles(self.text, code="m" if mono else "")
         self.pl = passes.Pipeline(self.b)
         self.g = {c: cmap[ord(c)] for c in STRUCTURAL + " \t" if ord(c) in cmap}
         self.alive = set(self.text)     # glyphs that can be in the buffer at this point
@@ -1189,10 +1193,17 @@ class MarkdownFont:
         pl, b = self.pl, self.b
         made = {}
 
-        def mark(kind, adv=None):
-            """A block marker's glyph (fontbuild.marker), one per kind."""
+        figure = b.advance(b.font.getBestCmap()[ord("0")])
+        # A task box is drawn on the character inside its brackets, often a
+        # space, which WebKit always gives a space's width: the box takes that
+        # width and reaches back over the hidden `[`, which takes the rest.
+        box_left = max(0, figure - b.advance(self.g[" "]))
+
+        def mark(kind):
+            """A block marker's glyph (fontbuild.marker), one per kind, a
+            figure wide (a space would be narrow in a proportional font)."""
             if ("mk", kind) not in made:
-                made[("mk", kind)] = b.marker(kind, b.advance(self.g[" "]) if adv is None else adv)
+                made[("mk", kind)] = b.marker(kind, figure, box_left if kind in ("box", "checked") else 0)
                 self.styled_key[made[("mk", kind)]] = ("marker", kind)
             return made[("mk", kind)]
 
@@ -1203,9 +1214,9 @@ class MarkdownFont:
                 src = fb.styled(pl.base_of(g), src_style)
                 glyph = b.glyphs.get(src) or b.glyf[src]
                 if glyph.isComposite() or glyph.numberOfContours > 0:
-                    b.composite(name, [(src, 0, 0)], b.advance(pl.base_of(g)))
+                    b.composite(name, [(src, 0, 0)], b.advance(src))
                 else:
-                    b.empty(name, b.advance(pl.base_of(g)))
+                    b.empty(name, b.advance(src))
                 if src in b.colr:
                     b.colr[name] = list(b.colr[src])
                 self.styled_key[name] = key
@@ -1223,6 +1234,13 @@ class MarkdownFont:
                 made[("hid", state)] = b.empty(f"_hid{len(made)}", 0)
                 self.styled_key[made[("hid", state)]] = ("hidden", state)
             return made[("hid", state)]
+
+        def box_pad(state):
+            """A task box's hidden `[`, as wide as the box reaches over it."""
+            if ("pad", state) not in made:
+                made[("pad", state)] = b.empty(f"_hidpad{len(made)}", box_left)
+                self.styled_key[made[("pad", state)]] = ("hidden-pad", state)
+            return made[("pad", state)]
 
         def hid_strike(state, struck):
             """A hidden `~`, which also says whether the text after it is
@@ -1294,6 +1312,8 @@ class MarkdownFont:
                 return passes.IMPOSSIBLE
             if r in ("indent", "number"):
                 return shown(g, state)
+            if r == "box-open" and box_left:
+                return box_pad(state), state
             if r in ("box-open", "box-close"):
                 return hid(state), state
             if r in ("quote", "bullet", "box", "checked"):
@@ -1602,11 +1622,11 @@ STAGES = ("html_validity", "gt_ends", "escapes", "backtick_runs", "code_closers"
           "main_scan", "url_live", "brackets", "emphasis", "emails", "style", "entities", "paint", "strike")
 
 
-def build(base, bold, italic, bold_italic):
-    mf = MarkdownFont(base, bold, italic, bold_italic)
+def build(base, bold, italic, bold_italic, mono=None, family="Fontlex Markdown"):
+    mf = MarkdownFont(base, bold, italic, bold_italic, mono)
     for stage in STAGES:
         getattr(mf, stage)()
-    font = mf.b.finish(mf.pl.gsub(), mf.pl.mark_sets)
+    font = mf.b.finish(mf.pl.gsub(), mf.pl.mark_sets, family)
     return font, mf
 
 
@@ -1621,12 +1641,16 @@ def main(argv=None):
     ap.add_argument("--bold", required=True)
     ap.add_argument("--italic", required=True)
     ap.add_argument("--bold-italic", required=True)
+    ap.add_argument("--mono", nargs=4, metavar=("REGULAR", "BOLD", "ITALIC", "BOLD_ITALIC"),
+                    help="a monospaced family to draw code with (for a proportional base)")
+    ap.add_argument("--family", default="Fontlex Markdown")
     ap.add_argument("--out", required=True)
     args = ap.parse_args(argv)
-    font, mf = build(args.base, args.bold, args.italic, args.bold_italic)
+    font, mf = build(args.base, args.bold, args.italic, args.bold_italic, args.mono, args.family)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    path = out / "Fontlex-Markdown.ttf"
+    first, *rest = args.family.split()
+    path = out / f"{first}-{''.join(rest)}.ttf"
     font.save(path)
     # The web font goes without glyph names (verify.py reads them from the TTF).
     font = TTFont(path, recalcTimestamp=False)

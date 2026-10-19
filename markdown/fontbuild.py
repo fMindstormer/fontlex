@@ -5,12 +5,16 @@ and COLOR_STYLES. The bold, italic and bold italic outlines come from the
 base font's family (matched by glyph name); glyphs a sibling lacks are
 composites of the regular (or bold) glyph, slanted for italics. Code, link,
 image and HTML styles are COLR glyphs layered over those outlines, so they
-follow the palette (light or dark) the app picks.
+follow the palette (light or dark) the app picks. Code can instead be drawn
+with another family's outlines (import_by_char): a monospaced one, for a
+proportional base.
 """
 
 import copy
 import math
 from fontTools.colorLib.builder import buildCOLR, buildCPAL
+from fontTools.pens.recordingPen import DecomposingRecordingPen
+from fontTools.pens.transformPen import TransformPen
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.ttLib import TTFont, newTable
 from fontTools.ttLib.tables import otTables as ot
@@ -129,17 +133,20 @@ class FontBuilder:
         os2 = self.font["OS/2"]
         return getattr(os2, name, 0) or default
 
-    def marker(self, kind, adv):
+    def marker(self, kind, adv, left=0):
         """The glyph a block marker is drawn as: a bullet, a block quote's bar
         and a thematic break's rule (both in the HTML palette color), a task
-        box, checked or not. Drawn from the font's metrics, `adv` wide."""
+        box, checked or not. Drawn from the font's metrics, `adv` wide; with
+        `left`, that much of it lies left of the glyph, over the hidden glyph
+        before it, and the glyph's advance is the rest."""
         name = f"_mk_{kind}{adv}"
         if name in self.ids:
             return name
         x_height = self.metric("sxHeight", self.upem // 2)
         cap = self.metric("sCapHeight", self.upem * 7 // 10)
         stroke = max(self.font["post"].underlineThickness, self.upem // 20)
-        pen = TTGlyphPen(None)
+        glyph_pen = TTGlyphPen(None)
+        pen = TransformPen(glyph_pen, (1, 0, 0, 1, -left, 0)) if left else glyph_pen
 
         def box(x0, y0, x1, y1, hole=False):
             pts = [(x0, y0), (x0, y1), (x1, y1), (x1, y0)]
@@ -179,7 +186,10 @@ class FontBuilder:
                 bmid = (x0 + side * 0.43, y0 + side * 0.28)
                 segment(a, bmid, w * 1.3)
                 segment(bmid, c, w * 1.3)
-        glyph = pen.glyph()
+        glyph = glyph_pen.glyph()
+        if left:
+            glyph.recalcBounds(None)
+            return self.add(name, glyph, adv - left, glyph.xMin)
         if kind in ("quote", "rule"):           # in the HTML palette color
             shape = self.add(name + ".shape", glyph, 0, 0)
             self.composite(name, [(shape, 0, 0)], adv)
@@ -250,15 +260,42 @@ class FontBuilder:
                                self.advance(name), self.gdef_class(name))
         return missing
 
-    def add_color_styles(self, bases, bg=(-230, 860), underline=None):
-        """Code, link, image and HTML variants of each glyph in `bases`."""
+    def import_by_char(self, suffix, path, bases, scale=1.0, fallback=""):
+        """Copy another font's glyph for each of `bases`' characters as
+        `<name>__<suffix>`, decomposed and scaled. Characters it lacks get a
+        composite of the `fallback`-styled glyph."""
+        other = TTFont(path)
+        cmap, glyphs, hmtx = other.getBestCmap(), other.getGlyphSet(), other["hmtx"]
+        chars = {}
+        for cp, name in sorted(self.font.getBestCmap().items()):
+            chars.setdefault(name, cp)
+        for name in bases:
+            theirs = cmap.get(chars.get(name))
+            if theirs is None:
+                src = styled(name, fallback)
+                self.composite(styled(name, suffix), [(src, 0, 0)], self.advance(src), self.gdef_class(name))
+                continue
+            rec = DecomposingRecordingPen(glyphs)
+            glyphs[theirs].draw(rec)
+            pen = TTGlyphPen(None)
+            rec.replay(TransformPen(pen, (scale, 0, 0, scale, 0, 0)))
+            g = pen.glyph()
+            g.recalcBounds(None)
+            self.add(styled(name, suffix), g, round(hmtx[theirs][0] * scale),
+                     g.xMin if g.numberOfContours else 0, self.gdef_class(name))
+
+    def add_color_styles(self, bases, bg=(-230, 860), underline=None, code=""):
+        """Code, link, image and HTML variants of each glyph in `bases`. Code
+        styles draw the outlines styled `code` + their outline style (from
+        import_by_char) if `code` is given; those get no GPOS of the base."""
         post = self.font["post"]
         uy, ut = (underline or (post.underlinePosition, post.underlineThickness))
         rects = {}
         for style, (outline, layers) in COLOR_STYLES.items():
+            is_code = layers[0] == "bg"
             for name in bases:
-                adv = self.advance(name)
-                body = styled(name, outline)
+                body = styled(name, code + outline if is_code else outline)
+                adv = self.advance(body)
                 vname = self.composite(styled(name, style), [(body, 0, 0)], adv, self.gdef_class(name))
                 stack = []
                 back, text, line = layers
@@ -273,15 +310,40 @@ class FontBuilder:
                                                        uy + (ut + 1) // 2)
                     stack.append((rects[("ul", adv)], "link"))
                 self.colr[vname] = stack
-                self.alias.setdefault(name, []).append(vname)
+                if not (code and is_code):
+                    self.alias.setdefault(name, []).append(vname)
         for name in bases:
             for suffix in OUTLINE_STYLES:
                 self.alias.setdefault(name, []).append(styled(name, suffix))
+
+    def _clear_bad_window(self, gsub):
+        """Keep glyphs that context lookups match out of glyph ids BAD_WINDOW.
+        HarfBuzz 14 caches coverage of context and chain context format 1 and
+        2 subtables in bytes that start as 0xFF and stores only ids below
+        16384, so an id from 32512 to 32767 reads an empty slot as "not
+        covered" (hb_cache_t<14, 1, 8> skips its empty-slot check): such a
+        glyph never matches. Empty glyphs inserted before the first one move
+        it and every later glyph past the window, keeping their order."""
+        covered = _context_coverage(gsub)
+        first = next((i for i in BAD_WINDOW if i < len(self.order) and self.order[i] in covered), None)
+        if first is None:
+            return
+        pad = []
+        for k in range(BAD_WINDOW.stop - first):
+            g = Glyph()
+            g.numberOfContours = 0
+            name = f"_pad{k}"
+            self.glyphs[name], self.metrics[name], self.classes[name] = g, (0, 0), 1
+            pad.append(name)
+        self.order[first:first] = pad
+        self.ids = {name: i for i, name in enumerate(self.order)}
 
     def finish(self, gsub=None, mark_sets=(), family="Fontlex Markdown"):
         """Write the glyphs and tables; returns the TTFont."""
         import fontlex
         font = self.font
+        if gsub is not None:
+            self._clear_bad_window(gsub)
         font.setGlyphOrder(self.order)
         self.glyf.glyphOrder = self.order
         for name, g in self.glyphs.items():
@@ -303,6 +365,8 @@ class FontBuilder:
                 gdef.MarkGlyphSetsDef.Coverage.append(cov)
             gdef.MarkGlyphSetsDef.MarkSetCount = len(gdef.MarkGlyphSetsDef.Coverage)
         fontlex.alias_layout(font, self.alias)
+        if fontlex._splits_script_runs(font):     # Core Text would restart the passes at each script
+            fontlex._unify_gpos_scripts(font)
         if gsub is not None:
             font["GSUB"] = gsub
         ids = {e: i for i, e in enumerate(PALETTE_ENTRIES)}
@@ -318,6 +382,21 @@ class FontBuilder:
             font["post"].mapping = {}
         fontlex.set_family_name(font, family)
         return font
+
+
+BAD_WINDOW = range(32512, 32768)
+
+
+def _context_coverage(gsub):
+    """The glyphs some context or chain context format 1 or 2 subtable covers."""
+    covered = set()
+    for lk in gsub.table.LookupList.Lookup:
+        for st in lk.SubTable:
+            kind = st.ExtensionLookupType if lk.LookupType == 7 else lk.LookupType
+            st = st.ExtSubTable if lk.LookupType == 7 else st
+            if kind in (5, 6) and st.Format in (1, 2):
+                covered |= set(st.Coverage.glyphs)
+    return covered
 
 
 def lookup(lookup_type, subtables, flag=0, mark_set=None):

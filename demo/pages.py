@@ -47,7 +47,7 @@ EDITOR = """<div class="editor" id="editor">
       <label for="hl"><input type="checkbox" id="hl" checked> {{TOGGLE}}</label>
       <label for="pal">Palette
         <select id="pal"><option value="auto">Match page</option><option value="light">Light</option>
-        <option value="dark">Dark</option></select></label>
+        <option value="dark">Dark</option></select></label>{{CONTROLS}}
     </div>
     <textarea id="code" spellcheck="false" {{ATTRIBUTES}}>{{SAMPLE}}</textarea>
   </div>"""
@@ -79,10 +79,12 @@ def woff2(font):
     return buf.getvalue()
 
 
-def editor(toggle, sample, attributes):
-    """The text box holding `sample`, under a bar with the `toggle` checkbox
-    and the palette menu; `attributes` are the textarea's other attributes."""
-    return fill(EDITOR, {"TOGGLE": toggle, "SAMPLE": html.escape(sample), "ATTRIBUTES": attributes})
+def editor(toggle, sample, attributes, controls=""):
+    """The text box holding `sample`, under a bar with the `toggle` checkbox,
+    the palette menu and any other `controls`; `attributes` are the
+    textarea's other attributes."""
+    return fill(EDITOR, {"TOGGLE": toggle, "SAMPLE": html.escape(sample), "ATTRIBUTES": attributes,
+                         "CONTROLS": controls})
 
 
 def page(template, font, family, colors, box, fields):

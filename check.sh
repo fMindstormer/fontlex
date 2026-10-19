@@ -80,14 +80,22 @@ if wants syllables; then
 fi
 
 if wants markdown; then
+    mono="fonts/JetBrainsMono-Regular.ttf fonts/JetBrainsMono-Bold.ttf fonts/JetBrainsMono-Italic.ttf fonts/JetBrainsMono-BoldItalic.ttf"
     echo "== markdown: compile"
     "$PY" markdown/mdfont.py --base $BASE --bold fonts/JetBrainsMono-Bold.ttf --italic fonts/JetBrainsMono-Italic.ttf \
         --bold-italic fonts/JetBrainsMono-BoldItalic.ttf --out build > /dev/null
-    echo "== markdown: test ($shapers)"
-    "$PY" markdown/verify.py build/Fontlex-Markdown.ttf $shapers --n "$N" \
-        --corpus README.md german/README.md german/syllables/README.md markdown/README.md
+    echo "== markdown: compile the proportional edition"
+    "$PY" markdown/mdfont.py --base fonts/NotoSans-Regular.ttf --bold fonts/NotoSans-Bold.ttf \
+        --italic fonts/NotoSans-Italic.ttf --bold-italic fonts/NotoSans-BoldItalic.ttf --mono $mono \
+        --family "Fontlex Markdown Sans" --out build > /dev/null
+    for font in build/Fontlex-Markdown.ttf build/Fontlex-MarkdownSans.ttf; do
+        echo "== markdown: test $font ($shapers)"
+        "$PY" markdown/verify.py $font $shapers --n "$N" \
+            --corpus README.md german/README.md german/syllables/README.md markdown/README.md
+    done
     echo "== markdown: demo page"
-    "$PY" markdown/build_page.py --font build/Fontlex-Markdown.ttf --out markdown/demo.html --n "$N" > /dev/null
+    "$PY" markdown/build_page.py --font build/Fontlex-Markdown.ttf --sans build/Fontlex-MarkdownSans.ttf \
+        --out markdown/demo.html --n "$N" > /dev/null
     if [ $macos = yes ]; then
         echo "== markdown: demo page in WebKit"
         "$PY" markdown/check_webkit.py markdown/demo.html
