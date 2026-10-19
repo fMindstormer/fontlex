@@ -21,10 +21,12 @@ The same machinery works for natural language:
   [german/syllables/README.md](german/syllables/README.md) and
   `german/syllables/demo.html`.
 - `english/` hints at how English words are pronounced, for learners: the
-  stressed vowel bold and red, reduced vowels gray, silent letters faded,
-  for the 30,000 most frequent words, from the CMU Pronouncing Dictionary. A
-  proof of concept, exact on every listed word in HarfBuzz and Core Text;
-  see [english/README.md](english/README.md) and `english/demo.html`.
+  stressed vowel bold and red, reduced vowels blue, silent letters faded,
+  for the 30,000 most frequent words, from the CMU Pronouncing Dictionary;
+  noun/verb pairs take their stress from the word before (*the record*, *to
+  record*). A proof of concept, exact on every listed word in HarfBuzz and
+  Core Text; see [english/README.md](english/README.md) and
+  `english/demo.html`.
 
 The sequel, `markdown/`, goes beyond lexing: a font that renders GitHub
 Flavored Markdown as you type it, line by line. CommonMark's inline rules
@@ -60,11 +62,27 @@ Then use the font in CSS:
 textarea { font-family: "Fontlex Python", monospace; font-palette: light; }
 ```
 
-`./check.sh` builds all five fonts and the demo pages and runs every check
+`./check.sh` builds all seven fonts and the demo pages and runs every check
 the machine supports; `./check.sh markdown` (or `unit`, `python`,
-`javascript`, `german`, `syllables`) runs some of it. On macOS,
-`pip install -r requirements-macos.txt` adds the Core Text (Safari, native
-apps) and WebKit checks.
+`javascript`, `german`, `syllables`, `english`, `theory`) runs some of it.
+On macOS, `pip install -r requirements-macos.txt` adds the Core Text
+(Safari, native apps) and WebKit checks. The German treebank scores need
+data that isn't in the repository (`german/fetch_ud.sh german/data`);
+without it that step is skipped. A full run rebuilds every tracked font and
+page byte for byte, so `git status` afterwards shows nothing.
+
+## Layout
+
+| Path | What it is |
+|---|---|
+| `fontlex.py`, `test_fontlex.py`, `specs/`, `demo/` | the lexer compiler, its tests, example specs, demo pages |
+| `german/` | German noun gender (lists learned from a treebank and Wiktionary) and `german/syllables/` |
+| `markdown/` | the GitHub Flavored Markdown font: model, compiler, verification, demo |
+| `english/` | the English pronunciation-hint font: aligner, lexicon, compiler, verification, demo, review sheet |
+| `theory/` | what font compilation can reach, with two experiments |
+| `fonts/` | base fonts (JetBrains Mono, Noto Sans subset) and their licenses |
+| `build/` | the compiled fonts, TTF and WOFF2 |
+| `tests/` | unit tests (`python -m unittest discover -s tests`) |
 
 ### Compiler options
 
@@ -272,11 +290,23 @@ which theme's colors dominate the code box's pixels.
 
 ## License
 
-The base font is JetBrains Mono (regular, and the bold and italics the
-Markdown font uses), under the SIL Open Font License 1.1 (`fonts/OFL.txt`).
-Fonts built from it are under the same license. The German word and ending
-lists are derived from CC BY-SA 4.0 data, so sharing the German gender font
-also takes attribution and CC BY-SA 4.0 (see
-[german/README.md](german/README.md#data-and-licenses)).
-`markdown/spec-0.31.2.json` holds CommonMark's spec examples, under CC BY-SA
-4.0.
+The project's own code and documentation are under the MIT License
+(`LICENSE`). The rest keeps its own terms:
+
+- **Base fonts**, under the SIL Open Font License 1.1: JetBrains Mono in four
+  styles (`fonts/OFL.txt`) and Noto Sans, instanced and subset in four styles
+  (`fonts/OFL-NotoSans.txt`). The fonts in `build/` and those embedded in the
+  demo pages are modified versions of them, renamed, under the same license.
+- **German lists** (`german/lexicon/`) are derived from CC BY-SA 4.0 data, so
+  sharing the German gender font also takes attribution and CC BY-SA 4.0 (see
+  [german/README.md](german/README.md#data-and-licenses)). The syllable
+  patterns come from TeX's hyph-de under the MIT License
+  (`german/syllables/hyph-de-1996.LICENSE.txt`).
+- **Markdown spec examples**: `markdown/spec-0.31.2.json` (CommonMark) and
+  `markdown/gfm-spec-0.29-extensions.json` (GitHub Flavored Markdown), under
+  CC BY-SA 4.0 (`markdown/SPEC-LICENSE.txt`).
+- **English lexicon** (`english/lexicon/`): pronunciations derived from the
+  CMU Pronouncing Dictionary under its BSD-style license
+  (`english/lexicon/CMUDICT-LICENSE.txt`); words chosen by wordfreq's
+  frequency ranking (data CC BY-SA 4.0); the noun/verb pair list is taken from
+  Wikipedia's "Initial-stress-derived noun" (CC BY-SA 4.0).
