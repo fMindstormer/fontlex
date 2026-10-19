@@ -112,8 +112,12 @@ letter, and the glyph count doesn't grow with the word list.
   rules are keyed on two letters.
 - **Words not in the 30,000**: the next 20,000 would add about 1.6% of
   running text (CMUdict lists fewer of them; many are names).
-- **Check the alignments.** Have a teacher or a phonics word list go over
-  the hints for the most frequent words. The alignment was only spot-checked.
+- **Check the alignments.** `review_sheet.py` builds a review page: the 500
+  most frequent words and the noun/verb pairs drawn in the font, with their
+  pronunciations in IPA, each to be marked right or wrong with a note. The
+  published page keeps the verdicts (with the hints judged) for reading back
+  and turning into alignment rules or per-word fixes. The alignment was only
+  spot-checked so far.
 - **More context for noun/verb pairs.** Only the word right before counts,
   so *then record it* and *rose to record levels* (an adjective after *to*)
   aren't decided right. Adjectives in between (*the new record*) block the
