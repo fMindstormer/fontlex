@@ -28,17 +28,17 @@ PAGE = """<!doctype html>
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fontlex Markdown: CommonMark rendered by a font</title>
+<title>Fontlex Markdown: GitHub Flavored Markdown rendered by a font</title>
 <style>
 {{STYLE}}
 main { max-width: 64rem; }
-textarea#code { min-height: 19rem; white-space: pre; overflow-x: auto; font-size: 1rem; line-height: 1.75; }
+textarea#code { min-height: 33rem; white-space: pre; overflow-x: auto; font-size: 1rem; line-height: 1.75; }
 </style>
 <main>
   <h1>Fontlex Markdown</h1>
   <p class="lede">The box below is a plain text box holding Markdown. The font renders it: the text engine
-  that lays out the letters runs CommonMark's inline rules, hides the markup and styles the text. The
-  characters you type stay exactly as typed. No script on this page does any of it.</p>
+  that lays out the letters runs GitHub Flavored Markdown's rules, line by line, hides the markup and styles the
+  text. The characters you type stay exactly as typed. No script on this page does any of it.</p>
 
   {{EDITOR}}
   <p class="note">Turn off "Render Markdown" to see the characters. Each line is read on its own: the font sees
@@ -53,6 +53,12 @@ textarea#code { min-height: 19rem; white-space: pre; overflow-x: auto; font-size
     links, images can.</li>
     <li>Autolinks (URLs and email addresses), raw HTML (dimmed), entity and numeric character references (shown
     as their characters), and backslash escapes.</li>
+    <li>GitHub's extensions: strikethrough with <code>~</code> or <code>~~</code>, bare URLs
+    (<code>www.</code>, <code>http://</code>, <code>https://</code>, <code>ftp://</code>, with the trailing
+    punctuation GitHub leaves out) and bare email addresses.</li>
+    <li>Each line's block markup: headings, block quotes (a bar), list items (a bullet; numbers stay), task
+    boxes, thematic breaks (a rule), and lines that are code, code fences, HTML or link reference definitions,
+    which inline syntax leaves alone.</li>
   </ul>
 
   <h2>How exact it is</h2>
@@ -60,9 +66,10 @@ textarea#code { min-height: 19rem; white-space: pre; overflow-x: auto; font-size
     <tr><th>Text</th><th class="n">Lines</th><th class="n">Rendered as CommonMark</th></tr>
     {{ROWS}}
   </table>
-  <p class="note">Each character's glyph (hidden, or its style) is compared with what CommonMark makes of it, as
-  computed by a port of the reference implementation, commonmark.js 0.31.2. Lines past one of the font's bounds
-  (below) are left out of the count; many of them still come out right.</p>
+  <p class="note">Each character's glyph (hidden, or its style) is compared with what GitHub makes of the line
+  read as a document, as computed by ports of the reference implementations: commonmark.js 0.31.2, and
+  cmark-gfm 0.29.0.gfm.13 (github.com's parser) for the extensions. Lines past one of the font's bounds (below)
+  are left out of the count; many of them still come out right.</p>
 
   <h2>How a font can parse Markdown</h2>
   <p>OpenType lets a font substitute glyphs by context, one lookup after another, each a pass over the line
@@ -71,22 +78,24 @@ textarea#code { min-height: 19rem; white-space: pre; overflow-x: auto; font-size
   matching <code>*</code> and <code>_</code> skips every letter in between, so a pair of markers is next to each
   other however much text separates them.</p>
   <ol>
-    <li><b>Right to left, once:</b> what lies ahead of each character. Whether a code span's closing backticks
-    follow, whether a link destination <code>(…)</code> follows a <code>]</code>, and whether a valid tag or
-    autolink starts at a <code>&lt;</code>.</li>
-    <li><b>Left to right, after that:</b> a scan settles code spans, link destinations and raw HTML; then
-    brackets and emphasis are matched in rounds, where each round pairs every opener with the closer right after
-    it and matched pairs drop out, so the next round sees the next level of nesting; then each glyph is drawn in
-    its style.</li>
+    <li><b>Right to left:</b> what lies ahead of each character. Whether a code span's closing backticks
+    follow, whether a link destination <code>(…)</code> follows a <code>]</code>, whether a valid tag or
+    autolink starts at a <code>&lt;</code>, and what the line's block markup needs to know.</li>
+    <li><b>Left to right, after that:</b> the line's block markup, read from its start; a scan that settles code
+    spans, link destinations and raw HTML; then brackets and emphasis are matched in rounds, where each round
+    pairs every opener with the closer right after it and matched pairs drop out, so the next round sees the
+    next level of nesting; then each glyph is drawn in its style.</li>
   </ol>
   <p>So CommonMark's inline syntax takes one change of direction. It can't take none: whether a run of backticks
-  opens a code span depends on what follows, and whether it is inside one depends on what precedes. Markdown's
-  nesting is unbounded, which no finite set of passes can follow, so the font has bounds: {{BOUNDS}}.</p>
+  opens a code span depends on what follows, and whether it is inside one depends on what precedes. GitHub's
+  extensions add a few right-to-left passes later on: where a bare URL's trailing punctuation starts, and
+  email addresses, which GitHub only looks for once emphasis is settled. Markdown's nesting is unbounded,
+  which no finite set of passes can follow, so the font has bounds: {{BOUNDS}}.</p>
 
   <h2>Limits</h2>
   <ul>
-    <li>Only inline syntax, one line at a time: no headings, lists, code blocks or reference links, and nothing
-    that spans lines.</li>
+    <li>One line at a time: a line is read as if it were the whole document, so nothing that spans lines (a
+    paragraph continued into a list, a fenced code block's content, reference links).</li>
     <li>Browsers break a line into pieces before the font sees it, and the font can't see across them: Safari at
     soft wraps (so this box doesn't wrap), Chrome where the script changes and at tabs, so <code>*мир*</code>
     after Latin text, a Latin URL after Cyrillic link text, or emphasis with a tab inside, stays as typed there
@@ -109,8 +118,10 @@ def main():
     ttf = Path(args.font).read_bytes()
     view, shaper = verify.FontView(ttf), test_fontlex.SHAPERS["harfbuzz"](ttf)
     rows = []
-    sets = [("CommonMark's single-line spec examples", [l for _, l in verify.spec_lines(HERE / "spec-0.31.2.json")]),
-            ("Random lines of Markdown syntax", list(verify.random_lines(args.n, 1, verify.TOKENS)))]
+    sets = [("CommonMark's one-line spec examples", [l for _, l in verify.spec_lines(HERE / "spec-0.31.2.json")]),
+            ("GitHub's one-line extension examples", [l for _, l in verify.spec_lines(HERE / "gfm-spec-0.29-extensions.json")]),
+            ("Random lines of Markdown syntax", list(verify.random_lines(args.n, 1, verify.TOKENS))),
+            ("Random lines behind block markup", list(verify.block_lines(args.n // 4, 1, verify.TOKENS)))]
     for name, lines in sets:
         within = [l for l in lines if not bounds.exceeds(l, view.cmap)]
         ok = sum(verify.check(view, shaper, l) is None for l in within)

@@ -16,6 +16,7 @@ WS = {" ", "\t"}
 ACC = "ACC"
 EMAIL_LOCAL = ALNUM | set(".!#$%&'*+/=?^_`{|}~-")
 NONASCII = "\x80"
+GT_NO = "\x81"           # a `>` with more than whitespace after it on the line
 ALPHABET = [chr(c) for c in range(0x21, 0x7F)] + [" ", "\t", NONASCII]
 
 
@@ -176,11 +177,26 @@ KINDS = [("email", email_autolink), ("uri", uri_autolink), ("open", open_tag), (
          ("comment", comment), ("pi", processing), ("decl", declaration), ("cdata", cdata)]
 
 
+def line_tag(step):
+    """The tag kind as it starts an HTML block of type 7 (a whole tag alone
+    on its line): only a `>` with nothing but whitespace after it can end it,
+    so another `>` (GT_NO) is a character inside quotes and fails elsewhere."""
+    def f(q, c):
+        if c != GT_NO:
+            return step(q, c)
+        n = step(q, ">")
+        return None if n == ACC else n
+    return f
+
+
+LINE_KINDS = [("open7", line_tag(open_tag)), ("close7", line_tag(close_tag))]
+
+
 def states(step):
     seen, todo = {"<"}, ["<"]
     while todo:
         q = todo.pop()
-        for c in ALPHABET:
+        for c in ALPHABET + [GT_NO]:
             n = step(q, c)
             if n not in (None, ACC) and n not in seen:
                 seen.add(n)

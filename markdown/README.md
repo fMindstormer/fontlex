@@ -1,10 +1,11 @@
-# Fontlex Markdown: CommonMark rendered by a font
+# Fontlex Markdown: GitHub Flavored Markdown rendered by a font
 
 A font that renders Markdown as you type it, in any text box: the text
-engine that lays out the letters runs CommonMark's inline rules, hides the
-markup and styles the text. The characters stay exactly as typed (copy them
-and you get Markdown back); with the font's `calt` feature off you see them
-all. `markdown/demo.html` is a page with the font in a text box.
+engine that lays out the letters runs GitHub Flavored Markdown's rules, a
+line at a time, hides the markup and styles the text. The characters stay
+exactly as typed (copy them and you get Markdown back); with the font's
+`calt` feature off you see them all. `markdown/demo.html` is a page with the
+font in a text box.
 
 - *Emphasis* and **strong emphasis** by CommonMark's full rules: left- and
   right-flanking runs judged with Unicode whitespace and punctuation, so in
@@ -15,34 +16,49 @@ all. `markdown/demo.html` is a page with the font in a text box.
   destinations and titles hidden. Links can't contain links; images can.
 - Autolinks, raw HTML (dimmed), entity and numeric character references
   (drawn as their characters), backslash escapes.
+- GitHub's extensions: ~~strikethrough~~ (a line drawn through the text,
+  spaces included), bare URLs such as www.commonmark.org or
+  https://github.com, with the trailing punctuation GitHub leaves out of
+  them, and bare email addresses.
+- Each line's block markup, read as GitHub reads a one-line document:
+  headings (bold, their `#`s dimmed), block quotes (a bar), list items (a
+  bullet; numbers stay), task boxes (drawn checked or not), thematic breaks
+  (a rule), and lines that are indented code, code fences, HTML blocks or
+  link reference definitions, which inline syntax leaves alone.
 
 Bold and italic come from JetBrains Mono's own bold and italic; code, link,
-image and HTML styles are color glyphs (COLR) with light and dark palettes.
+image and HTML styles, bullets, bars, boxes and rules are color glyphs
+(COLR) with light and dark palettes.
 
 ## Results
 
 Each character's glyph (hidden, or drawn in some style) is compared with
-what CommonMark makes of that character, as computed by `cm_inline.py`, a
-port of the inline parser of commonmark.js 0.31.2, the reference
-implementation. HarfBuzz (Chrome, Firefox) and Core Text (Safari) give
-identical results.
+what GitHub makes of that character when the line is a document on its own,
+as computed by ports of the reference implementations: `cm_inline.py` and
+`cm_block.py` follow commonmark.js 0.31.2 (its inline parser, and its block
+parser for one line), and `gfm.py` the extensions of cmark-gfm
+0.29.0.gfm.13, the parser github.com uses, byte for byte. HarfBuzz (Chrome,
+Firefox) and Core Text (Safari) give identical results.
 
-| Lines | Within the font's bounds | Rendered as CommonMark |
+| Lines | Within the font's bounds | Rendered as GitHub does |
 |---|---|---|
-| CommonMark's 290 one-line spec examples | 283 | 283 |
-| 20,000 random lines of Markdown syntax | 19,901 | 19,901 |
-| 10,725 lines of 65 Markdown documents (npm's documentation, Python package READMEs) | 10,725 | 10,725 |
+| CommonMark's 514 spec examples that are one line, or one-line blocks apart | 447 | 447 |
+| The GFM spec's 24 extension examples of that kind | 23 | 23 |
+| 20,000 random lines of Markdown syntax | 19,526 | 19,526 |
+| 5,000 random lines behind random block markup | 4,902 | 4,902 |
+| 10,725 lines of 65 Markdown documents (npm's documentation, Python package READMEs) | 10,723 | 10,723 |
 
-Of the 106 lines past a bound (7 spec examples and 99 random lines), 67 still
-come out right. The model itself matches all 303 spec examples that are
-inline paragraphs (the other three need link reference definitions) and
-commonmark.js on 220,000 random lines (`crosscheck.py`), apart from one
-place where commonmark.js departs from the spec (it counts a no-break space
-as whitespace inside HTML tags).
+Of the 642 lines past a bound (the spec's are mostly link reference
+definitions), 445 still come out right. The model itself matches all 290
+one-line CommonMark spec examples as documents and the GFM spec's
+extension examples, and the reference implementations on random lines
+(`crosscheck.py`): commonmark.js on 220,000 inline lines and 50,000 block
+lines, cmark-gfm on 50,000 lines with its extensions, apart from places
+where the two disagree with each other or with the spec (cmark-gfm's core
+follows an older CommonMark; commonmark.js counts a no-break space as
+whitespace inside HTML tags).
 
-The font has 46,648 glyphs and is 490 KB as WOFF2. Shaping a line (52
-characters on average, in the documents above) takes 0.11 ms in HarfBuzz and
-0.27 ms in Core Text, against 0.03 and 0.14 ms for plain JetBrains Mono.
+The font has 63,367 glyphs (of OpenType's 65,535) and is 722 KB as WOFF2.
 
 ## How many alternating passes does CommonMark need?
 
@@ -85,9 +101,30 @@ font has at most 65,535 glyphs, so the font spends passes to save states:
 | Link destinations | 364 | 8 passes, one per form of destination and title: 6 to 35 states each |
 | Raw HTML and autolinks | 14,737 | 8 passes, one per kind: 2 to 52 states each |
 
-Passes in one direction compose without changing direction, so the font
-runs 103 lookups: 38 right to left, then 23 left to right, with 42 plain
-substitutions among them that tidy up between passes.
+Passes in one direction compose without changing direction, so CommonMark's
+inline rules take 103 lookups: 38 right to left, then 23 left to right, with
+42 plain substitutions among them that tidy up between passes.
+
+GitHub's extensions cost more changes of direction, though none is needed in
+principle; they buy glyphs. The whole font runs 151 lookups (60 right to
+left, 31 left to right, 60 plain substitutions) with seven changes of
+direction:
+
+| Direction | Lookups | What for |
+|---|---|---|
+| Right to left | 55 | the inline passes above, and the block markup's own right-to-left checks |
+| Left to right | 1 | each line's block prefix: where its inline content starts |
+| Right to left | 3 | where bare URLs can start (which needs the prefix: `www.` counts after a bullet) |
+| Left to right | 1 | a mark before each such start |
+| Right to left | 1 | each URL's trailing punctuation |
+| Left to right | 23 | URLs' ends (counting parentheses), the scan, links, emphasis |
+| Right to left | 1 | email addresses, whose local part must be followed by `@` and a domain |
+| Left to right | 5 | the style, references, the paint, strikethrough |
+
+Moving the URL and email passes into the first right-to-left block would
+save the changes of direction, but there each pass's states multiply the
+variants of every glyph the later passes read, and the font is 2,168 glyphs
+short of OpenType's limit as it is.
 
 And no number of passes is exact on everything: matching `*a *b *c d* e* f*`
 means counting, which no composition of finite-state passes can do. So the
@@ -100,6 +137,7 @@ font has bounds, each a constant in `mdfont.py`:
 | Open brackets at once | 3 | random lines only |
 | Backtick runs | up to 8 | none above |
 | Parentheses in a link destination | 3 deep (CommonMark asks for at least 3) | none above |
+| A bare URL's `(` against its `)` | 3 out of balance | random lines only |
 
 Two rarer cases are simplified rather than bounded. A `](...)` after link
 text that contains a link (which CommonMark disallows) is assumed to be a
@@ -107,6 +145,15 @@ link destination while scanning, so Markdown inside it isn't recognized
 (spec examples 518 to 520 still come out right). And references are drawn
 only if they stand for one character the font has, without leading zeros
 (`&#0065;`).
+
+GitHub's extensions add bounds of their own, `bounds.py` names them all: a
+bare URL inside another one's word (`http://a.b/www.c.d`), two `@` in one
+email-like word, an escape or reference next to an email address, a
+reference ending a URL's word, a `*` or `_` right after four or more `~`,
+`mailto:` and `xmpp:` addresses, and combining marks in a URL's or email's
+domain (HarfBuzz composes them with the letter before). Link reference
+definitions are recognized and left as typed, but the links that use them
+aren't drawn: their definitions are elsewhere in the document.
 
 ## How the font does it
 
@@ -116,14 +163,33 @@ compiles them to lookups, `tails.py` and `htmlauto.py` hold the automata):
 1. **Right to left.** Escapes, and runs of backticks, `*` and `_` (from small
    windows); for each length of backtick run, whether a closing run follows;
    for each `]`, whether a link destination of each form follows; for each
-   `<`, which kind of autolink or raw HTML starts there.
-2. **Left to right.** A scan through code spans, raw HTML, autolinks and link
-   destinations, which also counts open brackets. Rounds of bracket matching
-   (links, images, and no links in links), then of emphasis matching, at each
-   level of link and image text. Then each run's characters learn their roles,
-   one pass works out the style after each marker, entity references become
-   ligatures, and the paint gives every glyph its final glyph: a styled one,
-   or an invisible one for markup.
+   `<`, which kind of autolink or raw HTML starts there. And the block
+   markup: whether a line is a heading, a rule, a fence or a reference
+   definition depends on how it ends (`--- a` is no rule).
+2. **Left to right, once.** The block prefix (`blocks.py` has the automaton:
+   quote markers, list markers, task boxes, indentation), which gives each
+   line the point where its inline content starts, or none.
+3. **Bare URLs**, in three short alternations. Right to left, which `www.`
+   and `http://` can start a URL (its domain must be valid up to the next
+   `/`, `?` or `#`); a mark goes before each. Right to left again, the zone
+   of trailing punctuation at each URL's end. Left to right, each URL's end:
+   a space or `<`, or the start of its trailing zone unless a `)` there is
+   still matched by a `(` (counted from the URL's start).
+4. **Left to right.** A scan through code spans, raw HTML, autolinks, link
+   destinations and the bare URLs, which also counts open brackets (inside
+   brackets nothing is a bare URL). Rounds of bracket matching (links,
+   images, and no links in links), then of emphasis matching, at each level
+   of link and image text.
+5. **Right to left, once more**, for email addresses, then **left to right**:
+   each run's characters learn their roles, one pass works out the style
+   after each marker (strikethrough included), entity references become
+   ligatures, the paint gives every glyph its final glyph (a styled one, or
+   an invisible one for markup), and struck text gets its line.
+
+Markers that one pass inserts for the next (a URL's start, an email's ends)
+are empty glyphs that later passes see only through filtering sets; at a
+space, which WebKit always widens to a space, the end is carried by the
+space glyph itself instead.
 
 Only characters that can matter take part: an ASCII character joins the HTML
 passes only if a `>` follows it, a space joins the link passes only if a `)`
@@ -131,9 +197,11 @@ follows it. Most text goes through untouched, which keeps shaping fast.
 
 ## Limits
 
-- Only inline syntax, and one line at a time: no headings, lists, block
-  quotes or code blocks, no reference links (their definitions are elsewhere
-  in the document), nothing that spans lines.
+- One line at a time: each line is read as GitHub reads it alone. Nothing
+  spans lines: a fence's code, a paragraph continued from the line before, a
+  setext heading's underline (`---` under text draws a rule), reference
+  links (their definitions are elsewhere in the document).
+- Tabs inside strikethrough aren't struck.
 - Browsers cut a line into pieces before the font sees it, and the font
   can't see across them. Safari reshapes each visual line, so a construct
   broken by a soft wrap isn't recognized (the demo's box doesn't wrap).
@@ -162,10 +230,18 @@ npm install --prefix /tmp/cm commonmark@0.31.2               # to check the mode
 python markdown/crosscheck.py /tmp/cm/node_modules/commonmark --n 100000
 ```
 
-The build takes about 20 seconds; `./check.sh` runs all of it.
+```sh
+pip install cmarkgfm==2025.10.22                           # cmark-gfm 0.29.0.gfm.13
+python markdown/crosscheck.py /tmp/cm/node_modules/commonmark --mode block --n 50000
+python markdown/crosscheck.py /tmp/cm/node_modules/commonmark --mode gfm --n 50000
+```
+
+The build takes about a minute; `./check.sh markdown` builds, verifies and
+makes the demo page.
 
 ## Licenses
 
 `spec-0.31.2.json` holds the examples of the CommonMark Spec 0.31.2 by John
-MacFarlane, under CC BY-SA 4.0 (see `SPEC-LICENSE.txt`). The base fonts,
+MacFarlane, and `gfm-spec-0.29-extensions.json` those of the GitHub Flavored
+Markdown Spec's extensions, both under CC BY-SA 4.0 (see `SPEC-LICENSE.txt`). The base fonts,
 JetBrains Mono in four styles, are under the SIL Open Font License.

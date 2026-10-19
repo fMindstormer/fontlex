@@ -19,6 +19,16 @@ from fontTools.ttLib.tables import otTables as ot
 import fontbuild as fb
 
 IMPOSSIBLE = object()   # what a step returns for an input that can't occur in a state
+# In an anchored pass, the state a glyph is in when its neighbor (left in a
+# left-to-right pass, right in a right-to-left one) records no state: there is
+# a glyph there, but not one of the pass's outputs. `init` then means the
+# start (or the end) of the line itself.
+OTHER = ("other",)
+
+
+class Seq(tuple):
+    """An output of several glyphs (a multiple substitution): the last one
+    records the state."""
 
 IGNORE_BASE = 0x0002
 IGNORE_LIGATURES = 0x0004
@@ -182,9 +192,12 @@ class Pipeline:
 
     # transducers -------------------------------------------------------
 
-    def _explore(self, inputs, step, init):
+    def _explore(self, inputs, step, init, anchored=False):
         states, index, todo, out = [init], {init: 0}, [init], {}
+        if anchored:
+            states, index, todo = [init, OTHER], {init: 0, OTHER: 1}, [init, OTHER]
         self.unchanged = set()   # inputs some state leaves as they are
+        self.kept = set()        # (input, state) pairs left unchanged
         ordered = sorted(inputs.items(), key=lambda gs: self.gid(gs[0]))
         while todo:
             s = todo.pop()
@@ -194,9 +207,11 @@ class Pipeline:
                     continue
                 if r is None:
                     self.unchanged.add(g)
+                    self.kept.add((g, s))
                     continue
                 kind, ns = r
-                o = kind if isinstance(kind, str) else self.var(g, kind)
+                assert ns != OTHER, "no output can record OTHER"
+                o = kind if isinstance(kind, (str, Seq)) else self.var(g, kind)
                 out[(g, s)] = (o, ns)
                 if ns not in index:
                     index[ns] = len(states)
@@ -204,11 +219,17 @@ class Pipeline:
                     todo.append(ns)
         records = {}
         for (g, s), (o, ns) in out.items():
+            o = o[-1] if isinstance(o, Seq) else o
             if records.setdefault(o, ns) != ns:
                 raise ValueError(f"output {self.info.get(o, o)} records two states: {records[o]}, {ns}")
         return states, index, out, records
 
-    def ltr(self, inputs, step, init, sees=(), skeleton=True, fill_backtrack=False):
+    def _tkey(self, o):
+        """How outputs group into the substitutions a pass calls: by self.key,
+        and sequences by their last glyph."""
+        return ("seq", o[-1]) if isinstance(o, Seq) else self.key(o)
+
+    def ltr(self, inputs, step, init, sees=(), skeleton=True, fill_backtrack=False, anchored=False):
         """A left-to-right transducer.
 
         inputs: glyph -> symbol. step(state, symbol) -> (kind, new state), where
@@ -219,13 +240,16 @@ class Pipeline:
         `sees`; or all glyphs if not `skeleton`) records no state starts from
         `init`. `fill_backtrack` may give glyphs between outputs of one state
         that state too, shrinking the class definition; only safe when every
-        glyph a rule can see to its left is an output. Returns
-        ({(glyph, state): output}, states).
+        glyph a rule can see to its left is an output. With `anchored` (and
+        not `skeleton`), a glyph after a glyph that records no state is in
+        state OTHER, and only the line's first glyph starts from `init`.
+        Returns ({(glyph, state): output}, states).
         """
-        states, index, out, records = self._explore(inputs, step, init)
+        assert not (anchored and (skeleton or fill_backtrack))
+        states, index, out, records = self._explore(inputs, step, init, anchored)
         sig = {}
         for g in inputs:
-            key = tuple((self.key(out[(g, s)][0]), out[(g, s)][1])
+            key = tuple((self._tkey(out[(g, s)][0]), out[(g, s)][1])
                         if (g, s) in out else None for s in states)
             sig.setdefault(key, []).append(g)
         input_class = {}
@@ -237,8 +261,11 @@ class Pipeline:
         # input that becomes that kind of output: a rule's inputs share one.
         targets = {}
         for (g, s), (o, ns) in out.items():
-            targets.setdefault(self.key(o), {})[g] = o
-        target_lookup = self.merged(targets)
+            targets.setdefault(self._tkey(o), {})[g] = o
+        seqs = {k: m for k, m in targets.items() if isinstance(k, tuple) and k[:1] == ("seq",)}
+        target_lookup = self.merged({k: m for k, m in targets.items() if k not in seqs})
+        for k, m in seqs.items():
+            target_lookup[k] = self.add(fb.lookup(2, [fb.multiple(m)]), top=False)
         st = ot.ChainContextSubst()
         st.Format = 2
         st.Coverage = self.coverage(input_class)
@@ -255,31 +282,89 @@ class Pipeline:
             # differ. The start state's rule comes first when there are others
             # (it is the usual one).
             default = out.get((g, init))
-            explicit = [s for s in states if s != init and (g, s) in out and out[(g, s)] != default]
-            order = [(s, True) for s in explicit]
+            explicit = [s for s in states if s not in (init, OTHER) and (g, s) in out and out[(g, s)] != default]
+            # A state that leaves the glyph as it is needs a rule of its own
+            # when the default would change it.
+            kept = [s for s in states if s not in (init, OTHER) and (g, s) in self.kept and default is not None]
+            order = [(s, True) for s in explicit + kept]
             if explicit and default is not None:
                 order = [(init, True)] + order
+            if anchored and (default is not None or (g, OTHER) in out):
+                order.append((OTHER, True))
             if default is not None:
                 order.append((init, False))
             for s, back in order:
-                o, ns = out[(g, s)]
                 rule = ot.ChainSubClassRule()
-                rule.Backtrack = [index[s] + 1] if back else []
+                rule.Backtrack = ([0] if s == OTHER else [index[s] + 1]) if back else []
                 rule.BacktrackGlyphCount = len(rule.Backtrack)
                 rule.Input, rule.InputGlyphCount = [], 1
                 rule.LookAhead, rule.LookAheadGlyphCount = [], 0
-                rec = ot.SubstLookupRecord()
-                rec.SequenceIndex = 0
-                rec.LookupListIndex = target_lookup[self.key(o)]
-                rule.SubstLookupRecord, rule.SubstCount = [rec], 1
+                rule.SubstLookupRecord = []
+                if (g, s) in out:
+                    rec = ot.SubstLookupRecord()
+                    rec.SequenceIndex = 0
+                    rec.LookupListIndex = target_lookup[self._tkey(out[(g, s)][0])]
+                    rule.SubstLookupRecord = [rec]
+                rule.SubstCount = len(rule.SubstLookupRecord)
                 rules.append(rule)
             cs = ot.ChainSubClassSet()
             cs.ChainSubClassRule, cs.ChainSubClassRuleCount = rules, len(rules)
             st.ChainSubClassSet.append(cs)
         st.ChainSubClassSetCount = len(st.ChainSubClassSet)
         ms = self.mark_set(set(input_class) | set(back_class) | set(sees)) if skeleton else None
-        self.add(fb.lookup(6, [st], SKELETON if skeleton else 0, ms))
-        return {k: v[0] for k, v in out.items()}, states
+        self.add(fb.lookup(6, self._split(st, input_class), SKELETON if skeleton else 0, ms))
+        return {k: v[0] for k, v in out.items()}, [s for s in states if s != OTHER]
+
+    def _split(self, st, input_class, limit=48000):
+        """The format 2 subtable as subtables small enough for 16-bit
+        offsets: each takes some of the input classes (its coverage only
+        their glyphs, so exactly one applies to a glyph) and shares the
+        backtrack class definition. Sizes are estimated, with identical
+        rules and class sets counted once, as the font compiler stores them."""
+        def rule_key(r):
+            return (tuple(r.Backtrack), tuple((x.SequenceIndex, x.LookupListIndex) for x in r.SubstLookupRecord))
+
+        def ranges(gids):
+            gids = sorted(gids)
+            return sum(1 for a, b in zip([None] + gids, gids) if a is None or b != a + 1)
+        back_ids = [self.gid(g) for g in st.BacktrackClassDef.classDefs]
+        fixed = 16 + 6 * ranges(back_ids)
+        glyphs_of = {}
+        for g, c in input_class.items():
+            glyphs_of.setdefault(c, []).append(self.gid(g))
+        chunks, cur, seen, size = [], [], set(), fixed
+        for c in range(1, len(st.ChainSubClassSet)):
+            cs = st.ChainSubClassSet[c]
+            keys = [rule_key(r) for r in cs.ChainSubClassRule]
+            new = [k for k in set(keys) if k not in seen]
+            cost = 2 + 2 * len(keys) + sum(10 + 2 * len(k[0]) + 4 * len(k[1]) for k in new) \
+                + 12 * ranges(glyphs_of[c])
+            if cur and size + cost > limit:
+                chunks.append(cur)
+                cur, seen, size = [], set(), fixed
+                new = set(keys)
+                cost = 2 + 2 * len(keys) + sum(10 + 2 * len(k[0]) + 4 * len(k[1]) for k in new) \
+                    + 12 * ranges(glyphs_of[c])
+            cur.append(c)
+            seen |= set(new)
+            size += cost
+        chunks.append(cur)
+        if len(chunks) == 1:
+            return [st]
+        out = []
+        for chunk in chunks:
+            part = ot.ChainContextSubst()
+            part.Format = 2
+            renumber = {c: i + 1 for i, c in enumerate(chunk)}
+            classes = {g: renumber[c] for g, c in input_class.items() if c in renumber}
+            part.Coverage = self.coverage(classes)
+            part.BacktrackClassDef = st.BacktrackClassDef
+            part.InputClassDef = self._classdef(classes, fill=True)
+            part.LookAheadClassDef = st.LookAheadClassDef
+            part.ChainSubClassSet = [None] + [st.ChainSubClassSet[c] for c in chunk]
+            part.ChainSubClassSetCount = len(part.ChainSubClassSet)
+            out.append(part)
+        return out
 
     def _classdef(self, classes, fill=False):
         """A class definition; with `fill`, glyphs lying between two glyphs of
@@ -296,26 +381,41 @@ class Pipeline:
                         cd.classDefs[order[i]] = ca
         return cd
 
-    def rtl(self, inputs, step, init, sees=(), skeleton=True):
+    def rtl(self, inputs, step, init, sees=(), skeleton=True, anchored=False):
         """A right-to-left transducer (reverse chaining substitutions); the
-        arguments are as for ltr(), with the right neighbor's state."""
-        states, index, out, records = self._explore(inputs, step, init)
+        arguments are as for ltr(), with the right neighbor's state (and in
+        an anchored pass, `init` only at the end of the line)."""
+        assert not (anchored and skeleton)
+        states, index, out, records = self._explore(inputs, step, init, anchored)
         by_state = {}
         for o, ns in records.items():
             by_state.setdefault(ns, set()).add(o)
         rules = []
         # The subtable with nothing after it is the default (the start
         # state's output); a state gets its own subtable only for the inputs
-        # whose output differs there.
+        # whose output differs there, or which it leaves alone where the
+        # default would change them (in an anchored pass, for all of them).
         default = {g: out[(g, init)][0] for g in inputs if (g, init) in out}
-        for s in [s for s in states if s != init]:
-            mapping = {g: out[(g, s)][0] for g in inputs if (g, s) in out and out[(g, s)][0] != default.get(g)}
-            if mapping:
-                rules.append((mapping, (), (by_state[s],)))
+
+        def mapping(s):
+            m = {}
+            for g in inputs:
+                o = out[(g, s)][0] if (g, s) in out else g if (g, s) in self.kept else None
+                if o is not None and (anchored or o != default.get(g, g)):
+                    m[g] = o
+            return m
+        for s in [s for s in states if s not in (init, OTHER)]:
+            m = mapping(s)
+            if m and s in by_state:
+                rules.append((m, (), (by_state[s],)))
+        if anchored:      # (a neighbor that records the start state is the default's)
+            m = mapping(OTHER)
+            if m:
+                rules.append((m, (), (set(self.fb.order) - set(records),)))
         if default:
             rules.append((default, (), ()))
         self.reverse(rules, set(inputs) | set(records) | set(sees) if skeleton else None)
-        return {k: v[0] for k, v in out.items()}, states
+        return {k: v[0] for k, v in out.items()}, [s for s in states if s != OTHER]
 
 
 

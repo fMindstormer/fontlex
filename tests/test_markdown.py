@@ -11,12 +11,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "markdown"))
 sys.path.insert(0, str(ROOT))
+import blocks  # noqa: E402
 import bounds  # noqa: E402
 import cm_block  # noqa: E402
+import gfm  # noqa: E402
 import cm_inline as cm  # noqa: E402
 import htmlauto  # noqa: E402
 import mdfont  # noqa: E402
 import tails  # noqa: E402
+import verify  # noqa: E402
 
 SPEC = json.loads((ROOT / "markdown" / "spec-0.31.2.json").read_text())
 GFM_SPEC = json.loads((ROOT / "markdown" / "gfm-spec-0.29-extensions.json").read_text())
@@ -89,7 +92,7 @@ class BlockTest(unittest.TestCase):
         for line, want in [("## Title *em* ##", "dd......._.._.dd"), ("- [ ] task", "B._O_....."),
                            ("> - [x] a", "Q.B......"),            # cmark-gfm: no task inside a quote
                            ("- [ ] a [x]", "B._X_......"),        # any [x] in the line checks it
-                           ("* * *", "RRRRR"), ("   ---  ", "...RRR.."), ("```js", "ddddd"), ("<div>*a*", "dddddddd"),
+                           ("* * *", "RRRRR"), ("   ---  ", "...RRRRR"), ("```js", "ddddd"), ("<div>*a*", "dddddddd"),
                            ('[a]: /u "t"', "ddddddddddd"), ("1. item", "......."), ("-", "B")]:
             self.assertEqual("".join(kinds[r.kind] for r in cm_block.roles(line)), want, line)
         r = cm_block.roles("# a *b*")
@@ -112,6 +115,46 @@ class BlockTest(unittest.TestCase):
 
 
 class AlgorithmTest(unittest.TestCase):
+    def test_line_start_automaton(self):
+        """blocks.step, which the font's first left-to-right pass runs,
+        against cm_block on random lines behind random block markup."""
+        drawn = {"quote": "quote", "bullet": "bullet", "box": "box", "checked": "checked", "box-open": "hidden",
+                 "box-close": "hidden", "atx": "dim", "fence": "dim", "html": "dim", "def": "dim", "hr": "rule",
+                 "indent": "text", "number": "text", "code": "text"}
+        for line in verify.block_lines(4000, 2, verify.TOKENS):
+            want = cm_block.roles(line, gfm=True)
+            got, mode = blocks.run(line)
+            stop = next((i for i, r in enumerate(got) if r is None), len(line))
+            for i in range(stop):
+                self.assertEqual(drawn[got[i]], want[i].kind, (line, i))
+            rest = {r.kind for r in want[stop:]}
+            if mode in (blocks.DIM, blocks.RULE):
+                self.assertEqual(rest, {"dim" if mode == blocks.DIM else "rule"}, line)
+            leaf = (cm_block.parse(line, True)[0] or [None])[-1]
+            self.assertEqual(mode == blocks.HEADING, leaf is not None and leaf.type == "heading", line)
+
+    def test_url_extents(self):
+        """The trailing punctuation rule as the font reads it (a `)` is kept
+        while the link has more `(`), against cmark-gfm's autolink_delim."""
+        rng = random.Random(4)
+        for _ in range(20000):
+            body = "".join(rng.choice("ab(.)?,:*_~'\"") for _ in range(rng.randint(1, 10)))
+            data = ("www.x.y/" + body).encode()
+            end = gfm.autolink_delim(data, 0, len(data))
+            depth, kept = 0, 8
+            trail = len(data) - len(re.search(rb"[?!.,:*_~'\")]*$", data).group())
+            for i in range(8, len(data)):
+                c = data[i:i + 1]
+                if i < trail:
+                    depth += (c == b"(") - (c == b")")
+                    kept = i + 1
+                elif c == b")" and depth >= 1 and b")" in data[i:]:
+                    depth -= 1
+                    kept = i + 1
+                elif not (b")" in data[i:] and depth >= 1):
+                    break
+            self.assertEqual(kept, end, data)
+
     def test_flanking(self):
         examples = {"W": " ", "P": ".", "O": "a", "S": None}
         p = cm.InlineParser("")
@@ -171,6 +214,8 @@ class AlgorithmTest(unittest.TestCase):
         self.assertEqual(bounds.exceeds("*a* `b` [c](d)"), set())
         self.assertIn("a delimiter run longer than 6", bounds.exceeds("*******a*******"))
         self.assertIn("more than 3 open brackets", bounds.exceeds("[[[[a](b)"))
+        self.assertIn("two `@` in one email-like word", bounds.exceeds("a@b.c@d.ef"))
+        self.assertEqual(bounds.exceeds("see www.a.com/b_(c). and x@y.org"), set())
 
 
 if __name__ == "__main__":

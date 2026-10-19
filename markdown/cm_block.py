@@ -179,9 +179,9 @@ class LineParser:
     def thematic_break(self):
         if self.indented or not RE_THEMATIC_BREAK.match(self.ln, self.next_nonspace):
             return None
-        chars = [i for i in range(self.next_nonspace, len(self.ln)) if self.ln[i] not in " \t"]
+        start = self.next_nonspace
         self.offset = len(self.ln)
-        return "leaf", Block("hr", tuple(range(chars[0], chars[-1] + 1)))
+        return "leaf", Block("hr", tuple(range(start, len(self.ln))))     # drawn as a rule to the end
 
     def list_item(self):
         if self.indent >= 4:
@@ -410,13 +410,19 @@ def roles(line, gfm=True, code_padding=False):
         elif b.type == "code":
             for i in range(*b.data["content"]):
                 out[i] = Role("text", frozenset({"code"}))
-    if definition:
-        for i in range(*definition):
+    if definition:                      # dimmed to the end of the line
+        for i in range(definition[0], len(line)):
             out[i] = Role("dim")
     if inline:
         node, a, z = inline
+        style = frozenset()
+        if blocks[-1].type == "heading":         # a heading's line is its text's style throughout
+            style = frozenset({"heading"})
+            heading = blocks[-1]
+            for i in range(heading.marker[heading.data["level"] - 1] + 1, len(line)):    # after the opening #s
+                if i not in heading.marker:
+                    out[i] = Role("text", style)
         for i in range(a, z):
             out[i] = cm.HIDDEN
-        style = frozenset({"heading"}) if blocks[-1].type == "heading" else frozenset()
         cm.assign(node, out, style, code_padding)
     return out

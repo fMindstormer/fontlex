@@ -125,6 +125,105 @@ class FontBuilder:
         pen.closePath()
         return self.add(name, pen.glyph(), 0, x0)
 
+    def metric(self, name, default):
+        os2 = self.font["OS/2"]
+        return getattr(os2, name, 0) or default
+
+    def marker(self, kind, adv):
+        """The glyph a block marker is drawn as: a bullet, a block quote's bar
+        and a thematic break's rule (both in the HTML palette color), a task
+        box, checked or not. Drawn from the font's metrics, `adv` wide."""
+        name = f"_mk_{kind}{adv}"
+        if name in self.ids:
+            return name
+        x_height = self.metric("sxHeight", self.upem // 2)
+        cap = self.metric("sCapHeight", self.upem * 7 // 10)
+        stroke = max(self.font["post"].underlineThickness, self.upem // 20)
+        pen = TTGlyphPen(None)
+
+        def box(x0, y0, x1, y1, hole=False):
+            pts = [(x0, y0), (x0, y1), (x1, y1), (x1, y0)]
+            for i, pt in enumerate(reversed(pts) if hole else pts):
+                (pen.moveTo if i == 0 else pen.lineTo)(tuple(round(v) for v in pt))
+            pen.closePath()
+
+        def segment(p, q, w):
+            (x1, y1), (x2, y2) = p, q
+            d = math.hypot(x2 - x1, y2 - y1)
+            nx, ny = -(y2 - y1) / d * w / 2, (x2 - x1) / d * w / 2
+            pts = [(x1 + nx, y1 + ny), (x2 + nx, y2 + ny), (x2 - nx, y2 - ny), (x1 - nx, y1 - ny)]
+            for i, pt in enumerate(pts):
+                (pen.moveTo if i == 0 else pen.lineTo)(tuple(round(v) for v in pt))
+            pen.closePath()
+
+        mid = x_height / 2
+        if kind == "bullet":
+            r = adv * 0.15
+            pts = [(adv / 2 + r * math.cos(t * math.pi / 8), mid + r * math.sin(t * math.pi / 8)) for t in range(16)]
+            for i, pt in enumerate(reversed(pts)):
+                (pen.moveTo if i == 0 else pen.lineTo)(tuple(round(v) for v in pt))
+            pen.closePath()
+        elif kind == "quote":
+            descender = self.font["hhea"].descent
+            box(adv * 0.2, max(descender, -cap // 3), adv * 0.2 + max(stroke * 2, adv * 0.12), cap * 1.15)
+        elif kind == "rule":
+            box(0, mid + cap * 0.1 - stroke / 2, adv, mid + cap * 0.1 + stroke / 2)
+        else:                                   # box, checked
+            side = min(adv * 0.9, cap * 0.8)
+            x0, y0 = (adv - side) / 2, mid + cap * 0.1 - side / 2
+            w = stroke * 1.3
+            box(x0, y0, x0 + side, y0 + side)
+            box(x0 + w, y0 + w, x0 + side - w, y0 + side - w, hole=True)
+            if kind == "checked":
+                a, c = (x0 + side * 0.24, y0 + side * 0.52), (x0 + side * 0.78, y0 + side * 0.76)
+                bmid = (x0 + side * 0.43, y0 + side * 0.28)
+                segment(a, bmid, w * 1.3)
+                segment(bmid, c, w * 1.3)
+        glyph = pen.glyph()
+        if kind in ("quote", "rule"):           # in the HTML palette color
+            shape = self.add(name + ".shape", glyph, 0, 0)
+            self.composite(name, [(shape, 0, 0)], adv)
+            self.colr[name] = [(shape, "html")]
+            return name
+        return self.add(name, glyph, adv, 0)
+
+    def strikeout(self):
+        os2 = self.font["OS/2"]
+        size = getattr(os2, "yStrikeoutSize", 0) or max(self.font["post"].underlineThickness, self.upem // 20)
+        pos = getattr(os2, "yStrikeoutPosition", 0) or self.metric("sxHeight", self.upem // 2) // 2
+        return pos, size
+
+    def _bar(self, name, x0, x1, advance):
+        pos, size = self.strikeout()
+        pen = TTGlyphPen(None)
+        pen.moveTo((x0, pos)); pen.lineTo((x0, pos + size)); pen.lineTo((x1, pos + size)); pen.lineTo((x1, pos))
+        pen.closePath()
+        return self.add(name, pen.glyph(), advance, x0)
+
+    def strike_overlay(self, adv):
+        """A glyph with no advance that draws the strikethrough line back over
+        the `adv` before it, in the text color (with adv 0, nothing)."""
+        name = f"_st{adv}"
+        if name in self.ids:
+            return name
+        if not adv:
+            return self.empty(name, 0)
+        return self._bar(name, -adv, 0, 0)
+
+    def struck(self, name):
+        """A copy of `name` (a space, which WebKit always draws a space wide)
+        with the strikethrough line on it, over its own layers."""
+        new = name + ".st"
+        if new in self.ids:
+            return new
+        adv = self.advance(name)
+        line = f"_stline{adv}"
+        if line not in self.ids:
+            self._bar(line, 0, adv, 0)
+        self.composite(new, [(line, 0, 0)], adv, self.gdef_class(name))
+        self.colr[new] = list(self.colr.get(name, [])) + [(line, None)]
+        return new
+
     def import_style(self, suffix, sibling_path, fallback=None, slant=0.0):
         """Copy every glyph of a sibling font as `<name>__<suffix>`. Glyphs the
         sibling lacks are composites of `fallback`-styled glyphs, slanted by
@@ -234,6 +333,12 @@ def lookup(lookup_type, subtables, flag=0, mark_set=None):
 def single(mapping):
     st = ot.SingleSubst()
     st.mapping = dict(mapping)
+    return st
+
+
+def multiple(mapping):
+    st = ot.MultipleSubst()
+    st.mapping = {g: list(seq) for g, seq in mapping.items()}
     return st
 
 

@@ -163,8 +163,9 @@ def text(literal, src):
 
 
 class Delimiter:
-    def __init__(self, cc, numdelims, node, previous, can_open, can_close):
+    def __init__(self, cc, numdelims, node, previous, can_open, can_close, pos=0):
         self.cc, self.numdelims, self.origdelims, self.node = cc, numdelims, numdelims, node
+        self.pos = pos
         self.previous, self.next = previous, None
         self.can_open, self.can_close = can_open, can_close
 
@@ -305,7 +306,7 @@ class InlineParser:
         node = text(self.subject[start:self.pos], self.src(start, self.pos))
         block.append(node)
         if (can_open or can_close) and (cc != "~" or numdelims <= 2):
-            self.delimiters = Delimiter(cc, numdelims, node, self.delimiters, can_open, can_close)
+            self.delimiters = Delimiter(cc, numdelims, node, self.delimiters, can_open, can_close, start)
             if self.delimiters.previous is not None:
                 self.delimiters.previous.next = self.delimiters
         return True
@@ -327,11 +328,14 @@ class InlineParser:
             if not closer.can_close:
                 closer = closer.next
                 continue
-            # cmark-gfm keys a `~` closer's lower bound by length alone.
+            # cmark-gfm keys a `~` closer's lower bound by length alone, and
+            # keeps it as a position (the delimiter may be gone by then).
             key = (closer.cc, None if closer.cc == "~" else closer.can_open, closer.origdelims % 3)
             bottom = openers_bottom.get(key, stack_bottom)
             opener, found = closer.previous, False
             while opener is not None and opener is not stack_bottom and opener is not bottom:
+                if closer.cc == "~" and isinstance(bottom, int) and opener.pos < bottom:
+                    break
                 odd_match = ((closer.can_open or opener.can_close) and closer.origdelims % 3 != 0
                              and (opener.origdelims + closer.origdelims) % 3 == 0)
                 if opener.cc == closer.cc and opener.can_open and not odd_match:
@@ -370,7 +374,7 @@ class InlineParser:
                     self.remove_delimiter(closer)
                     closer = nxt
             if not found:
-                openers_bottom[key] = old_closer.previous
+                openers_bottom[key] = old_closer.pos if old_closer.cc == "~" else old_closer.previous
                 if not old_closer.can_open:
                     self.remove_delimiter(old_closer)
         while self.delimiters is not None and self.delimiters is not stack_bottom:
@@ -586,6 +590,7 @@ class InlineParser:
 
     def append_link(self, block, start, end, prefix):
         node = Node("link")
+        node.bare = "url"                      # (for bounds.py)
         node.destination = normalize_uri(prefix + self.subject[start:end])
         node.append(text(self.subject[start:end], self.src(start, end)))
         block.append(node)
@@ -620,6 +625,7 @@ def link_emails(node):
             for bs, be, mailto in G.emails(child.literal.encode("utf-8")):
                 s, e = at[bs], at[be]
                 link = Node("link")
+                link.bare = "email"
                 link.destination = normalize_uri(("mailto:" if mailto else "") + child.literal[s:e])
                 link.append(_slice(child, s, e))
                 _insert_before(child, _slice(child, done, s))
@@ -698,8 +704,8 @@ class Role:
     symbol: "bullet", "quote" (a block quote's `>`), "rule" (a thematic
     break), "box" and "checked" (a task list item's box).
     style: the subset of em, strong, code, link, image, strike and heading
-    that applies; text in an image description is image only, as it becomes
-    plain alt text.
+    that applies; text in an image description is image only (and struck
+    through if the image is), as it becomes plain alt text.
     """
     kind: str
     style: frozenset = frozenset()
@@ -755,8 +761,8 @@ def assign(node, out, style, code_padding=False):
                     out[i] = Role("text", st)
         elif c.type == "html_inline":
             for i in c.src:
-                out[i] = Role("dim")
+                out[i] = Role("dim", style & {"strike"})
         elif c.type in NAMES:
             assign(c, out, style if "image" in style else style | {NAMES[c.type]}, code_padding)
-        elif c.type == "image":
-            assign(c, out, frozenset({"image"}), code_padding)
+        elif c.type == "image":              # (a strikethrough goes on through)
+            assign(c, out, frozenset({"image"}) | style & {"strike"}, code_padding)
