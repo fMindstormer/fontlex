@@ -22,7 +22,7 @@ from fontTools.ttLib import TTFont  # noqa: E402
 
 SAMPLE = """English spelling often hides the sound of a word. Which letters are silent in knife, write, island, listen, castle and honest? Where does the stress fall in photograph and photography, or in comfortable, chocolate and different?
 
-This font shows it as you read: the stressed vowel is bold and red, reduced vowels are gray, and silent letters fade. It knows the 30,000 most common words; others stay as they are. Type anything in this box."""
+This font shows it as you read: the stressed vowel is bold and red, reduced vowels are blue, and silent letters fade. Where a word's stress depends on its use, the word before it decides: keep a record, then record it again; a present for you, to present to you. It knows the 30,000 most common words; others stay as they are. Type anything in this box."""
 
 PAGE = """<!doctype html>
 <html lang="en">
@@ -44,9 +44,11 @@ textarea#code { min-height: 16rem; font-family: "Fontlex English", system-ui, sa
   you typed.</p>
   {{EDITOR}}
   <p class="note legend">In words of two or more syllables, the <span class="stress">stressed vowel</span> is
-  bold and red and <span class="reduced">reduced vowels</span> (the schwa of <i>banana</i>) are gray. In any
-  word, <span class="silent">silent letters</span> fade. Only what every listed pronunciation agrees on is
-  marked, so <i>record</i> (noun or verb) shows no stress.</p>
+  bold and red and <span class="reduced">reduced vowels</span> (the schwa of <i>banana</i>) are blue. In any
+  word, <span class="silent">silent letters</span> fade. A word whose stress moves between noun and verb
+  (<i>record</i>, <i>present</i>, <i>object</i>) takes its reading from the word before it: <i>the</i>,
+  <i>a</i>, <i>my</i> make it a noun, <i>to</i>, <i>will</i>, <i>we</i> a verb; with neither it shows only
+  what both readings share.</p>
 
   <h2>Where the hints come from</h2>
   <p>The pronunciations are the CMU Pronouncing Dictionary's (American English). Each word's spelling is aligned
@@ -79,21 +81,21 @@ textarea#code { min-height: 16rem; font-family: "Fontlex English", system-ui, sa
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--font", required=True)
-    ap.add_argument("--lexicon", default=str(HERE / "lexicon" / "words.tsv"))
+    ap.add_argument("--lexicon", default=str(HERE / "lexicon"))
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
     ttf = Path(args.font).read_bytes()
-    words = verify.read_lexicon(args.lexicon)
+    lex = verify.Lexicon(args.lexicon)
     view = verify.View(ttf, test_fontlex.SHAPERS["harfbuzz"](ttf))
     sets = [("Listed words, alone, capitalized, in capitals and in sentences; unlisted words",
-             list(verify.cases(words, random.Random(1)))),
+             list(verify.cases(lex, random.Random(1)))),
             ("Lines of this project's English documentation",
              [l for p in ("README.md", "markdown/README.md", "theory/README.md")
               for l in (HERE.parent / p).read_text(encoding="utf-8").splitlines() if l.strip()]),
             ("This page's sample", SAMPLE.splitlines())]
     rows = []
     for name, texts in sets:
-        ok = sum(verify.expected(t, words) == view.hints(t) for t in texts)
+        ok = sum(verify.expected(t, lex) == view.hints(t) for t in texts)
         rows.append(f"<tr><td>{html.escape(name)}</td><td class=\"n\">{len(texts):,}</td>"
                     f"<td class=\"n\">{ok / len(texts):.1%}</td></tr>")
         print(f"{name}: {ok}/{len(texts)}")
@@ -102,7 +104,7 @@ def main():
     box = ("Show hints", SAMPLE, 'aria-label="English text, with pronunciation hints"')
     page = pages.page(PAGE, pages.woff2(font), "Fontlex English", colors, box, {
         "ROWS": "\n    ".join(rows),
-        "WORDS": f"{len(words):,}",
+        "WORDS": f"{len(lex.words):,}",
     })
     pages.write(args.out, page)
 

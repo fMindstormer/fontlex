@@ -7,7 +7,9 @@ Every listed word is shaped alone, capitalized, in capitals, between
 punctuation and inside a sentence; a word with an apostrophe also with a
 curly one. Each letter must come out with its hint (stress, reduced, silent)
 or plain. Listed words inside longer words, and words that aren't listed,
-must come out plain. Corpus files are checked line by line the same way.
+must come out plain. Noun/verb pairs are shaped after every cue word (their
+noun or verb reading) and after other words or two spaces (the hints both
+readings share). Corpus files are checked line by line the same way.
 """
 
 import argparse
@@ -25,21 +27,34 @@ from fontTools.ttLib import TTFont  # noqa: E402
 WORD = re.compile(r"[A-Za-z]+(?:['’][A-Za-z]+)*")
 
 
-def read_lexicon(path):
-    words = {}
-    for line in open(path, encoding="utf-8"):
-        word, hints, _ = line.rstrip("\n").split("\t")
-        words[word] = hints
-    return words
+class Lexicon:
+    """lexicon/: words.tsv (word, hints), homographs.tsv (word, noun hints,
+    verb hints) and cues.tsv (word, noun or verb)."""
+
+    def __init__(self, directory):
+        def rows(name):
+            for line in open(Path(directory) / name, encoding="utf-8"):
+                if line.strip() and not line.startswith("#"):
+                    yield line.rstrip("\n").split("\t")
+        self.words = {r[0]: r[1] for r in rows("words.tsv")}
+        self.homographs = {r[0]: (r[1], r[2]) for r in rows("homographs.tsv")}
+        self.cues = {r[0]: r[1] for r in rows("cues.tsv")}
 
 
-def expected(text, words):
+def expected(text, lex):
     """The hint of every character of `text`, as the font should draw it."""
     out = ["."] * len(text)
+    prev = None
     for m in WORD.finditer(text):
-        hints = words.get(m.group().lower().replace("’", "'"))
+        word = m.group().lower().replace("\u2019", "'")
+        hints = lex.words.get(word)
+        if word in lex.homographs and prev and prev.end() == m.start() - 1 and text[prev.end()] == " ":
+            cue = lex.cues.get(prev.group().lower().replace("\u2019", "'"))
+            if cue:
+                hints = lex.homographs[word][0 if cue == "noun" else 1]
         if hints:
             out[m.start():m.end()] = hints
+        prev = m
     return "".join(out)
 
 
@@ -63,7 +78,14 @@ class View:
         return "".join(out)
 
 
-def cases(words, rng):
+def cases(lex, rng):
+    words = lex.words
+    for w in lex.homographs:
+        for c in lex.cues:
+            yield f"{c} {w}"
+            yield f"{c.capitalize()} {w.upper()}."
+        yield f"the  {w}"          # two spaces: no cue
+        yield f"then {w}"
     for w in words:
         yield w
         yield w.capitalize()
@@ -83,23 +105,23 @@ def cases(words, rng):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("font")
-    ap.add_argument("--lexicon", default=str(HERE / "lexicon" / "words.tsv"))
+    ap.add_argument("--lexicon", default=str(HERE / "lexicon"), help="the directory of words.tsv and the rest")
     ap.add_argument("--shaper", action="append", choices=sorted(test_fontlex.SHAPERS))
     ap.add_argument("--corpus", nargs="*", default=[])
     ap.add_argument("--show", type=int, default=10)
     args = ap.parse_args()
-    words = read_lexicon(args.lexicon)
+    lex = Lexicon(args.lexicon)
     data = Path(args.font).read_bytes()
     failed = 0
     for name in args.shaper or ["harfbuzz"]:
         view = View(data, test_fontlex.SHAPERS[name](data))
-        sets = [("lexicon words in context", list(cases(words, random.Random(1))))]
+        sets = [("lexicon words in context", list(cases(lex, random.Random(1))))]
         for path in args.corpus:
             sets.append((f"lines of {path}", [l for l in Path(path).read_text(encoding="utf-8").splitlines() if l.strip()]))
         for label, texts in sets:
             bad, shown, t = 0, 0, time.perf_counter()
             for text in texts:
-                want, got = expected(text, words), view.hints(text)
+                want, got = expected(text, lex), view.hints(text)
                 if want != got:
                     bad += 1
                     if shown < args.show:

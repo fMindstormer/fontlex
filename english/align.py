@@ -11,7 +11,11 @@ gets a hint: `S` the vowel with primary stress, `r` a reduced vowel (the
 schwa of AH0, ER0, or IH0 and UH0), `x` silent, `.` none. Stress and reduced
 vowels are only marked in words of two or more syllables. A word with several
 pronunciations keeps only the hints all of them agree on; pronunciations that
-don't align (abbreviations: `us` as U.S.) are left out.
+don't align (abbreviations: `us` as U.S.) are left out. A verb/noun pair
+whose stress moves (`record`, `present`: lexicon/noun_verb_pairs.txt), and
+its plural, also gets a noun reading (its earliest stress) and a verb reading
+(its latest), for the font to pick from the word before it; they go in
+`homographs.tsv`.
 
 The output `words.tsv` has the most frequent words (wordfreq's ranking) that
 CMUdict has and that align: word, hints, pronunciation.
@@ -149,6 +153,26 @@ def hints(word, alignment):
     return "".join("." if c == "'" else next(letters) for c in word)
 
 
+def stress_position(alignment):
+    """Which vowel (0, 1, ...) carries primary stress, or None."""
+    vowels = [p for _, ph in alignment for p in ph if p[-1].isdigit()]
+    return next((i for i, p in enumerate(vowels) if p.endswith("1")), None)
+
+
+def readings(word, alignments):
+    """For a word whose stress moves between its pronunciations (record,
+    present): the hints of its noun reading (the earliest stress, as in
+    REcord) and its verb reading (the latest, reCORD); else None."""
+    by_pos = {}
+    for a in alignments:
+        pos = stress_position(a)
+        if pos is not None:
+            by_pos.setdefault(pos, []).append(hints(word, a))
+    if len(by_pos) < 2:
+        return None
+    return agree(by_pos[min(by_pos)]), agree(by_pos[max(by_pos)])
+
+
 def agree(hint_strings):
     """The hints every pronunciation gives."""
     return "".join(cs[0] if len(set(cs)) == 1 else "." for cs in zip(*hint_strings))
@@ -211,7 +235,9 @@ def main():
               if re.fullmatch(r"[a-z]+(?:'[a-z]+)?", w) and w in prons]
     train = [(w, prons[w]) for w in ranked[:30000]]
     cost = learn(train)
-    rows, failed = [], []
+    rows, failed, homographs = [], [], []
+    pairs = {l.strip() for l in open(Path(__file__).parent / "lexicon" / "noun_verb_pairs.txt")
+             if l.strip() and not l.startswith("#")}
     for w in ranked:
         if len(rows) == args.words:
             break
@@ -220,16 +246,23 @@ def main():
             failed.append(w)
             continue
         rows.append((w, agree([hints(w, a) for a in aligned]), " ".join(prons[w][0]), aligned[0]))
+        two = readings(w, aligned) if w in pairs or w[:-1] in pairs and w.endswith("s") else None
+        if two and two[0] != two[1]:
+            homographs.append((w, *two))
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     with open(out / "words.tsv", "w", encoding="utf-8") as f:
         for w, h, p, _ in rows:
             f.write(f"{w}\t{h}\t{p}\n")
+    with open(out / "homographs.tsv", "w", encoding="utf-8") as f:
+        for w, noun, verb in homographs:
+            f.write(f"{w}\t{noun}\t{verb}\n")
     alpha = [w for w in wordfreq.top_n_list("en", 200000) if re.fullmatch(r"[a-z]+(?:'[a-z]+)?", w)]
     total = sum(wordfreq.word_frequency(w, "en") for w in alpha)
     covered = sum(wordfreq.word_frequency(w, "en") for w, *_ in rows)
     print(f"wrote {out / 'words.tsv'}: {len(rows)} words, {covered / total:.1%} of running text; "
-          f"{len(failed)} skipped (no alignment), e.g. {' '.join(failed[:20])}")
+          f"{len(failed)} skipped (no alignment), e.g. {' '.join(failed[:20])}; "
+          f"{len(homographs)} with a noun and a verb reading")
     for w, h, p, a in rows[:args.show]:
         print(f"  {w:14} {h:14} {' '.join(g + '=' + ('-'.join(ph) or '_') for g, ph in a)}")
     return 0

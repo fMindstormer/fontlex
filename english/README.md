@@ -2,10 +2,12 @@
 
 A proof of concept: a font that hints at how English words are pronounced,
 for learners. In words of two or more syllables the **stressed vowel** is
-bold and red and **reduced vowels** (the schwa of *banana*) are gray. In any
+bold and red and **reduced vowels** (the schwa of *banana*) are blue. In any
 word, **silent letters** fade: the *k* of *knife*, the *gh* of *night*, the
-*b* of *debt*, the final *e* of *make*. The text stays as typed; copy it and
-you get plain letters. `english/demo.html` is a text box in the font.
+*b* of *debt*, the final *e* of *make*. Where the stress depends on whether a
+word is a noun or a verb (*record*, *present*, *object*), the word before it
+decides: *the record* is REcord, *to record* is reCORD. The text stays as
+typed; copy it and you get plain letters. `english/demo.html` is a text box in the font.
 
 It knows the 30,000 most frequent English words that the CMU Pronouncing
 Dictionary has (American English). By wordfreq's counts they make up 96.4%
@@ -19,11 +21,12 @@ lexicon's hint for it:
 
 | Text | Checked | Right, HarfBuzz | Right, Core Text |
 |---|---|---|---|
-| Every listed word alone, capitalized, in capitals, in punctuation and in a sentence; with a curly apostrophe; inside longer words and made-up words (must stay plain) | 156,553 | 156,553 | 156,553 |
+| Every listed word alone, capitalized, in capitals, in punctuation and in a sentence; with a curly apostrophe; inside longer words and made-up words (must stay plain); every noun/verb pair after each cue word, after another word and after two spaces | 166,537 | 166,537 | 166,537 |
 | Lines of this project's English READMEs (`README.md`, `markdown/`, `theory/`) | 743 | 743 | 743 |
 
-The glyph count doesn't depend on the word list: 1,850 glyphs for any size.
-The rules do:
+The glyph count doesn't depend on the word list (3,410 glyphs, mostly the
+letters' first-letter variants); the rules do. Before the two-letter keys and
+homographs:
 
 | Words | Rules (words with hints) | WOFF2 | ms a line, HarfBuzz | ms a line, Core Text |
 |---|---|---|---|---|
@@ -34,10 +37,12 @@ The rules do:
 
 The times are the best of five runs over this project's README lines, on a
 heavily loaded machine, so only their ratios mean much: about four times a
-plain font in HarfBuzz, twice in Core Text. A shaper tries a word's rules
-one after another among those for its first letter, which is most of the
-cost; keying the rules on the first two letters would cut it. In WebKit the hints render in both palettes and survive soft wrapping,
-because each hint depends only on its own word.
+plain font in HarfBuzz, twice in Core Text. A shaper tries a word against
+the rules for its first letter one after another. Keying them on the first
+two letters (the current font, 236 KB) cut the time by about a fifth in both
+engines, to roughly 0.2 ms a line in HarfBuzz and 0.13 ms in Core Text; the
+rest is spread over the passes. In WebKit the hints render in both palettes
+and survive soft wrapping, because each hint depends only on its own word.
 
 ## Where the hints come from
 
@@ -57,8 +62,15 @@ because each hint depends only on its own word.
   - One spelling AH0, ER0, IH0 or UH0 is reduced.
   - Stress and reduction are only marked in words of two or more syllables.
 - **Ambiguous words.** A word with several pronunciations keeps only the
-  hints they all agree on. So *record* and *present* show no stress, and *the*
-  shows nothing.
+  hints they all agree on. So *the* shows nothing, and *record* shows no
+  stress unless the word before it decides (below).
+- **Noun/verb pairs.** For the 128 listed words and plurals that
+  linguists list as stress-shifting verb/noun pairs (`lexicon/noun_verb_pairs.txt`,
+  from Wikipedia's list of initial-stress-derived nouns), the pronunciations
+  with the earliest stress make the noun reading and those with the latest
+  make the verb reading (`lexicon/homographs.tsv`). Other words with several
+  stress patterns (*museum*, *emergency*, *into*) are variants, not noun/verb
+  pairs, and keep only their shared hints.
 
 How *kn* and *wr* are cut matters for teaching: *knife* has a silent *k*
 rather than a *kn* that spells "n". The choices follow how phonics usually
@@ -72,17 +84,23 @@ letters, abbreviations and initialisms (*mr*, *tv*, *bbc*, *usb*).
 
 ## How the font does it
 
-Four GSUB passes, built by `enfont.py` on Noto Sans and Noto Sans Bold:
+Six GSUB passes, built by `enfont.py` on Noto Sans and Noto Sans Bold:
 
 1. Right to left, each word's last letter becomes a "final" variant. A word
    is letters, with apostrophes between letters.
-2. Left to right, each word's first letter becomes an "initial" variant.
-3. Then one context rule per listed word that has hints (25,649 of the
+2. Left to right, each word's first letter becomes an "initial" variant
+   that also records the second letter, so a word is only tried against the
+   rules for its first two letters.
+3. Cue words (`lexicon/cues.tsv`: *the*, *a*, *my*, ... for nouns; *to*,
+   *will*, *we*, ... for verbs) mark their last letter as a noun or verb cue.
+4. A noun/verb pair right after a cue and one space gets that reading's
+   hints.
+5. Then one context rule per listed word that has hints (25,649 of the
    30,000). Each rule is class-based, so case is ignored, and runs from an
    initial letter to a final one, so it matches whole words only. It applies
    the stress, reduced or silent lookup at each hinted letter. The colors are
    COLR layers with light and dark palettes.
-4. Initial and final variants that no rule claimed go back to plain letters.
+6. The variants that no rule claimed go back to plain letters.
 
 This is the "lexicon as table bytes, not glyphs" design from
 [../theory/README.md](../theory/README.md). The word rules cost bytes per
@@ -90,19 +108,19 @@ letter, and the glyph count doesn't grow with the word list.
 
 ## Next steps
 
-- **Faster matching.** Mark each word's first letter with a variant that
-  also records the second letter, so a word is tried only against the rules
-  for its first two letters.
+- **Faster matching.** Profile which pass costs most now that the word
+  rules are keyed on two letters.
 - **Words not in the 30,000**: the next 20,000 would add about 1.6% of
   running text (CMUdict lists fewer of them; many are names).
 - **Check the alignments.** Have a teacher or a phonics word list go over
   the hints for the most frequent words. The alignment was only spot-checked.
-- **Homographs from context.** *a record* vs *to record*: the previous word
-  is often enough, and a font can read it.
-- **Design.** Gray for reduced vowels and pale for silent letters are close
-  in the dark palette. Alternatives are dotted or outlined silent letters,
-  or vowel colors by sound behind a stylistic set, like ESL color-vowel
-  charts.
+- **More context for noun/verb pairs.** Only the word right before counts,
+  so *then record it* and *rose to record levels* (an adjective after *to*)
+  aren't decided right. Adjectives in between (*the new record*) block the
+  cue.
+- **Design.** Reduced vowels are now blue rather than gray, so the three
+  hints differ in hue. Further options: vowel colors by sound behind a
+  stylistic set, like ESL color-vowel charts.
 - **British English**, from other pronunciation data (e.g. Wiktionary).
 - **Words not listed**, from letter-to-sound rules or a suffix list, as
   the German font uses for gender.
