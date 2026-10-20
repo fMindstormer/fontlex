@@ -13,6 +13,7 @@ jobs:
       - run: |
           mkdir site
           cp demo/index.html site/index.html
+          cp -r docs/images site/images
           cp demo/fontlex-demo.html site/python.html
           cp demo/fontlex-demo-javascript.html site/javascript.html
           cp markdown/demo.html site/markdown.html

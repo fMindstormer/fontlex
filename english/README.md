@@ -22,7 +22,7 @@ lexicon's hint for it:
 | Text | Checked | Right, HarfBuzz | Right, Core Text |
 |---|---|---|---|
 | Every listed word alone, capitalized, in capitals, in punctuation and in a sentence; with a curly apostrophe; inside longer words and made-up words (must stay plain); every noun/verb pair after each cue word, after another word and after two spaces | 166,537 | 166,537 | 166,537 |
-| Lines of this project's English READMEs (`README.md`, `markdown/`, `theory/`) | 797 | 797 | 797 |
+| Lines of this project's English READMEs (`README.md`, `markdown/`, `theory/`) | 792 | 792 | 792 |
 
 The glyph count doesn't depend on the word list (3,410 glyphs, mostly the
 letters' first-letter variants); the rules do. Before the two-letter keys and

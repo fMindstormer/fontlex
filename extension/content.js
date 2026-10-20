@@ -5,6 +5,7 @@
   const api = globalThis.browser ?? globalThis.chrome;
   const html = document.documentElement;
   const loading = {};
+  let latest = 0;            // settings can change while a font loads: only the latest call applies
 
   function fontFor(settings) {
     if (settings.off.includes(location.hostname)) return null;
@@ -40,6 +41,7 @@
   }
 
   async function apply(settings) {
+    const call = ++latest;
     const key = fontFor(settings);
     if (!key) {
       delete html.dataset.fontlex;
@@ -51,6 +53,7 @@
       console.warn("Fontlex: could not load the font", e);
       return;
     }
+    if (call !== latest) return;
     html.dataset.fontlexPalette = settings.palette === "auto" ? (darkPage() ? "dark" : "light") : settings.palette;
     html.dataset.fontlex = key;
   }

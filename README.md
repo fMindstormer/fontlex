@@ -1,68 +1,63 @@
 # Fontlex
 
-Compile a lexer spec into a syntax-highlighting font. The font runs the lexer
-inside the text shaper, so highlighting works in any app that renders OpenType
-color fonts: a plain `<textarea>`, an `<input>`, a doc, a design tool. No
-editor plugin, no JavaScript.
+**Compilers that target fonts.** Fontlex turns a lexer, a Markdown grammar
+or a pronunciation dictionary into an OpenType font, and the text shaper
+that every browser and operating system already has runs it. Type into a
+plain `<textarea>` and the font highlights Python, renders Markdown as you
+type, or shows a learner how French words are said. No editor plugin, no
+JavaScript: the font's substitution rules do it.
 
-Live demos: [Python](https://fmindstormer.github.io/fontlex/python.html) · [JavaScript](https://fmindstormer.github.io/fontlex/javascript.html) ·
-[Markdown](https://fmindstormer.github.io/fontlex/markdown.html) · [German genders](https://fmindstormer.github.io/fontlex/german.html) ·
-[German syllables](https://fmindstormer.github.io/fontlex/german-syllables.html) · [English
-pronunciation](https://fmindstormer.github.io/fontlex/english.html) · [French pronunciation](https://fmindstormer.github.io/fontlex/french.html)
-(all on [one page](https://fmindstormer.github.io/fontlex/)).
+[![Checks](https://github.com/fMindstormer/fontlex/actions/workflows/checks.yml/badge.svg)](https://github.com/fMindstormer/fontlex/actions/workflows/checks.yml)
+[![License: MIT](https://img.shields.io/badge/code-MIT-blue.svg)](LICENSE)
 
-`demo/fontlex-demo.html` (Python) and `demo/fontlex-demo-javascript.html` are
-self-contained pages with an editable textarea in the compiled font.
+**[Try the live demos](https://fmindstormer.github.io/fontlex/)** · [Download the fonts and the browser extension](https://github.com/fMindstormer/fontlex/releases/latest)
 
-The same machinery works for natural language:
+<table>
+<tr><td><a href="https://fmindstormer.github.io/fontlex/python.html"><img src="docs/images/python.png" alt="Python code in a plain text box, highlighted by the Fontlex Python font"></a></td>
+<td><a href="https://fmindstormer.github.io/fontlex/markdown.html"><img src="docs/images/markdown.png" alt="Markdown in a plain text box, rendered by the Fontlex Markdown font: bold, italic, code, links, lists, task boxes"></a></td></tr>
+<tr><td><a href="https://fmindstormer.github.io/fontlex/english.html"><img src="docs/images/english.png" alt="English text with stressed vowels in red, reduced vowels in blue and silent letters faded"></a></td>
+<td><a href="https://fmindstormer.github.io/fontlex/french.html"><img src="docs/images/french.png" alt="French text with silent letters faded, nasal vowels in violet and liaisons in green with a tie"></a></td></tr>
+<tr><td><a href="https://fmindstormer.github.io/fontlex/german.html"><img src="docs/images/german.png" alt="German text with nouns colored by gender: der blue, die red, das green"></a></td>
+<td><a href="https://fmindstormer.github.io/fontlex/german-syllables.html"><img src="docs/images/german-syllables.png" alt="German text with each word's syllables in turn blue and red"></a></td></tr>
+</table>
 
-- `specs/german.yaml` colors German nouns by grammatical gender for learners
-  (der blue, die red, das green), from lists learned from a treebank and
-  Wiktionary. On held-out newspaper text it colors 97% of nouns, 99.5% of
-  them right; see [german/README.md](german/README.md) and `german/demo.html`.
-- `specs/german-syllables.yaml` colors each word's syllables in turn, blue and
-  red, as German primary schools teach reading, from TeX's hyphenation
-  patterns. It splits 97.5% of held-out first-reader words exactly right, and
-  its colors survive printing; see
-  [german/syllables/README.md](german/syllables/README.md) and
-  `german/syllables/demo.html`.
-- `english/` hints at how English words are pronounced, for learners: the
-  stressed vowel bold and red, reduced vowels blue, silent letters faded,
-  for the 30,000 most frequent words, from the CMU Pronouncing Dictionary;
-  noun/verb pairs take their stress from the word before (*the record*, *to
-  record*). A proof of concept, exact on every listed word in HarfBuzz and
-  Core Text; see [english/README.md](english/README.md) and
-  `english/demo.html`.
-- `french/` does the same for French, from Lexique: silent letters faded,
-  nasal vowels violet, droppable schwas blue, and obligatory liaisons bold
-  green with a tie under the space (*les‿amis*, *vont-ils*), never before an
-  h aspiré (*les héros*). Verbs spelled like nouns read the word before
-  (*le président*, *ils président*). Exact on every listed case in HarfBuzz
-  and Core Text; see [french/README.md](french/README.md) and
-  `french/demo.html`.
-- `extension/` puts any web page in one of these learner fonts: a browser
-  extension (Chromium) that matches the page's language, so French news
-  shows its liaisons and English articles their stress; see
-  [extension/README.md](extension/README.md).
+Every image is a plain text box; the colors, the hidden Markdown markup and
+the liaison ties are drawn by the font.
 
-The sequel, `markdown/`, goes beyond lexing: a font that renders GitHub
-Flavored Markdown as you type it, line by line. CommonMark's inline rules
-(emphasis, code spans, links, images, autolinks, raw HTML, entities and
-escapes), GitHub's strikethrough, bare URLs and emails, and each line's block
-markup (headings, quotes, lists, task boxes, rules) are run by the shaper,
-with the markup hidden and the text styled, in any script the font has. It
-comes monospaced and proportional. Within its bounds it renders every
-one-line spec example, 20,000 random lines and 10,723 lines of real
-documents exactly as GitHub does; see [markdown/README.md](markdown/README.md)
-and `markdown/demo.html`.
+## The fonts
 
-[theory/README.md](theory/README.md) works out what font compilation can
-reach: exactly the finite-state (rational) functions of a run, with glyph
-ids, lookup headers and the engine's work budget as the real limits. Fonts
-can't count, but `theory/depth.py` matches brackets 4,000 deep. It also
-covers what follows from fonts being programs, including a HarfBuzz bug
-(12.3.1 and later) that this project's fonts uncovered (`theory/hbcache.py`,
-reported as harfbuzz/harfbuzz#6418).
+| Font | What the shaper does | Measured |
+|---|---|---|
+| [Python](https://fmindstormer.github.io/fontlex/python.html), [JavaScript](https://fmindstormer.github.io/fontlex/javascript.html) | runs a lexer compiled from a YAML spec ([below](#the-spec)) and colors each token | every glyph's state matches a reference lexer: 20,000 random strings, every transition, every spec example; HarfBuzz and Core Text |
+| [Markdown](https://fmindstormer.github.io/fontlex/markdown.html) ([README](markdown/README.md)) | renders GitHub Flavored Markdown line by line: CommonMark's inline rules, strikethrough, autolinks, block markup; markup hidden; mono and proportional | within its bounds, every one-line spec example, 20,000 random lines and 10,723 lines of real documents exactly as GitHub renders them |
+| [German genders](https://fmindstormer.github.io/fontlex/german.html) ([README](german/README.md)) | colors nouns by gender, from lists learned from a treebank and Wiktionary | on held-out newspaper text, 97% of nouns colored, 99.5% of them right |
+| [German syllables](https://fmindstormer.github.io/fontlex/german-syllables.html) ([README](german/syllables/README.md)) | colors syllables in turn, as German schools teach reading | 97.5% of held-out first-reader words split exactly right |
+| [English pronunciation](https://fmindstormer.github.io/fontlex/english.html) ([README](english/README.md)) | marks stressed and reduced vowels and silent letters of 30,000 words; noun/verb pairs read the word before (*the record*, *to record*) | 166,537 of 166,537 cases right in HarfBuzz and Core Text |
+| [French pronunciation](https://fmindstormer.github.io/fontlex/french.html) ([README](french/README.md)) | marks silent letters, nasal vowels, droppable schwas and obligatory liaison (*les‿amis*, but not *les héros*) for 30,000 words | 198,865 of 198,865 cases right in HarfBuzz and Core Text |
+| [Browser extension](extension/README.md) | draws any web page in a learner font, matched to the page's language | 17 checks in Chromium, including a page with a strict CSP |
+
+## What's interesting here
+
+- **Fonts are programs.** GSUB lookups compose into finite-state
+  transducers. [theory/README.md](theory/README.md) works out what a font
+  can compute (exactly the rational functions of a run) and measures the
+  real budgets: glyph ids, the lookup list's 16-bit offsets, engine work.
+  Fonts can't count, yet `theory/depth.py` matches brackets 4,000 deep.
+- **Checked, not eyeballed.** Each font is compared glyph by glyph with a
+  reference model in HarfBuzz (Chrome, Firefox, Android) and Core Text
+  (Safari, macOS), and the demo pages are rendered in WebKit. CI rebuilds every
+  font and page and fails unless the result matches the repository byte for
+  byte.
+- **It found an engine bug.** Compiled fonts reach glyph-id ranges that
+  hand-drawn fonts don't. HarfBuzz 12.3.1 and later never match glyph ids
+  32,512 to 32,767 in format 2 context rules; it was bisected to one commit
+  and reported upstream
+  ([harfbuzz/harfbuzz#6418](https://github.com/harfbuzz/harfbuzz/issues/6418)).
+- **Data, then compilation.** The learner fonts come from real data: hard-EM
+  alignment of spellings with CMUdict and Lexique pronunciations, gender
+  lists learned from a treebank, TeX hyphenation patterns. The pronunciation
+  lexicons compile into class-based context rules, so their glyph count
+  doesn't grow with the word list.
 
 ## Quick start
 
@@ -99,6 +94,8 @@ page byte for byte, so `git status` afterwards shows nothing.
 | `english/` | the English pronunciation-hint font: aligner, lexicon, compiler, verification, demo, review sheet |
 | `french/` | the French pronunciation-hint font, with liaison: aligner, lexicon, compiler, verification, demo |
 | `extension/` | a browser extension that draws web pages in the learner fonts, with its Chromium test |
+| `docs/images/` | the screenshots above, of the demo pages in WebKit |
+| `.github/workflows/` | CI (`./check.sh` on Ubuntu, byte-identical rebuild) and the GitHub Pages deploy |
 | `theory/` | what font compilation can reach, with two experiments |
 | `fonts/` | base fonts (JetBrains Mono, Noto Sans subset) and their licenses |
 | `build/` | the compiled fonts, TTF and WOFF2 |
