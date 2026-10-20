@@ -1,0 +1,25 @@
+name: Checks
+on:
+  push: { branches: [main] }
+  pull_request:
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with: { python-version: "3.13" }
+      - uses: actions/setup-node@v7
+        with: { node-version: "24" }
+      - name: Install
+        run: |
+          pip install -r requirements.txt
+          npm install --no-save playwright-core@1.54.2
+          npx playwright-core install --with-deps chromium
+          echo "CHROMIUM=$(node -e 'console.log(require("playwright-core").chromium.executablePath())')" >> "$GITHUB_ENV"
+      - name: Build every font and page, and run every check HarfBuzz and Chromium can do
+        run: ./check.sh
+      - name: The rebuild matches the repository byte for byte
+        run: git status --short && git diff --stat --exit-code
