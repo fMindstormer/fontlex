@@ -1,0 +1,26 @@
+name: Pages
+on:
+  push: { branches: [main] }
+  workflow_dispatch:
+permissions: { contents: read, pages: write, id-token: write }
+concurrency: { group: pages, cancel-in-progress: true }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: "${{ steps.deployment.outputs.page_url }}" }
+    steps:
+      - uses: actions/checkout@v7
+      - run: |
+          mkdir site
+          cp demo/index.html site/index.html
+          cp demo/fontlex-demo.html site/python.html
+          cp demo/fontlex-demo-javascript.html site/javascript.html
+          cp markdown/demo.html site/markdown.html
+          cp german/demo.html site/german.html
+          cp german/syllables/demo.html site/german-syllables.html
+          cp english/demo.html site/english.html
+          cp french/demo.html site/french.html
+      - uses: actions/upload-pages-artifact@v5
+        with: { path: site }
+      - id: deployment
+        uses: actions/deploy-pages@v5

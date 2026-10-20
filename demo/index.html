@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fontlex demos</title>
+<!-- The GitHub Pages landing page: .github/workflows/pages.yml copies it and the demos into one folder. -->
+<style>
+:root { --bg: #F4F5F7; --surface: #FFFFFF; --ink: #1B2130; --muted: #5B6476; --rule: #D8DCE3; --link: #0B63D6;
+        color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #11141B; --surface: #181C25; --ink: #E4E7EE; --muted: #98A0B1; --rule: #2A303D; --link: #58A6FF;
+  color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 52rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+h1 { font-size: 2rem; margin: 0 0 .25rem; }
+.lede { color: var(--muted); margin: 0 0 1.5rem; }
+ul { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; }
+li { padding: .8rem 1.1rem; border-bottom: 1px solid var(--rule); }
+li:last-child { border-bottom: 0; }
+a { color: var(--link); font-weight: 600; text-decoration: none; }
+a:hover { text-decoration: underline; }
+.note { color: var(--muted); font-size: .9rem; margin-top: 1.5rem; }
+</style>
+<main>
+  <h1>Fontlex</h1>
+  <p class="lede">Fonts that run a lexer inside the text shaper. Each demo is a plain text box in a compiled font:
+  the font draws the colors, with no script doing the highlighting.</p>
+  <ul>
+    <li><a href="python.html">Python</a>: syntax highlighting, as you type.</li>
+    <li><a href="javascript.html">JavaScript</a>: the same, from a JavaScript lexer spec.</li>
+    <li><a href="markdown.html">Markdown</a>: GitHub Flavored Markdown rendered line by line, markup hidden, monospaced or proportional.</li>
+    <li><a href="german.html">German genders</a>: nouns colored by gender, der blue, die red, das green.</li>
+    <li><a href="german-syllables.html">German syllables</a>: each word's syllables in turn blue and red, as German schools teach reading.</li>
+    <li><a href="english.html">English pronunciation</a>: stressed vowels, reduced vowels and silent letters of 30,000 words.</li>
+    <li><a href="french.html">French pronunciation</a>: silent letters, nasal vowels and liaison for 30,000 words.</li>
+  </ul>
+  <p class="note">Color fonts render in current Chrome, Firefox and Safari. Source:
+  <a href="https://github.com/fMindstormer/fontlex">github.com/fMindstormer/fontlex</a>.</p>
+</main>

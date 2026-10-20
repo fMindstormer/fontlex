@@ -5,6 +5,12 @@ inside the text shaper, so highlighting works in any app that renders OpenType
 color fonts: a plain `<textarea>`, an `<input>`, a doc, a design tool. No
 editor plugin, no JavaScript.
 
+Live demos: [Python](https://fmindstormer.github.io/fontlex/python.html) · [JavaScript](https://fmindstormer.github.io/fontlex/javascript.html) ·
+[Markdown](https://fmindstormer.github.io/fontlex/markdown.html) · [German genders](https://fmindstormer.github.io/fontlex/german.html) ·
+[German syllables](https://fmindstormer.github.io/fontlex/german-syllables.html) · [English
+pronunciation](https://fmindstormer.github.io/fontlex/english.html) · [French pronunciation](https://fmindstormer.github.io/fontlex/french.html)
+(all on [one page](https://fmindstormer.github.io/fontlex/)).
+
 `demo/fontlex-demo.html` (Python) and `demo/fontlex-demo-javascript.html` are
 self-contained pages with an editable textarea in the compiled font.
 
