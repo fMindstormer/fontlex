@@ -70,6 +70,7 @@ async function state(page) {
 }
 
 async function colorsOnScreen(page, wanted) {
+  await page.bringToFront();             // a background tab may not paint (headless Linux), and never settles
   const png = await page.locator("#t").screenshot();
   const shot = await context.newPage();
   const counts = await shot.evaluate(async ({ data, wanted }) => {
