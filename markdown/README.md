@@ -81,8 +81,9 @@ boxes, bars and rules are a figure wide.
 
 Three things only showed up with the second base font:
 
-- **HarfBuzz 14 never matches a glyph with id 32,512 to 32,767 in a context
-  lookup of format 1 or 2.** Its per-subtable coverage cache
+- **HarfBuzz 12.3.1 to 14 never matches a glyph with id 32,512 to 32,767
+  in a context lookup of format 2** (harfbuzz/harfbuzz#6418). Its
+  per-subtable coverage cache
   (`hb_cache_t<14, 1, 8>`) stores 7 bits per byte and starts each byte as
   0xFF, but checks for an empty slot only when the stored bits fill the
   byte; and it stores only ids below 16,384. So an id whose bits above the

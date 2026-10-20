@@ -180,10 +180,12 @@ lexers), so every glyph can be checked in every engine. That makes each
 compiled font a large differential test. The proportional edition of
 Fontlex Markdown failed in HarfBuzz, and only there, on lines like `<a>x`.
 
-*Measured*: HarfBuzz from 13.0.0 (released 2026-03-04) through at least
-14.6.0 never matches a glyph with id **32,512 to 32,767** in a contextual
-lookup of format 1 or 2 (the code is shared by GSUB and GPOS). The new coverage cache,
-`hb_cache_t<14, 1, 8>`, stores 7 bits per byte and starts each byte at 0xFF.
+*Measured*: HarfBuzz from 12.3.1 (released 2026-01-20) through at least
+14.6.0 never matches a glyph with id **32,512 to 32,767** in a context or
+chain context subtable of format 2; formats 1 and 3 are fine, and 12.3.0
+is too. The cause is HarfBuzz commit a78994395, which enlarged the format 2
+coverage cache to `hb_cache_t<14, 1, 8>`. That cache stores 7 bits per byte
+and starts each byte at 0xFF.
 Its empty-slot check applies only when the stored bits fill the byte, and it
 stores only ids below 16,384. So an id whose high byte is 127 reads an empty
 slot as a cached "not covered". `hbcache.py` shows it with seven one-rule
@@ -201,7 +203,8 @@ Exposure:
   glyphs there, one of them the `>` that ends raw HTML.
 
 `fontbuild.py` now inserts padding glyphs to move such glyphs past the
-window. The bug isn't reported upstream yet.
+window. The bug is reported upstream as
+[harfbuzz/harfbuzz#6418](https://github.com/harfbuzz/harfbuzz/issues/6418).
 
 The general point: an engine's fast paths are tuned on fonts that people
 draw, and compiled fonts are far out of that distribution. They hit glyph-id

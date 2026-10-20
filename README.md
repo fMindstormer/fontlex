@@ -56,8 +56,9 @@ and `markdown/demo.html`.
 reach: exactly the finite-state (rational) functions of a run, with glyph
 ids, lookup headers and the engine's work budget as the real limits. Fonts
 can't count, but `theory/depth.py` matches brackets 4,000 deep. It also
-covers what follows from fonts being programs, including a HarfBuzz 13+ bug
-that this project's fonts uncovered (`theory/hbcache.py`).
+covers what follows from fonts being programs, including a HarfBuzz bug
+(12.3.1 and later) that this project's fonts uncovered (`theory/hbcache.py`,
+reported as harfbuzz/harfbuzz#6418).
 
 ## Quick start
 

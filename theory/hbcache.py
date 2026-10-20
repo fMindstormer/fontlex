@@ -1,10 +1,10 @@
-"""A test for HarfBuzz 13+'s context coverage cache: glyph ids 32512-32767.
+"""A test for HarfBuzz 12.3.1+'s context coverage cache: glyph ids 32512-32767.
 
     python theory/hbcache.py [--page OUT.html]
 
 Each test font turns `a` into a helper glyph at a chosen glyph id, and a
 format 2 chain context rule turns that glyph into `B`. A shaper that matches
-the rule draws "BBB" for "aaa". HarfBuzz from 13.0.0 caches whether a glyph
+the rule draws "BBB" for "aaa". HarfBuzz from 12.3.1 caches whether a glyph
 is covered in an hb_cache_t<14, 1, 8>, whose empty slots read as "not
 covered" for ids 32512 to 32767, so there it draws "aaa". With --page, the
 fonts go into an HTML page, to see what a browser does.
