@@ -1,0 +1,24 @@
+/* Applied by content.js through data-fontlex on <html>. Code, math, SVG and icon fonts
+   (elements whose class names an icon, or hidden from screen readers) keep their own font. */
+html[data-fontlex] { --fontlex-palette: light; }
+html[data-fontlex-palette="dark"] { --fontlex-palette: dark; }
+html[data-fontlex="en"] body,
+html[data-fontlex="en"] body :not(pre, code, kbd, samp, tt, var, math, svg, pre *, code *, kbd *, samp *, svg *, [aria-hidden="true"], [aria-hidden="true"] *, [class*="icon" i], [class*="material-symbols" i], [class*="fa-"], [data-icon]) {
+  font-family: "fontlex-hints-en", system-ui, -apple-system, "Segoe UI", sans-serif !important;
+  font-palette: var(--fontlex-palette) !important;
+}
+html[data-fontlex="fr"] body,
+html[data-fontlex="fr"] body :not(pre, code, kbd, samp, tt, var, math, svg, pre *, code *, kbd *, samp *, svg *, [aria-hidden="true"], [aria-hidden="true"] *, [class*="icon" i], [class*="material-symbols" i], [class*="fa-"], [data-icon]) {
+  font-family: "fontlex-hints-fr", system-ui, -apple-system, "Segoe UI", sans-serif !important;
+  font-palette: var(--fontlex-palette) !important;
+}
+html[data-fontlex="de"] body,
+html[data-fontlex="de"] body :not(pre, code, kbd, samp, tt, var, math, svg, pre *, code *, kbd *, samp *, svg *, [aria-hidden="true"], [aria-hidden="true"] *, [class*="icon" i], [class*="material-symbols" i], [class*="fa-"], [data-icon]) {
+  font-family: "fontlex-hints-de", system-ui, -apple-system, "Segoe UI", sans-serif !important;
+  font-palette: var(--fontlex-palette) !important;
+}
+html[data-fontlex="de-syl"] body,
+html[data-fontlex="de-syl"] body :not(pre, code, kbd, samp, tt, var, math, svg, pre *, code *, kbd *, samp *, svg *, [aria-hidden="true"], [aria-hidden="true"] *, [class*="icon" i], [class*="material-symbols" i], [class*="fa-"], [data-icon]) {
+  font-family: "fontlex-hints-de-syl", system-ui, -apple-system, "Segoe UI", sans-serif !important;
+  font-palette: var(--fontlex-palette) !important;
+}

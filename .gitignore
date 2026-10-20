@@ -6,3 +6,5 @@ german/data/
 build/*.fea
 build/*.glyphmap.json
 french/data/
+build/extension/
+build/*.zip

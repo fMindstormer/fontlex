@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Fontlex Reading Hints</title>
+<style>
+:root { --bg: #FFFFFF; --ink: #1B2130; --muted: #5B6476; --rule: #D8DCE3; --link: #0B63D6; color-scheme: light; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #181C25; --ink: #E4E7EE; --muted: #98A0B1; --rule: #2A303D; --link: #58A6FF; color-scheme: dark; }
+}
+body { margin: 0; width: 18rem; background: var(--bg); color: var(--ink);
+       font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { padding: .9rem 1rem 1rem; }
+h1 { font-size: 1rem; margin: 0 0 .6rem; }
+fieldset { border: 0; margin: 0 0 .8rem; padding: 0; }
+legend { color: var(--muted); font-size: .8rem; margin-bottom: .25rem; }
+label { display: flex; gap: .45rem; align-items: center; padding: .12rem 0; }
+select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--rule); border-radius: 6px; }
+.site { border-top: 1px solid var(--rule); padding-top: .6rem; }
+.note { color: var(--muted); font-size: .8rem; margin: .7rem 0 0; }
+a { color: var(--link); }
+</style>
+<main>
+  <h1>Fontlex Reading Hints</h1>
+  <fieldset id="modes">
+    <legend>Font for web pages</legend>
+    <label><input type="radio" name="mode" value="auto"> Match the page's language</label>
+  </fieldset>
+  <fieldset>
+    <legend>Hint colors</legend>
+    <label><select id="palette">
+      <option value="auto">For the page's background</option>
+      <option value="light">For light backgrounds</option>
+      <option value="dark">For dark backgrounds</option>
+    </select></label>
+  </fieldset>
+  <label class="site" id="site-row" hidden><input type="checkbox" id="site"> <span>Off on <b id="host"></b></span></label>
+  <p class="note">What the colors mean: <a href="https://fmindstormer.github.io/fontlex/" target="_blank">the demos</a>.</p>
+</main>
+<script src="fonts.js"></script>
+<script src="popup.js"></script>

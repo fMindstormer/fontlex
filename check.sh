@@ -1,14 +1,14 @@
 #!/bin/sh
 # Build everything and run every check this machine can run.
 #   ./check.sh                    # every section
-#   ./check.sh markdown german    # some: unit python javascript german syllables markdown english french theory
+#   ./check.sh markdown german    # some: unit python javascript german syllables markdown english french extension theory
 #   PYTHON=... to pick the interpreter, N=... random cases
 set -e
 cd "$(dirname "$0")"
 PY=${PYTHON:-python3}
 N=${N:-20000}
 BASE=fonts/JetBrainsMono-Regular.ttf
-SECTIONS="unit python javascript german syllables markdown english french theory"
+SECTIONS="unit python javascript german syllables markdown english french extension theory"
 want=${*:-$SECTIONS}
 for s in $want; do
     case " $SECTIONS " in *" $s "*) ;; *) echo "unknown section: $s (sections: $SECTIONS)" >&2; exit 2 ;; esac
@@ -118,6 +118,17 @@ if wants french; then
     "$PY" french/verify.py build/Fontlex-French.ttf $shapers --corpus french/sample.txt
     echo "== french: demo page"
     "$PY" french/build_page.py --font build/Fontlex-French.ttf --out french/demo.html > /dev/null
+fi
+
+if wants extension; then
+    echo "== extension: package"
+    "$PY" extension/package.py > /dev/null
+    if [ -n "$CHROMIUM" ] && node -e 'require("playwright-core")' 2>/dev/null; then
+        echo "== extension: test in Chromium"
+        node extension/test_extension.mjs
+    else
+        echo "(extension test skipped: needs node, playwright-core and CHROMIUM=/path/to/Chromium)"
+    fi
 fi
 
 if wants theory; then

@@ -40,6 +40,10 @@ The same machinery works for natural language:
   (*le président*, *ils président*). Exact on every listed case in HarfBuzz
   and Core Text; see [french/README.md](french/README.md) and
   `french/demo.html`.
+- `extension/` puts any web page in one of these learner fonts: a browser
+  extension (Chromium) that matches the page's language, so French news
+  shows its liaisons and English articles their stress; see
+  [extension/README.md](extension/README.md).
 
 The sequel, `markdown/`, goes beyond lexing: a font that renders GitHub
 Flavored Markdown as you type it, line by line. CommonMark's inline rules
@@ -78,7 +82,7 @@ textarea { font-family: "Fontlex Python", monospace; font-palette: light; }
 
 `./check.sh` builds all eight fonts and the demo pages and runs every check
 the machine supports; `./check.sh markdown` (or `unit`, `python`,
-`javascript`, `german`, `syllables`, `english`, `french`, `theory`) runs some of it.
+`javascript`, `german`, `syllables`, `english`, `french`, `extension`, `theory`) runs some of it.
 On macOS, `pip install -r requirements-macos.txt` adds the Core Text
 (Safari, native apps) and WebKit checks. The German treebank scores need
 data that isn't in the repository (`german/fetch_ud.sh german/data`);
@@ -94,6 +98,7 @@ page byte for byte, so `git status` afterwards shows nothing.
 | `markdown/` | the GitHub Flavored Markdown font: model, compiler, verification, demo |
 | `english/` | the English pronunciation-hint font: aligner, lexicon, compiler, verification, demo, review sheet |
 | `french/` | the French pronunciation-hint font, with liaison: aligner, lexicon, compiler, verification, demo |
+| `extension/` | a browser extension that draws web pages in the learner fonts, with its Chromium test |
 | `theory/` | what font compilation can reach, with two experiments |
 | `fonts/` | base fonts (JetBrains Mono, Noto Sans subset) and their licenses |
 | `build/` | the compiled fonts, TTF and WOFF2 |
