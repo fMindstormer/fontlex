@@ -14,6 +14,7 @@ h1 { font-size: 1rem; margin: 0 0 .6rem; }
 fieldset { border: 0; margin: 0 0 .8rem; padding: 0; }
 legend { color: var(--muted); font-size: .8rem; margin-bottom: .25rem; }
 label { display: flex; gap: .45rem; align-items: center; padding: .12rem 0; }
+[hidden] { display: none !important; }
 select { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--rule); border-radius: 6px; }
 .site { border-top: 1px solid var(--rule); padding-top: .6rem; }
 .note { color: var(--muted); font-size: .8rem; margin: .7rem 0 0; }
@@ -24,6 +25,9 @@ a { color: var(--link); }
   <fieldset id="modes">
     <legend>Font for web pages</legend>
     <label><input type="radio" name="mode" value="auto"> Match the page's language</label>
+  </fieldset>
+  <fieldset id="hints">
+    <legend>Hints to show</legend>
   </fieldset>
   <fieldset>
     <legend>Hint colors</legend>

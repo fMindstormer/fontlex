@@ -1,7 +1,7 @@
 // Load the packaged extension (build/extension/) into Chromium and check it on
 // local test pages: the font each page gets, what keeps its own font, the
 // palette, a strict Content-Security-Policy, the popup's settings, and that
-// the hints are drawn (their colors appear on screen).
+// the hints are drawn (their colors appear on screen) or hidden.
 //
 //   npm install playwright-core            # once, anywhere on NODE_PATH
 //   CHROMIUM=/path/to/Chromium node extension/test_extension.mjs
@@ -119,6 +119,7 @@ check("no lang: left alone", s.font === null, s.text);
 
 const popup = await context.newPage();
 await popup.goto(`chrome-extension://${id}/popup.html`);
+check("popup: no site switch on the browser's own pages", !(await popup.isVisible("#site-row")));
 await popup.check('input[value="fr"]');
 s = await state(page);
 check("popup: French for every page applies live", s.font === "fr");
@@ -141,6 +142,27 @@ check("off on this site", s.font === null);
 await popup.evaluate(() => chrome.storage.sync.set({ off: [] }));
 s = await state(page);
 check("back on", s.font === "fr");
+
+// Hiding a kind of hint: its stylistic set goes on, its color goes away, the others stay.
+const features = () => page.evaluate(() => getComputedStyle(document.getElementById("t")).fontFeatureSettings);
+await popup.uncheck('input[name="hint"][value="liaison"]');
+await state(page);
+seen = await colorsOnScreen(page, COLORS["fr-light"]);
+check("popup: liaisons hidden", (await features()) === '"ss05"' && seen.liaison === 0 && seen.nasal > 20,
+      `${await features()} ${JSON.stringify(seen)}`);
+await popup.check('input[name="hint"][value="liaison"]');
+await state(page);
+seen = await colorsOnScreen(page, COLORS["fr-light"]);
+check("popup: liaisons shown again", (await features()) === "normal" && seen.liaison > 20, JSON.stringify(seen));
+await page.goto(`${base}/en`);
+await popup.uncheck('input[name="hint"][value="stress"]');
+await popup.uncheck('input[name="hint"][value="silent"]');
+await state(page);
+seen = await colorsOnScreen(page, COLORS["en-dark"]);
+check("popup: English stress and silent letters hidden", (await features()) === '"ss03", "ss01"'
+      && seen.stress === 0 && seen.reduced > 20, `${await features()} ${JSON.stringify(seen)}`);
+await popup.check('input[name="hint"][value="stress"]');
+await popup.check('input[name="hint"][value="silent"]');
 
 await context.close();
 server.close();

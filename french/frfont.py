@@ -22,14 +22,18 @@ hyphen ends one (`l'homme`, `peut-être`). The passes:
 4. Verb/noun pairs (homographs.tsv) after a cue and one space get that
    reading's hints: "le président", "ils président".
 5. Liaison: a listed trigger (liaison.txt: `les`, `nous`, `un`, `dans`, ...),
-   not after a hyphen, then one space, then a vowel or h that doesn't block:
-   the trigger's last letter becomes the liaison glyph, the space a tie.
+   not after a hyphen unless it is a number ("vingt-trois‿ans"), then one
+   space, then a vowel or h that doesn't block: the trigger's last letter
+   becomes the liaison glyph, the space a tie.
 6. Liaison in inversion: a word's last s, x, t, d or z before a hyphen and
    `il`, `ils`, `elle`, `elles`, `on`, `en` or `y` ("vont-ils", "allons-y").
 7. One context rule per listed word or compound with hints, case-insensitive,
    from an initial letter to a final one, so it matches whole words only.
    Compounds (compounds.tsv: `peut-être`) are tried first.
 8. The variants that no rule claimed go back to plain letters.
+
+Stylistic sets turn a kind of hint off: ss01 silent letters, ss02 schwas,
+ss04 nasal vowels, ss05 liaisons and their ties (enfont.HINT_SETS).
 """
 
 import argparse
@@ -44,7 +48,7 @@ sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE.parent / "markdown"))
 sys.path.insert(0, str(HERE.parent / "english"))
 import fontbuild as fb  # noqa: E402
-from enfont import context_subtables, coverage, read_table, record  # noqa: E402
+from enfont import HINT_SETS, context_subtables, coverage, read_table, record  # noqa: E402
 
 LETTERS = "abcdefghijklmnopqrstuvwxyzàâæçéèêëîïôœùûüÿ"
 LINKS_TO = set("aeiouyàâæéèêëîïôœùûüÿh")       # a liaison links to a vowel, or an h muet
@@ -58,6 +62,7 @@ PALETTES = {
 CUE_FORMS = {"noun": ("FN", "IFN"), "verb": ("FV", "IFV")}
 CLITICS = ("il", "ils", "elle", "elles", "on", "en", "y")
 INVERTED = "sxtdz"
+NUMBERS = ("un", "deux", "trois", "six", "dix", "vingt", "vingts", "cent", "cents")   # link after a hyphen too
 
 
 class Lexicon:
@@ -299,7 +304,8 @@ class FrenchFont:
                     chain_rule([1, cue_class], keys, [], hint_records(hints) or [record(0, to_plain)]))
         add(fb.lookup(6, [chain2(pairs, back, {})]))
         # 5. Liaison after a trigger and a space; not after a hyphen, where the
-        # trigger is an inverted subject ("ont-ils eu").
+        # trigger is an inverted subject ("ont-ils eu"), unless it is the end
+        # of a number ("quatre-vingts‿ans").
         to_liaison = single({v: self.hinted[(g, "L")] for g in letters for v in self.forms_of([g], "F", "FN", "FV")})
         links_to = [g for g in letters if self.letter[g] in LINKS_TO]
         ahead = {g: 1 for g in links_to + [v for (g, f), v in self.form.items() if g in links_to and f[0] != "B"]
@@ -307,9 +313,9 @@ class FrenchFont:
         rules = {}
         for word in lex.triggers:
             keys = self.keys(word) + [("space",)]
-            rules.setdefault(classes[keys[0]], []).extend([
-                chain_rule([1], keys, [], []),
-                chain_rule([], keys, [1], [record(len(word) - 1, to_liaison), record(len(word), to_tie)])])
+            rules.setdefault(classes[keys[0]], []).extend(
+                ([] if word in NUMBERS else [chain_rule([1], keys, [], [])])
+                + [chain_rule([], keys, [1], [record(len(word) - 1, to_liaison), record(len(word), to_tie)])])
         add(fb.lookup(6, [chain2(rules, {self.hyphen: 1, self.tie[self.hyphen]: 1}, ahead)]))
         # 6. Liaison in inversion: "vont-ils", "allons-y".
         subtables = []
@@ -337,7 +343,16 @@ class FrenchFont:
         add(fb.lookup(5, context_subtables(rules, cd, klass, classes, gid)))
         # 8. Back to plain letters.
         add(fb.lookup(1, [fb.single({v: g for (g, _), v in self.form.items()})]))
-        gsub = fb.build_gsub(lookups, top=top)
+        # The stylistic sets: one kind of hint back to plain letters (a
+        # liaison's tie back to its space or hyphen).
+        sets = {}
+        for h, entry in HINTS.items():
+            tag, label = HINT_SETS[entry]
+            plain = {self.hinted[(g, h)]: g for g in letters}
+            if h == "L":
+                plain.update({t: g for g, t in self.tie.items()})
+            sets[tag] = ([single(plain)], label)
+        gsub = fb.build_gsub(lookups, top=top, sets=sets)
         return b.finish(gsub, family="Fontlex French"), n_rules
 
 

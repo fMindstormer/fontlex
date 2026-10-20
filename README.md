@@ -32,9 +32,9 @@ the liaison ties are drawn by the font.
 | [Markdown](https://fmindstormer.github.io/fontlex/markdown.html) ([README](markdown/README.md)) | renders GitHub Flavored Markdown line by line: CommonMark's inline rules, strikethrough, autolinks, block markup; markup hidden; mono and proportional | within its bounds, every one-line spec example, 20,000 random lines and 10,723 lines of real documents exactly as GitHub renders them |
 | [German genders](https://fmindstormer.github.io/fontlex/german.html) ([README](german/README.md)) | colors nouns by gender, from lists learned from a treebank and Wiktionary | on held-out newspaper text, 97% of nouns colored, 99.5% of them right |
 | [German syllables](https://fmindstormer.github.io/fontlex/german-syllables.html) ([README](german/syllables/README.md)) | colors syllables in turn, as German schools teach reading | 97.5% of held-out first-reader words split exactly right |
-| [English pronunciation](https://fmindstormer.github.io/fontlex/english.html) ([README](english/README.md)) | marks stressed and reduced vowels and silent letters of 30,000 words; noun/verb pairs read the word before (*the record*, *to record*) | 166,537 of 166,537 cases right in HarfBuzz and Core Text |
-| [French pronunciation](https://fmindstormer.github.io/fontlex/french.html) ([README](french/README.md)) | marks silent letters, nasal vowels, droppable schwas and obligatory liaison (*les‿amis*, but not *les héros*) for 30,000 words | 198,865 of 198,865 cases right in HarfBuzz and Core Text |
-| [Browser extension](extension/README.md) | draws any web page in a learner font, matched to the page's language | 17 checks in Chromium, including a page with a strict CSP |
+| [English pronunciation](https://fmindstormer.github.io/fontlex/english.html) ([README](english/README.md)) | marks stressed and reduced vowels and silent letters of 30,000 words; noun/verb pairs read the word before (*the record*, *to record*); a stylistic set turns each kind of hint off | 166,537 of 166,537 cases right in HarfBuzz and Core Text |
+| [French pronunciation](https://fmindstormer.github.io/fontlex/french.html) ([README](french/README.md)) | marks silent letters, nasal vowels, droppable schwas and obligatory liaison (*les‿amis*, but not *les héros*) for 30,000 words; a stylistic set turns each kind of hint off | 198,870 of 198,870 cases right in HarfBuzz and Core Text |
+| [Browser extension](extension/README.md) | draws any web page in a learner font, matched to the page's language | 21 checks in Chromium, including a page with a strict CSP and hiding each kind of hint |
 
 ## What's interesting here
 
@@ -50,9 +50,11 @@ the liaison ties are drawn by the font.
   byte.
 - **It found an engine bug.** Compiled fonts reach glyph-id ranges that
   hand-drawn fonts don't. HarfBuzz 12.3.1 and later never match glyph ids
-  32,512 to 32,767 in format 2 context rules; it was bisected to one commit
+  32,512 to 32,767 in format 2 context rules. It was bisected to one commit
   and reported upstream
-  ([harfbuzz/harfbuzz#6418](https://github.com/harfbuzz/harfbuzz/issues/6418)).
+  ([harfbuzz/harfbuzz#6418](https://github.com/harfbuzz/harfbuzz/issues/6418)),
+  and the fix was merged the same day
+  ([#6419](https://github.com/harfbuzz/harfbuzz/pull/6419)).
 - **Data, then compilation.** The learner fonts come from real data: hard-EM
   alignment of spellings with CMUdict and Lexique pronunciations, gender
   lists learned from a treebank, TeX hyphenation patterns. The pronunciation

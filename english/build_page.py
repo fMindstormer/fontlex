@@ -48,7 +48,8 @@ textarea#code { min-height: 16rem; font-family: "Fontlex English", system-ui, sa
   word, <span class="silent">silent letters</span> fade. A word whose stress moves between noun and verb
   (<i>record</i>, <i>present</i>, <i>object</i>) takes its reading from the word before it: <i>the</i>,
   <i>a</i>, <i>my</i> make it a noun, <i>to</i>, <i>will</i>, <i>we</i> a verb; with neither it shows only
-  what both readings share.</p>
+  what both readings share. The switches above the text turn one kind of hint off; in other apps they are the
+  font's stylistic sets (ss01 silent letters, ss02 reduced vowels, ss03 stress).</p>
 
   <h2>Where the hints come from</h2>
   <p>The pronunciations are the CMU Pronouncing Dictionary's (American English). Each word's spelling is aligned
@@ -101,7 +102,9 @@ def main():
         print(f"{name}: {ok}/{len(texts)}")
     font = TTFont(io.BytesIO(ttf), recalcTimestamp=False)
     colors = {k: (enfont.PALETTES["light"][k], enfont.PALETTES["dark"][k]) for k in enfont.PALETTES["light"]}
-    box = ("Show hints", SAMPLE, 'aria-label="English text, with pronunciation hints"')
+    switches = pages.hint_switches([(enfont.HINT_SETS[k][0], k, label) for k, label in
+                                    (("stress", "Stress"), ("reduced", "Reduced vowels"), ("silent", "Silent letters"))])
+    box = ("Show hints", SAMPLE, 'aria-label="English text, with pronunciation hints"', switches)
     page = pages.page(PAGE, pages.woff2(font), "Fontlex English", colors, box, {
         "ROWS": "\n    ".join(rows),
         "WORDS": f"{len(lex.words):,}",

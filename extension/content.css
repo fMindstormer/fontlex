@@ -1,5 +1,6 @@
 /* Applied by content.js through data-fontlex on <html>. Code, math, SVG and icon fonts
-   (elements whose class names an icon, or hidden from screen readers) keep their own font. */
+   (elements whose class names an icon, or hidden from screen readers) keep their own font.
+   With data-fontlex-hide, the stylistic sets in --fontlex-features hide kinds of hint. */
 html[data-fontlex] { --fontlex-palette: light; }
 html[data-fontlex-palette="dark"] { --fontlex-palette: dark; }
 html[data-fontlex="en"] body,
@@ -21,4 +22,8 @@ html[data-fontlex="de-syl"] body,
 html[data-fontlex="de-syl"] body :not(pre, code, kbd, samp, tt, var, math, svg, pre *, code *, kbd *, samp *, svg *, [aria-hidden="true"], [aria-hidden="true"] *, [class*="icon" i], [class*="material-symbols" i], [class*="fa-"], [data-icon]) {
   font-family: "fontlex-hints-de-syl", system-ui, -apple-system, "Segoe UI", sans-serif !important;
   font-palette: var(--fontlex-palette) !important;
+}
+html[data-fontlex][data-fontlex-hide] body,
+html[data-fontlex][data-fontlex-hide] body :not(pre, code, kbd, samp, tt, var, math, svg, pre *, code *, kbd *, samp *, svg *, [aria-hidden="true"], [aria-hidden="true"] *, [class*="icon" i], [class*="material-symbols" i], [class*="fa-"], [data-icon]) {
+  font-feature-settings: var(--fontlex-features) !important;
 }

@@ -1,6 +1,7 @@
 // Puts the page's text in the chosen hint font. The font is fetched from the
 // extension and registered with document.fonts, so a page's font-src policy
-// doesn't block it; content.css applies it once <html> has data-fontlex.
+// doesn't block it; content.css applies it once <html> has data-fontlex. Hidden
+// kinds of hint are the stylistic sets in --fontlex-features.
 (() => {
   const api = globalThis.browser ?? globalThis.chrome;
   const html = document.documentElement;
@@ -55,6 +56,14 @@
     }
     if (call !== latest) return;
     html.dataset.fontlexPalette = settings.palette === "auto" ? (darkPage() ? "dark" : "light") : settings.palette;
+    const hide = settings.hide.filter((h) => FONTLEX_HINTS[h]).map((h) => `"${FONTLEX_HINTS[h].feature}" 1`);
+    if (hide.length) {
+      html.style.setProperty("--fontlex-features", hide.join(", "));
+      html.dataset.fontlexHide = "";
+    } else {
+      html.style.removeProperty("--fontlex-features");
+      delete html.dataset.fontlexHide;
+    }
     html.dataset.fontlex = key;
   }
 

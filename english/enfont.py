@@ -22,6 +22,9 @@ letters, with apostrophes between letters (`don't`). The passes:
    whole words only. It applies a hint lookup at each hinted letter. A pair
    with no cue before it gets only the hints both readings share.
 6. The variants that no rule claimed go back to plain letters.
+
+Stylistic sets turn a kind of hint off: ss01 silent letters, ss02 reduced
+vowels, ss03 stress (HINT_SETS; the French font shares the numbering).
 """
 
 import argparse
@@ -42,6 +45,10 @@ PALETTES = {
     "light": {"stress": "#C2272D", "reduced": "#4F74B8", "silent": "#BCC2CC"},
     "dark": {"stress": "#FF7B7B", "reduced": "#86A8E6", "silent": "#596070"},
 }
+# Stylistic sets that turn one kind of hint off, numbered alike in every hint font.
+HINT_SETS = {"silent": ("ss01", "No silent-letter hints"), "reduced": ("ss02", "No reduced-vowel hints"),
+             "stress": ("ss03", "No stress hints"), "nasal": ("ss04", "No nasal-vowel hints"),
+             "liaison": ("ss05", "No liaison hints")}
 SECOND = list(LETTERS) + ["'"]       # what an initial form can record as the next character
 CUE_FORMS = {"noun": ("FN", "IFN"), "verb": ("FV", "IFV")}
 SUBTABLE_BYTES = 40000               # rules per subtable, under its 16-bit offsets
@@ -292,7 +299,12 @@ class EnglishFont:
         add(fb.lookup(5, context_subtables(rules, cd, klass, classes, gid)))
         # 6. Back to plain letters.
         add(fb.lookup(1, [fb.single({self.form[(g, f)]: g for g in letters for f in self.forms})]))
-        gsub = fb.build_gsub(lookups, top=top)
+        # The stylistic sets: one kind of hint back to plain letters.
+        sets = {}
+        for h, entry in HINTS.items():
+            tag, label = HINT_SETS[entry]
+            sets[tag] = ([single({self.hinted[(g, h)]: g for g in letters})], label)
+        gsub = fb.build_gsub(lookups, top=top, sets=sets)
         return b.finish(gsub, family="Fontlex English"), sum(len(v) for v in rules.values())
 
 

@@ -9,7 +9,9 @@ curly one. Each letter must come out with its hint (stress, reduced, silent)
 or plain. Listed words inside longer words, and words that aren't listed,
 must come out plain. Noun/verb pairs are shaped after every cue word (their
 noun or verb reading) and after other words or two spaces (the hints both
-readings share). Corpus files are checked line by line the same way.
+readings share). Corpus files are checked line by line the same way. Every
+tenth text is then shaped again with each stylistic set, and with all of
+them, where that set's hints must come out plain.
 """
 
 import argparse
@@ -23,6 +25,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 import test_fontlex  # noqa: E402
 from fontTools.ttLib import TTFont  # noqa: E402
+from enfont import HINT_SETS, HINTS  # noqa: E402
 
 WORD = re.compile(r"[A-Za-z]+(?:['’][A-Za-z]+)*")
 
@@ -119,18 +122,35 @@ def main():
         for path in args.corpus:
             sets.append((f"lines of {path}", [l for l in Path(path).read_text(encoding="utf-8").splitlines() if l.strip()]))
         for label, texts in sets:
-            bad, shown, t = 0, 0, time.perf_counter()
-            for text in texts:
-                want, got = expected(text, lex), view.hints(text)
-                if want != got:
-                    bad += 1
-                    if shown < args.show:
-                        shown += 1
-                        print(f"  {text!r}\n    expected {want}\n    drawn    {got}")
-            ms = (time.perf_counter() - t) * 1000 / max(1, len(texts))
-            print(f"{label}: {len(texts) - bad}/{len(texts)} right ({name}, {ms:.3f} ms each)")
-            failed += bad
+            failed += report(label, texts, view, lambda text: expected(text, lex), name, args.show)
+        sample = [text for _, texts in sets for text in texts[::10]]
+        for tags, off in hint_sets():
+            view = View(data, test_fontlex.SHAPERS[name](data, features=tags))
+            failed += report(f"every tenth text with {'+'.join(tags)}", sample, view,
+                             lambda text: "".join("." if c in off else c for c in expected(text, lex)),
+                             name, args.show)
     return 1 if failed else 0
+
+
+def hint_sets():
+    """Each stylistic set with the hints it turns off, then all of them at once."""
+    sets = sorted((HINT_SETS[entry][0], h + ("T" if h == "L" else "")) for h, entry in HINTS.items())
+    return [((tag,), off) for tag, off in sets] + [(tuple(t for t, _ in sets), "".join(o for _, o in sets))]
+
+
+def report(label, texts, view, want_of, name, show):
+    """Shapes each text and compares it with want_of(text); returns the misses."""
+    bad, shown, t = 0, 0, time.perf_counter()
+    for text in texts:
+        want, got = want_of(text), view.hints(text)
+        if want != got:
+            bad += 1
+            if shown < show:
+                shown += 1
+                print(f"  {text!r}\n    expected {want}\n    drawn    {got}")
+    ms = (time.perf_counter() - t) * 1000 / max(1, len(texts))
+    print(f"{label}: {len(texts) - bad}/{len(texts)} right ({name}, {ms:.3f} ms each)")
+    return bad
 
 
 if __name__ == "__main__":

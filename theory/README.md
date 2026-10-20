@@ -203,8 +203,14 @@ Exposure:
   glyphs there, one of them the `>` that ends raw HTML.
 
 `fontbuild.py` now inserts padding glyphs to move such glyphs past the
-window. The bug is reported upstream as
-[harfbuzz/harfbuzz#6418](https://github.com/harfbuzz/harfbuzz/issues/6418).
+window. The bug was reported upstream as
+[harfbuzz/harfbuzz#6418](https://github.com/harfbuzz/harfbuzz/issues/6418)
+and fixed in HarfBuzz main on 2026-10-20 by
+[#6419](https://github.com/harfbuzz/harfbuzz/pull/6419) (commit b98ffb1,
+which checks the key's range on reads as well as writes). No release has
+the fix yet. *Measured*: built from b98ffb1, HarfBuzz draws "BBB" for all
+seven of `hbcache.py`'s fonts; built from its parent, it draws "aaa" for
+the three in the window. The padding stays for the releases already out.
 
 The general point: an engine's fast paths are tuned on fonts that people
 draw, and compiled fonts are far out of that distribution. They hit glyph-id

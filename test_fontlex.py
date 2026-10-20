@@ -115,10 +115,11 @@ class HarfBuzz:
     improvises_marks = False
     falls_back_clusters = False
 
-    def __init__(self, data: bytes, variations: dict[str, float] | None = None):
+    def __init__(self, data: bytes, variations: dict[str, float] | None = None, features=()):
         self.font = hb.Font(hb.Face(hb.Blob(data)))
         if variations:
             self.font.set_variations(variations)
+        self.features = {"calt": True, **{tag: True for tag in features}}
 
     def shape(self, text):
         buf = hb.Buffer()
@@ -126,7 +127,7 @@ class HarfBuzz:
         buf.guess_segment_properties()
         # One cluster per character, so a combining mark keeps its own index.
         buf.cluster_level = hb.BufferClusterLevel.MONOTONE_CHARACTERS
-        hb.shape(self.font, buf, {"calt": True})
+        hb.shape(self.font, buf, self.features)
         glyphs, x, y = [], 0, 0
         for info, pos in zip(buf.glyph_infos, buf.glyph_positions or []):
             glyphs.append((info.codepoint, info.cluster, x + pos.x_offset, y + pos.y_offset))
@@ -142,7 +143,7 @@ class CoreText:
     # from a fallback font.
     falls_back_clusters = True
 
-    def __init__(self, data: bytes, variations: dict[str, float] | None = None):
+    def __init__(self, data: bytes, variations: dict[str, float] | None = None, features=()):
         try:
             import CoreText as CT
             from Foundation import NSAttributedString, NSData
@@ -158,6 +159,9 @@ class CoreText:
             # Core Text keys variation axes by the tag read as a 32-bit integer.
             axes = {int.from_bytes(tag.encode(), "big"): value for tag, value in variations.items()}
             desc = CT.CTFontDescriptorCreateCopyWithAttributes(desc, {CT.kCTFontVariationAttribute: axes})
+        if features:
+            settings = [{CT.kCTFontOpenTypeFeatureTag: tag, CT.kCTFontOpenTypeFeatureValue: 1} for tag in features]
+            desc = CT.CTFontDescriptorCreateCopyWithAttributes(desc, {CT.kCTFontFeatureSettingsAttribute: settings})
         self.font = CT.CTFontCreateWithFontDescriptor(desc, upem, None)
         self.ps_name = CT.CTFontCopyPostScriptName(self.font)
 

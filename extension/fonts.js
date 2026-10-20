@@ -6,6 +6,15 @@ const FONTLEX_FONTS = {
   de: { label: "German noun genders", family: "fontlex-hints-de", file: "fonts/Fontlex-German.woff2", lang: "de" },
   "de-syl": { label: "German syllables", family: "fontlex-hints-de-syl", file: "fonts/Fontlex-German-Syllables.woff2" },
 };
+// The kinds of hint a reader can hide, each by the stylistic set that turns it
+// off (enfont.HINT_SETS: numbered alike in the English and French fonts).
+const FONTLEX_HINTS = {
+  stress: { label: "Stress (English)", feature: "ss03" },
+  reduced: { label: "Reduced vowels and schwas", feature: "ss02" },
+  silent: { label: "Silent letters", feature: "ss01" },
+  nasal: { label: "Nasal vowels (French)", feature: "ss04" },
+  liaison: { label: "Liaisons (French)", feature: "ss05" },
+};
 // mode: "auto" (by the page's language), "off" or a font key; palette: "auto", "light" or "dark";
-// off: host names where the extension does nothing.
-const FONTLEX_DEFAULTS = { mode: "auto", palette: "auto", off: [] };
+// off: host names where the extension does nothing; hide: FONTLEX_HINTS keys not drawn.
+const FONTLEX_DEFAULTS = { mode: "auto", palette: "auto", off: [], hide: [] };

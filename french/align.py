@@ -112,15 +112,23 @@ def segmentations(word, cuts=()):
 
 def align(word, phones, cost, cuts=()):
     """The cheapest alignment of `word` (letters only) with `phones`: a list
-    of (grapheme, phonemes), or None."""
+    of (grapheme, phonemes), or None. Of equally cheap ones, the one whose
+    silent letters end its parts, as French spelling has them: each phoneme
+    goes to the latest part that can say it (*sous-sol*: sou-s, then s-o-l)
+    and within it to the earliest letter (*ils content*: con-t, then e-n-t)."""
     nexts = segmentations(word, cuts)
     n, m = len(word), len(phones)
-    best = {(0, 0): (0.0, None)}
+    starts = [0] + sorted(cuts)
+    part = [sum(1 for s in starts[1:] if s <= i) for i in range(n + 1)]
+
+    def placement(i, k):             # the tie-break: lower is better
+        return k * (1000 * (len(starts) - part[i]) + i - starts[part[i]])
+    best = {(0, 0): (0.0, 0, None)}
     for i in range(n + 1):
         for j in range(m + 1):
             if (i, j) not in best or i == n:
                 continue
-            c0 = best[(i, j)][0]
+            c0, t0, _ = best[(i, j)]
             for g in nexts[i]:
                 for k in (0, 1, 2, 3):
                     if j + k > m:
@@ -129,14 +137,15 @@ def align(word, phones, cost, cuts=()):
                     c = cost(g, ph)
                     if c is None:
                         continue
-                    key = (i + len(g), j + k)
-                    if key not in best or c0 + c < best[key][0]:
-                        best[key] = (c0 + c, (i, j, g, k))
+                    key, cand = (i + len(g), j + k), (c0 + c, t0 + placement(i, k))
+                    if key not in best or cand[0] < best[key][0] - 1e-9 or (
+                            cand[0] < best[key][0] + 1e-9 and cand[1] < best[key][1]):
+                        best[key] = (*cand, (i, j, g, k))
     if (n, m) not in best:
         return None
     out, key = [], (n, m)
     while key != (0, 0):
-        i, j, g, k = best[key][1]
+        i, j, g, k = best[key][2]
         out.append((g, phones[j:j + k]))
         key = (i, j)
     return out[::-1]

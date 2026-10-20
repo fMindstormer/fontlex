@@ -383,6 +383,14 @@ class FontBuilder:
         if not hasattr(font["post"], "mapping"):
             font["post"].mapping = {}
         fontlex.set_family_name(font, family)
+        if gsub is not None:
+            for fr in gsub.table.FeatureList.FeatureRecord:
+                if getattr(fr.Feature, "ui_name", None):
+                    fr.Feature.FeatureParams = ot.FeatureParamsStylisticSet()
+                    fr.Feature.FeatureParams.Version = 0
+                    fr.Feature.FeatureParams.UINameID = font["name"].addName(fr.Feature.ui_name, minNameID=255)
+                if hasattr(fr.Feature, "ui_name"):
+                    del fr.Feature.ui_name
         return font
 
 
@@ -437,21 +445,28 @@ def extension(lk):
     return lk
 
 
-def build_gsub(lookups, top=None, feature="calt", scripts=("DFLT", "latn")):
+def build_gsub(lookups, top=None, feature="calt", scripts=("DFLT", "latn"), sets=None):
+    """`sets` maps a stylistic set's tag (`ss01`) to its lookups' indices and
+    the name apps show for it; finish() names them."""
     gsub = newTable("GSUB")
     t = gsub.table = ot.GSUB()
     t.Version = 0x00010000
     t.LookupList = ot.LookupList()
     t.LookupList.Lookup = [extension(lk) for lk in lookups]
     t.LookupList.LookupCount = len(lookups)
-    fr = ot.FeatureRecord()
-    fr.FeatureTag = feature
-    fr.Feature = ot.Feature()
-    fr.Feature.LookupListIndex = list(range(len(lookups))) if top is None else list(top)
-    fr.Feature.LookupCount = len(fr.Feature.LookupListIndex)
+    features = {feature: (list(range(len(lookups))) if top is None else list(top), None)}
+    features.update(sets or {})
     t.FeatureList = ot.FeatureList()
-    t.FeatureList.FeatureRecord = [fr]
-    t.FeatureList.FeatureCount = 1
+    t.FeatureList.FeatureRecord = []
+    for tag in sorted(features):
+        fr = ot.FeatureRecord()
+        fr.FeatureTag = tag
+        fr.Feature = ot.Feature()
+        fr.Feature.FeatureParams = None
+        fr.Feature.LookupListIndex, fr.Feature.ui_name = features[tag]
+        fr.Feature.LookupCount = len(fr.Feature.LookupListIndex)
+        t.FeatureList.FeatureRecord.append(fr)
+    t.FeatureList.FeatureCount = len(features)
     t.ScriptList = ot.ScriptList()
     t.ScriptList.ScriptRecord = []
     for tag in scripts:
@@ -459,7 +474,8 @@ def build_gsub(lookups, top=None, feature="calt", scripts=("DFLT", "latn")):
         sr.ScriptTag = tag
         sr.Script = ot.Script()
         ls = sr.Script.DefaultLangSys = ot.LangSys()
-        ls.ReqFeatureIndex, ls.FeatureIndex, ls.FeatureCount = 0xFFFF, [0], 1
+        ls.ReqFeatureIndex, ls.FeatureIndex = 0xFFFF, list(range(len(features)))
+        ls.FeatureCount = len(features)
         sr.Script.LangSysRecord, sr.Script.LangSysCount = [], 0
         t.ScriptList.ScriptRecord.append(sr)
     t.ScriptList.ScriptCount = len(t.ScriptList.ScriptRecord)

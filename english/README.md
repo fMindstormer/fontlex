@@ -22,7 +22,7 @@ lexicon's hint for it:
 | Text | Checked | Right, HarfBuzz | Right, Core Text |
 |---|---|---|---|
 | Every listed word alone, capitalized, in capitals, in punctuation and in a sentence; with a curly apostrophe; inside longer words and made-up words (must stay plain); every noun/verb pair after each cue word, after another word and after two spaces | 166,537 | 166,537 | 166,537 |
-| Lines of this project's English READMEs (`README.md`, `markdown/`, `theory/`) | 792 | 792 | 792 |
+| Lines of this project's English READMEs (`README.md`, `markdown/`, `theory/`) | 801 | 801 | 801 |
 
 The glyph count doesn't depend on the word list (3,410 glyphs, mostly the
 letters' first-letter variants); the rules do. Before the two-letter keys and
@@ -105,6 +105,20 @@ Six GSUB passes, built by `enfont.py` on Noto Sans and Noto Sans Bold:
 This is the "lexicon as table bytes, not glyphs" design from
 [../theory/README.md](../theory/README.md). The word rules cost bytes per
 letter, and the glyph count doesn't grow with the word list.
+
+### Turning a kind of hint off
+
+Each kind of hint has a stylistic set that turns it off: `ss01` silent
+letters, `ss02` reduced vowels, `ss03` stress. The French font uses the same
+numbers, plus `ss04` and `ss05` for its own hints. Each set is one lookup
+after the six passes that maps its hint's glyphs back to plain letters, so
+the other hints don't change. In CSS it's `font-feature-settings: "ss03"`.
+The font names each set ("No stress hints") for apps that list stylistic
+sets by name. The demo page has a switch for each, and so does the browser
+extension. *Measured*: every tenth `verify.py` text (16,736), with each set
+and with all three, comes out right in HarfBuzz and Core Text, and
+`demo/check_switches.py` sees each switch remove its color, and only its
+color, in WebKit.
 
 ## Next steps
 

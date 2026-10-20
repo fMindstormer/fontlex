@@ -53,19 +53,23 @@ EDITOR = """<div class="editor" id="editor">
   </div>"""
 
 # The toggle turns the font's features off (the plain characters); the menu
-# picks the font's palette, or the one matching the page.
+# picks the font's palette, or the one matching the page; an unticked hint
+# switch turns its stylistic set on, which hides that kind of hint.
 SCRIPT = """<script>
 (() => {
   const editor = document.getElementById('editor'), hl = document.getElementById('hl'), pal = document.getElementById('pal');
+  const sets = [...document.querySelectorAll('input[data-feature]')];
   const style = document.createElement('style');
   document.head.appendChild(style);
   function apply() {
     editor.classList.toggle('off', !hl.checked);
     const value = pal.value === 'auto' ? 'var(--fp)' : pal.value;
-    style.textContent = 'textarea#code { font-palette: ' + value + '; }';
+    const off = sets.filter((s) => !s.checked).map((s) => '"' + s.dataset.feature + '" 1');
+    for (const s of sets) s.disabled = !hl.checked;
+    style.textContent = 'textarea#code { font-palette: ' + value + ';'
+      + (off.length ? ' font-feature-settings: ' + off.join(', ') + ';' : '') + ' }';
   }
-  hl.addEventListener('change', apply);
-  pal.addEventListener('change', apply);
+  for (const el of [hl, pal, ...sets]) el.addEventListener('change', apply);
   apply();
 })();
 </script>"""
@@ -85,6 +89,14 @@ def editor(toggle, sample, attributes, controls=""):
     textarea's other attributes."""
     return fill(EDITOR, {"TOGGLE": toggle, "SAMPLE": html.escape(sample), "ATTRIBUTES": attributes,
                          "CONTROLS": controls})
+
+
+def hint_switches(sets):
+    """editor() controls: a ticked checkbox per (stylistic set tag, color
+    variable, label); unticking one hides the hints that set turns off.
+    check_switches.py reads the color variable."""
+    return "".join(f'\n      <label for="{tag}"><input type="checkbox" id="{tag}" data-feature="{tag}" '
+                   f'data-color="--{color}" checked> {html.escape(label)}</label>' for tag, color, label in sets)
 
 
 def page(template, font, family, colors, box, fields):

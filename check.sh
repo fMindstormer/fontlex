@@ -109,6 +109,10 @@ if wants english; then
     "$PY" english/verify.py build/Fontlex-English.ttf $shapers --corpus README.md markdown/README.md theory/README.md
     echo "== english: demo page"
     "$PY" english/build_page.py --font build/Fontlex-English.ttf --out english/demo.html > /dev/null
+    if [ $macos = yes ]; then
+        echo "== english: demo hint switches in WebKit"
+        "$PY" demo/check_switches.py english/demo.html
+    fi
 fi
 
 if wants french; then
@@ -118,6 +122,10 @@ if wants french; then
     "$PY" french/verify.py build/Fontlex-French.ttf $shapers --corpus french/sample.txt
     echo "== french: demo page"
     "$PY" french/build_page.py --font build/Fontlex-French.ttf --out french/demo.html > /dev/null
+    if [ $macos = yes ]; then
+        echo "== french: demo hint switches in WebKit"
+        "$PY" demo/check_switches.py french/demo.html
+    fi
 fi
 
 if wants extension; then
@@ -134,7 +142,7 @@ fi
 if wants theory; then
     echo "== theory: bracket matching as deep as the rounds ($shapers)"
     "$PY" theory/depth.py --distinct --rounds 10 300 $shapers
-    echo "== theory: HarfBuzz's coverage cache (ids 32512-32767 read aaa where HarfBuzz 12.3.1+ has the bug)"
+    echo "== theory: HarfBuzz's coverage cache (ids 32512-32767 read aaa in HarfBuzz 12.3.1 to 14.6.0)"
     "$PY" theory/hbcache.py
 fi
 

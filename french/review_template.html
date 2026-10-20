@@ -1,0 +1,322 @@
+<title>French Hint Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700&family=Noto+Sans:wght@400;700&display=swap">
+<style>
+/* Layout: a reviewer's worksheet: one row per word, the word large in the font under review,
+   its dictionary pronunciation and hints beside it, the verdict at the end of the row. */
+@font-face { font-family: "Fontlex French"; src: url(data:font/woff2;base64,{{FONT}}) format("woff2"); }
+:root {
+  --bg: #F4F6F9; --surface: #FFFFFF; --ink: #182031; --muted: #586276; --line: #D9DEE6;
+  --accent: #3B5CA3; --accent-ink: #FFFFFF; --right: #24774A; --right-bg: #E3F2E9;
+  --wrong: #A84A12; --wrong-bg: #FBEBDD; --silent: #A9B0BC; --reduced: #4F74B8; --nasal: #9447B0;
+  --liaison: #16855A; --fp: light;
+  --ui: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, sans-serif;
+  --ipa: "Noto Sans", "Charis SIL", "Doulos SIL", "Lucida Grande", sans-serif;
+  --word: "Fontlex French", "Noto Sans", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11151C; --surface: #181E28; --ink: #E5E9F0; --muted: #9AA4B6; --line: #2B3341;
+  --accent: #8AA8E6; --accent-ink: #0E1420; --right: #72C996; --right-bg: #18301F;
+  --wrong: #F1A465; --wrong-bg: #3A2614; --silent: #596070; --reduced: #86A8E6; --nasal: #C996DD;
+  --liaison: #5FD0A0; --fp: dark; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #11151C; --surface: #181E28; --ink: #E5E9F0; --muted: #9AA4B6; --line: #2B3341;
+  --accent: #8AA8E6; --accent-ink: #0E1420; --right: #72C996; --right-bg: #18301F;
+  --wrong: #F1A465; --wrong-bg: #3A2614; --silent: #596070; --reduced: #86A8E6; --nasal: #C996DD;
+  --liaison: #5FD0A0; --fp: dark; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 400 1rem/1.55 var(--ui); margin: 0; }
+.page { max-width: 64rem; margin: 0 auto; padding-block: 2rem 4rem;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 .4rem; text-wrap: balance; }
+.lede { color: var(--muted); max-width: 44rem; margin: 0 0 1rem; }
+.legend { display: flex; flex-wrap: wrap; gap: .4rem 1.25rem; margin: 0 0 1.5rem; font-size: .95rem; }
+.legend span { display: inline-flex; align-items: center; gap: .45rem; }
+.legend i { font-style: normal; font: 700 1.05rem var(--word); }
+.legend i { font-weight: 400; }
+.legend .x i { color: var(--silent); } .legend .r i { color: var(--reduced); }
+.legend .n i { color: var(--nasal); } .legend .L i { color: var(--liaison); font-weight: 700; }
+
+.controls { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+  display: grid; gap: .65rem; padding-block: .75rem; border-bottom: 1px solid var(--line); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.progress { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; font-size: .95rem; color: var(--muted); }
+.progress strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.meter { flex: 1 1 10rem; height: .4rem; background: var(--line); border-radius: 1rem; overflow: hidden; min-width: 6rem; }
+.meter > div { height: 100%; width: 0; background: var(--accent); }
+.row-controls { display: flex; flex-wrap: wrap; gap: .5rem .75rem; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: .5rem; overflow: hidden; background: var(--surface); }
+.seg button { font: 600 .9rem var(--ui); color: var(--muted); background: none; border: 0; padding: .4rem .75rem; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.search { flex: 1 1 12rem; min-width: 0; font: 1rem var(--ui); color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: .5rem; padding: .4rem .7rem; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.notice { margin: 1rem 0 0; padding: .6rem .8rem; border-radius: .5rem; background: var(--wrong-bg); color: var(--ink); font-size: .95rem; }
+.empty { color: var(--muted); padding: 2rem 0; }
+ol.list { list-style: none; margin: 0; padding: 0; }
+.row { display: grid; grid-template-columns: 2.6rem minmax(9rem, 14rem) minmax(0, 1fr) auto; gap: .35rem 1rem;
+  align-items: center; padding: .85rem 0; border-bottom: 1px solid var(--line); }
+.rank { color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums; text-align: right; }
+.word { font: 400 1.75rem/1.25 var(--word); font-palette: var(--fp); min-width: 0; overflow-wrap: anywhere; }
+.word.pair, .word.phrase { font-size: 1.35rem; display: grid; gap: .1rem; }
+.info { min-width: 0; display: grid; gap: .15rem; }
+.ipa { font: 1rem/1.4 var(--ipa); }
+.ipa .alt { color: var(--muted); }
+.hints { color: var(--muted); font-size: .92rem; }
+.hints b { color: var(--ink); font-weight: 700; }
+.hints .tag { text-transform: uppercase; letter-spacing: .05em; font-size: .72rem; font-weight: 700; }
+.verdict { display: grid; grid-template-columns: auto auto; gap: .4rem; justify-content: end; }
+.verdict button { font: 600 .9rem var(--ui); padding: .35rem .8rem; border-radius: .45rem; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.verdict .ok[aria-pressed="true"] { background: var(--right-bg); border-color: var(--right); color: var(--right); }
+.verdict .bad[aria-pressed="true"] { background: var(--wrong-bg); border-color: var(--wrong); color: var(--wrong); }
+.verdict button:disabled { cursor: default; opacity: .55; }
+.note { grid-column: 1 / -1; font: .9rem var(--ui); color: var(--ink); background: var(--surface); width: 16rem; max-width: 100%;
+  border: 1px solid var(--line); border-radius: .45rem; padding: .3rem .55rem; }
+.stale { grid-column: 1 / -1; font-size: .8rem; color: var(--wrong); text-align: right; }
+@media (max-width: 40rem) {
+  .row { grid-template-columns: 2rem minmax(0, 1fr); }
+  .info, .verdict { grid-column: 2; }
+  .verdict { justify-content: start; }
+  .stale { text-align: left; }
+}
+</style>
+
+<div class="page">
+  <h1>French Hint Review</h1>
+  <p class="lede">Each row is drawn in the Fontlex French font, next to its pronunciation in Lexique 3.83. Mark
+  whether the hints are right for a learner of French, and say what's wrong when they aren't. A word with
+  nothing to hint should show no marks; mark it wrong if a silent letter, a nasal vowel or a droppable schwa is
+  missing. The liaison list asks two things: is the liaison after each word obligatory, and does each listed
+  word really block liaison?</p>
+  <p class="legend"><span class="x"><i>t</i> silent letter</span><span class="n"><i>an</i> nasal vowel</span>
+    <span class="r"><i>e</i> schwa speakers often drop</span><span class="L"><i>s‿</i> obligatory liaison</span></p>
+
+  <div class="controls">
+    <div class="progress"><span><strong id="done">0</strong> of <strong id="all">0</strong> reviewed</span>
+      <div class="meter" aria-hidden="true"><div id="bar"></div></div>
+      <span><strong id="wrongs">0</strong> marked wrong</span></div>
+    <div class="row-controls">
+      <div class="seg" role="group" aria-label="List">
+        <button type="button" data-tab="words" aria-pressed="true">Common words</button>
+        <button type="button" data-tab="pairs" aria-pressed="false">Verb/noun pairs</button>
+        <button type="button" data-tab="liaison" aria-pressed="false">Liaison</button>
+        <button type="button" data-tab="compounds" aria-pressed="false">Compounds</button></div>
+      <div class="seg" role="group" aria-label="Show">
+        <button type="button" data-filter="all" aria-pressed="true">All</button>
+        <button type="button" data-filter="todo" aria-pressed="false">To review</button>
+        <button type="button" data-filter="wrong" aria-pressed="false">Wrong</button>
+        <button type="button" data-filter="right" aria-pressed="false">Right</button></div>
+      <input class="search" id="search" type="search" placeholder="Find a word" aria-label="Find a word">
+    </div>
+  </div>
+  <p class="notice" id="notice" hidden></p>
+  <ol class="list" id="list"></ol>
+  <p class="empty" id="empty" hidden>No words match.</p>
+</div>
+
+<script>
+const DATA = {{DATA}};
+const NAMES = { x: "Silent", n: "Nasal", r: "Schwa", L: "Liaison" };
+const TABS = { word: "words", pair: "pairs", trigger: "liaison", blocker: "liaison", compound: "compounds" };
+const $ = (id) => document.getElementById(id);
+const state = { tab: "words", filter: "all", q: "", reviews: new Map(), readOnly: true };
+const rows = new Map();          // id -> {el, item, kind}
+let db = null, me = null;
+
+// The hinted letters, a run of letters with one hint as one group: "ent" of "parlent".
+function hintSummary(word, hints) {
+  const groups = { x: [], n: [], r: [], L: [] };
+  const chars = [...word];
+  chars.forEach((c, i) => {
+    const g = groups[hints[i]];
+    if (!g) return;
+    if (i && hints[i - 1] === hints[i]) g[g.length - 1] += c; else g.push(c);
+  });
+  const parts = Object.entries(groups).filter(([, cs]) => cs.length)
+    .map(([h, cs]) => `<span class="tag">${NAMES[h]}</span> <b>${cs.join(" ")}</b>`);
+  return parts.length ? parts.join(" · ") : "No hints";
+}
+
+function judged(item, kind) {
+  if (kind === "pair") return { noun: item.noun, verb: item.verb };
+  if (kind === "trigger") return { example: item.example };
+  if (kind === "blocker") return { reason: item.reason };
+  return { hints: item.hints };
+}
+
+function ipaLine(list) {
+  if (!list.length) return `<div class="ipa alt">Not in Lexique</div>`;
+  const [first, ...rest] = list;
+  return `<div class="ipa">${first}${rest.length ? ` <span class="alt">also ${rest.join(", ")}</span>` : ""}</div>`;
+}
+
+function buildRow(item, kind) {
+  const li = document.createElement("li");
+  li.className = "row";
+  li.dataset.id = item.id;
+  const rank = kind === "word" ? item.rank : "";
+  let word, info;
+  if (kind === "pair") {
+    word = `<div class="word pair" lang="fr"><span>${item.nounCue} ${item.word}</span><span>${item.verbCue} ${item.word}</span></div>`;
+    info = `<div class="info"><div class="ipa">${item.nounPart} ${item.nounIpa} · verb ${item.verbIpa}</div>
+      <div class="hints">${item.nounCue}: ${hintSummary(item.word, item.noun)}</div>
+      <div class="hints">${item.verbCue}: ${hintSummary(item.word, item.verb)}</div></div>`;
+  } else if (kind === "trigger") {
+    word = `<div class="word phrase" lang="fr">${item.example}</div>`;
+    info = `<div class="info"><div class="hints"><span class="tag">Obligatory liaison</span> after
+      <b>${item.word}</b>, before a vowel or h muet</div></div>`;
+  } else if (kind === "blocker") {
+    word = `<div class="word" lang="fr">${item.word}</div>`;
+    info = `<div class="info">${ipaLine(item.ipa)}<div class="hints"><span class="tag">Blocks liaison</span>
+      ${item.reason}</div></div>`;
+  } else {
+    word = `<div class="word${kind === "compound" ? " phrase" : ""}" lang="fr">${item.word}</div>`;
+    info = `<div class="info">${ipaLine(item.ipa)}<div class="hints">${hintSummary(item.word, item.hints)}</div></div>`;
+  }
+  li.innerHTML = `<span class="rank">${rank}</span>${word}${info}
+    <div class="verdict"><button type="button" class="ok" aria-pressed="false">Right</button>
+      <button type="button" class="bad" aria-pressed="false">Wrong</button>
+      <input class="note" type="text" id="note-${item.id}" placeholder="What's wrong? (optional)" aria-label="Note on ${item.word}">
+      <span class="stale" hidden>Hints changed since this review</span></div>`;
+  li.querySelector(".ok").addEventListener("click", () => toggle(item.id, "right"));
+  li.querySelector(".bad").addEventListener("click", () => toggle(item.id, "wrong"));
+  const note = li.querySelector(".note");
+  note.addEventListener("change", () => saveNote(item.id, note.value.trim()));
+  note.addEventListener("keydown", (e) => { if (e.key === "Enter") note.blur(); });
+  rows.set(item.id, { el: li, item, kind });
+  return li;
+}
+
+function paintRow(id) {
+  const { el, item, kind } = rows.get(id);
+  const r = state.reviews.get(id);
+  const verdict = r ? r.verdict : null;
+  el.querySelector(".ok").setAttribute("aria-pressed", String(verdict === "right"));
+  el.querySelector(".bad").setAttribute("aria-pressed", String(verdict === "wrong"));
+  const note = el.querySelector(".note");
+  if (document.activeElement !== note) note.value = r && r.note ? r.note : "";
+  note.hidden = !(verdict === "wrong" || (r && r.note) || document.activeElement === note);
+  for (const b of el.querySelectorAll("button, input")) b.disabled = state.readOnly;
+  const now = JSON.stringify(judged(item, kind));
+  const then = r ? JSON.stringify(Object.fromEntries(Object.keys(judged(item, kind)).map((k) => [k, r[k]]))) : now;
+  el.querySelector(".stale").hidden = now === then;
+}
+
+function visible(id) {
+  const { item, kind } = rows.get(id);
+  if (TABS[kind] !== state.tab) return false;
+  if (state.q && !(item.word + " " + (item.example || "")).includes(state.q)) return false;
+  const v = state.reviews.get(id)?.verdict;
+  if (state.filter === "todo") return !v;
+  if (state.filter === "wrong") return v === "wrong";
+  if (state.filter === "right") return v === "right";
+  return true;
+}
+
+function refresh() {
+  let shown = 0;
+  for (const [id, row] of rows) { const v = visible(id); row.el.hidden = !v; shown += v; }
+  $("empty").hidden = shown > 0;
+  const ids = [...rows.keys()];
+  const done = ids.filter((id) => state.reviews.has(id)).length;
+  $("done").textContent = done;
+  $("all").textContent = ids.length;
+  $("wrongs").textContent = ids.filter((id) => state.reviews.get(id)?.verdict === "wrong").length;
+  $("bar").style.width = `${(100 * done / ids.length).toFixed(1)}%`;
+}
+
+function notice(text) { $("notice").textContent = text; $("notice").hidden = !text; }
+
+const chains = new Map();        // one write at a time per document
+function write(id, body) {
+  const ref = db.collection("reviews").doc(id);
+  const prev = chains.get(id) || Promise.resolve();
+  const next = prev.then(() => (body ? ref.set(body) : ref.delete())).catch((e) => {
+    if (e && e.code === "invalid_argument") { state.readOnly = true; rows.forEach((_, i) => paintRow(i));
+      notice("This view can't save reviews, so the buttons are off. Ask the owner for Contributor access."); }
+    else if (e && e.code === "quota_exceeded") notice("The review store is full; no more reviews can be saved.");
+    else notice("A review didn't save. Check your connection and try again.");
+  });
+  chains.set(id, next);
+}
+
+function bodyFor(id, verdict, note) {
+  const { item, kind } = rows.get(id);
+  return { word: item.word, kind, verdict, note, ...judged(item, kind), reviewer: me, at: new Date().toISOString() };
+}
+
+function toggle(id, verdict) {
+  if (state.readOnly) return;
+  const r = state.reviews.get(id);
+  if (r && r.verdict === verdict && !r.note) {
+    state.reviews.delete(id);
+    write(id, null);
+  } else {
+    const body = bodyFor(id, verdict, r ? r.note || "" : "");
+    state.reviews.set(id, body);
+    write(id, body);
+  }
+  paintRow(id);
+  refresh();
+  if (verdict === "wrong" && state.reviews.get(id)) rows.get(id).el.querySelector(".note").focus();
+}
+
+function saveNote(id, note) {
+  if (state.readOnly) return;
+  const r = state.reviews.get(id);
+  if (!r && !note) return;
+  const body = bodyFor(id, r ? r.verdict : "wrong", note);
+  state.reviews.set(id, body);
+  write(id, body);
+  paintRow(id);
+  refresh();
+}
+
+function setPressed(buttons, pressed) { buttons.forEach((b) => b.setAttribute("aria-pressed", String(b === pressed))); }
+
+function start() {
+  const list = $("list");
+  DATA.words.forEach((w) => list.appendChild(buildRow(w, "word")));
+  DATA.pairs.forEach((p) => list.appendChild(buildRow(p, "pair")));
+  DATA.liaison.forEach((l) => list.appendChild(buildRow(l, l.kind)));
+  DATA.compounds.forEach((c) => list.appendChild(buildRow(c, "compound")));
+  const tabs = [...document.querySelectorAll("[data-tab]")];
+  const sizes = { words: DATA.words.length, pairs: DATA.pairs.length, liaison: DATA.liaison.length,
+                  compounds: DATA.compounds.length };
+  tabs.forEach((t) => {
+    t.textContent += ` (${sizes[t.dataset.tab]})`;
+    t.addEventListener("click", () => { state.tab = t.dataset.tab; setPressed(tabs, t); refresh(); });
+  });
+  const filters = [...document.querySelectorAll("[data-filter]")];
+  filters.forEach((f) => f.addEventListener("click", () => { state.filter = f.dataset.filter; setPressed(filters, f); refresh(); }));
+  $("search").addEventListener("input", (e) => { state.q = e.target.value.trim().toLowerCase(); refresh(); });
+  rows.forEach((_, id) => paintRow(id));
+  refresh();
+  connect();
+}
+
+async function connect() {
+  const use = window.claude && window.claude.use;
+  if (!use) { notice("Open this page on claude.ai to save reviews; here it is read-only."); return; }
+  db = await window.claude.use("db");
+  if (!db) { notice("Reviews can't be loaded or saved in this view; sign in on claude.ai to review."); return; }
+  const user = await window.claude.use("user");
+  me = user ? await user.id() : null;
+  const canWrite = user ? await user.can("data.write") : null;
+  state.readOnly = canWrite === false;
+  if (state.readOnly) notice("You can see the reviews but not change them.");
+  db.collection("reviews").limit(1000).onSnapshot((snap) => {
+    state.reviews = new Map(snap.docs.map((d) => [d.id, d.data()]));
+    rows.forEach((_, id) => paintRow(id));
+    refresh();
+  }, () => notice("Live updates stopped. Reload the page to see the latest reviews."));
+  rows.forEach((_, id) => paintRow(id));
+}
+
+start();
+</script>

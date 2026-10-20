@@ -10,8 +10,11 @@ liaison) or plain, and each space or hyphen with its tie or plain. Listed
 words inside longer words, and words that aren't listed, must come out
 plain. Verb/noun pairs are shaped after every cue word and after other words
 or two spaces; liaison triggers before vowels, h muet, blockers and
-consonants, and after hyphens and apostrophes; inverted verbs before each
-clitic. Corpus files are checked line by line the same way.
+consonants, after hyphens and apostrophes, and ending numbers
+(`vingt-trois ans`); inverted verbs before each
+clitic. Corpus files are checked line by line the same way. Every tenth
+text is then shaped again with each stylistic set, and with all of them,
+where that set's hints (and a liaison's tie) must come out plain.
 """
 
 import argparse
@@ -28,6 +31,7 @@ from fontTools.ttLib import TTFont  # noqa: E402
 
 sys.path.insert(0, str(HERE))
 import frfont  # noqa: E402
+from frfont import HINT_SETS, HINTS  # noqa: E402
 
 LETTERS = frfont.LETTERS + frfont.LETTERS.upper() + "Ÿ"
 WORD = re.compile(f"[{LETTERS}]+")
@@ -53,9 +57,9 @@ def expected(text, lex):
                 and word(i - 1) in lex.cues:
             out[s:e] = lex.homographs[word(i)][0 if lex.cues[word(i - 1)] == "noun" else 1]
             claimed.add(i)
-    # 5. Liaison after a trigger and one space, not after a hyphen.
+    # 5. Liaison after a trigger and one space, not after a hyphen unless it ends a number.
     for i, (s, e) in enumerate(toks):
-        if word(i) in lex.triggers and before(i) != "-" and low[e:e + 1] == " " and e + 1 in at \
+        if word(i) in lex.triggers and (before(i) != "-" or word(i) in frfont.NUMBERS) and low[e:e + 1] == " " and e + 1 in at \
                 and low[e + 1] in frfont.LINKS_TO and word(at[e + 1]) not in lex.blockers:
             links |= {e - 1, e}
     # 6. Liaison in inversion.
@@ -127,7 +131,7 @@ def cases(lex, rng):
                                                  "livres", "Anne", "été", "à"] + rng.sample(blockers, 4):
             yield f"{t} {nxt}"
             yield f"{t.capitalize()} {nxt.upper()}"
-            yield f"Elles-{t} {nxt}"           # after a hyphen: none
+            yield f"Elles-{t} {nxt}"           # after a hyphen: none, but for numbers
             yield f"qu’{t} {nxt}"
             yield f"{t}  {nxt}"                # two spaces: none
             yield f"{t}x {nxt}"                # not the trigger
@@ -137,7 +141,8 @@ def cases(lex, rng):
             yield f"{w}-{c} ?"
         yield f"{w.capitalize()}-{rng.choice(frfont.CLITICS).upper()} ?"
         yield f"{w}-ilx"
-    yield from ("a-t-il", "Va-t-on", "Y a-t-il", "vas-y", "Allons-y !", "prend-il", "ont-ils eu", "sont-elles arrivées")
+    yield from ("a-t-il", "Va-t-on", "Y a-t-il", "vas-y", "Allons-y !", "prend-il", "ont-ils eu", "sont-elles arrivées",
+                "quatre-vingts ans", "vingt-trois ans", "trente-deux euros", "dix-six ans", "vingt-et-un ans")
     for c in lex.compounds:
         yield c
         yield c.capitalize()
@@ -175,18 +180,35 @@ def main():
         for path in args.corpus:
             sets.append((f"lines of {path}", [l for l in Path(path).read_text(encoding="utf-8").splitlines() if l.strip()]))
         for label, texts in sets:
-            bad, shown, t = 0, 0, time.perf_counter()
-            for text in texts:
-                want, got = expected(text, lex), view.hints(text)
-                if want != got:
-                    bad += 1
-                    if shown < args.show:
-                        shown += 1
-                        print(f"  {text!r}\n    expected {want}\n    drawn    {got}")
-            ms = (time.perf_counter() - t) * 1000 / max(1, len(texts))
-            print(f"{label}: {len(texts) - bad}/{len(texts)} right ({name}, {ms:.3f} ms each)")
-            failed += bad
+            failed += report(label, texts, view, lambda text: expected(text, lex), name, args.show)
+        sample = [text for _, texts in sets for text in texts[::10]]
+        for tags, off in hint_sets():
+            view = View(data, test_fontlex.SHAPERS[name](data, features=tags))
+            failed += report(f"every tenth text with {'+'.join(tags)}", sample, view,
+                             lambda text: "".join("." if c in off else c for c in expected(text, lex)),
+                             name, args.show)
     return 1 if failed else 0
+
+
+def hint_sets():
+    """Each stylistic set with the hints it turns off, then all of them at once."""
+    sets = sorted((HINT_SETS[entry][0], h + ("T" if h == "L" else "")) for h, entry in HINTS.items())
+    return [((tag,), off) for tag, off in sets] + [(tuple(t for t, _ in sets), "".join(o for _, o in sets))]
+
+
+def report(label, texts, view, want_of, name, show):
+    """Shapes each text and compares it with want_of(text); returns the misses."""
+    bad, shown, t = 0, 0, time.perf_counter()
+    for text in texts:
+        want, got = want_of(text), view.hints(text)
+        if want != got:
+            bad += 1
+            if shown < show:
+                shown += 1
+                print(f"  {text!r}\n    expected {want}\n    drawn    {got}")
+    ms = (time.perf_counter() - t) * 1000 / max(1, len(texts))
+    print(f"{label}: {len(texts) - bad}/{len(texts)} right ({name}, {ms:.3f} ms each)")
+    return bad
 
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ lexicon's hint for it, and each space's and hyphen's tie:
 
 | Text | Checked | Right, HarfBuzz | Right, Core Text |
 |---|---|---|---|
-| Every listed word alone, capitalized, in capitals, in punctuation, in a sentence and after *l'*; every compound alone, capitalized, in a sentence, with a curly apostrophe and with a letter added (must fall back to its parts); every verb/noun pair after each cue word, after another word and after two spaces; every liaison trigger before vowels, h muet, h aspiré, *onze*, *oui*, *yeux* and consonants, after a hyphen and an apostrophe, and with two spaces; 400 words ending in s, x, t, d or z before each inverted clitic; listed words inside longer words and made-up words (must stay plain) | 198,865 | 198,865 | 198,865 |
+| Every listed word alone, capitalized, in capitals, in punctuation, in a sentence and after *l'*; every compound alone, capitalized, in a sentence, with a curly apostrophe and with a letter added (must fall back to its parts); every verb/noun pair after each cue word, after another word and after two spaces; every liaison trigger before vowels, h muet, h aspiré, *onze*, *oui*, *yeux* and consonants, after a hyphen and an apostrophe, and with two spaces; numbers ending a longer one (*vingt-trois ans*); 400 words ending in s, x, t, d or z before each inverted clitic; listed words inside longer words and made-up words (must stay plain) | 198,870 | 198,870 | 198,870 |
 | The demo's sample (`sample.txt`) | 15 lines | 15 | 15 |
 
 The font has 6,246 glyphs (letters' first-letter variants, as in the English
@@ -44,6 +44,11 @@ English aligner:
   *on*, *un*, *ain*, *ein*, with *m* too), consonant groups (*ch*, *ph*, *gn*,
   *qu*, *gu*, *ill*, doubled consonants). Each takes 0 to 3 phonemes (*oy* is
   "waj"), with costs learned by hard EM over the 30,000 words.
+- **Ties.** Where two alignments cost the same, the silent letters go at the
+  end of each part of the word, as in French spelling: *choses* says its
+  first *s* and not its last, *ils content* says *con-t* and drops *ent*, and
+  *sous-sol* drops the *s* of *sous*, not of *sol*. Without this rule, 367
+  words had their silent letters on the wrong side of a sound they spell.
 - **Hints from the alignment.** A group that spells nothing is silent. A
   group of vowel and *n* or *m* that spells a nasal vowel is nasal. One that
   spells Lexique's schwa (°), in a word of two or more vowels, is a schwa;
@@ -74,7 +79,8 @@ How the font decides liaison:
   *elles*, *on*, *en*), short prepositions and adverbs (*dans*, *chez*,
   *sans*, *sous*, *très*, *tout*, *quand*) and numbers (*deux*, *trois*,
   *six*, *dix*, *vingt*, *cent*). After a hyphen a trigger is an inverted
-  subject, and there is no liaison: *ont-ils eu*.
+  subject, and there is no liaison (*ont-ils eu*), unless it is a number
+  ending a longer one: *vingt-trois‿ans*, *quatre-vingts‿euros*.
 - **Inversion**: a final s, x, t, d or z before a hyphen and *il(s)*,
   *elle(s)*, *on*, *en* or *y* (*vont-ils*, *prend-il*, *allons-y*).
 - **What it links to**: a vowel or an h, except before the words in
@@ -99,9 +105,9 @@ Eight GSUB passes, built by `frfont.py` on Noto Sans and Noto Sans Bold:
 4. A verb/noun pair right after a cue and one space gets that reading's
    hints. A reading with no hints turns the first letter plain, so pass 7
    leaves the word alone.
-5. A trigger, not after a hyphen, then one space and a vowel or h that isn't
-   blocking: the trigger's last letter becomes its bold liaison glyph and the
-   space a tie. The next word's first letter can be any variant, hinted or
+5. A trigger, not after a hyphen unless it is a number, then one space and
+   a vowel or h that isn't blocking: the trigger's last letter becomes its
+   bold liaison glyph and the space a tie. The next word's first letter can be any variant, hinted or
    not; after a space it is always a first letter.
 6. Inversion, the same for a final s, x, t, d or z, a hyphen and a clitic.
 7. One context rule per compound (tried first) and per listed word with
@@ -109,6 +115,15 @@ Eight GSUB passes, built by `frfont.py` on Noto Sans and Noto Sans Bold:
    glyph still counts as its word's final letter; hint lookups don't cover
    it, so a word's own "silent" hint doesn't undo the liaison.
 8. The variants that no rule claimed go back to plain letters.
+
+Each kind of hint has a stylistic set that turns it off, numbered as in the
+English font: `ss01` silent letters, `ss02` schwas, `ss04` nasal vowels,
+`ss05` liaisons with their ties. Each set is one lookup after the eight
+passes, so the other hints don't change. The demo page and the browser
+extension have a switch for each. *Measured*: every tenth `verify.py` text
+(19,889), with each set and with all four, comes out right in HarfBuzz and
+Core Text, and `demo/check_switches.py` sees each switch remove its color,
+and only its color, in WebKit.
 
 Word hints depend only on their word, so they survive soft wrapping, as in
 the English font. A liaison looks one space ahead, and *measured* in WebKit
@@ -141,9 +156,23 @@ python french/align.py french/data/Lexique383.tsv --h-aspire french/data/h_aspir
 python french/frfont.py --base fonts/NotoSans-Regular.ttf --bold fonts/NotoSans-Bold.ttf --out build
 python french/verify.py build/Fontlex-French.ttf --shaper harfbuzz --shaper coretext --corpus french/sample.txt
 python french/build_page.py --font build/Fontlex-French.ttf --out french/demo.html
+python french/review_sheet.py french/data/Lexique383.tsv --font build/Fontlex-French.woff2 --out review.html
 ```
 
-`./check.sh french` runs the last three.
+`./check.sh french` runs the font, test and page steps, and checks the
+page's hint switches in WebKit.
+
+## Review
+
+The hints have been checked against Lexique, not yet by a fluent speaker.
+`review_sheet.py` builds a page for that: the 500 most frequent words, the
+verb/noun pairs (each after a cue the font reads: *le président*, *ils
+président*), every liaison trigger in a phrase (*quatre-vingts‿ans*) and
+every blocker, and the compounds. Each is drawn in the font with its
+pronunciation in IPA, to be marked right or wrong with a note. The
+published page keeps the verdicts, with what was judged, to read back and
+turn into fixes. Building it already found two: the tie rule above, and
+liaison after numbers that end a longer one.
 
 ## Licenses
 

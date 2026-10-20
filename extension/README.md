@@ -16,8 +16,10 @@ fonts:
 By default it matches the page's language (`<html lang>`): English pages get
 the English hints, French pages the French ones, German pages the genders,
 and other pages are left alone. The popup picks a font for every page
-instead, turns the extension off, or off for the current site. Hint colors
-follow the page's background (light or dark palette), or a fixed choice.
+instead, turns the extension off, or off for the current site. Each kind of
+pronunciation hint (stress, reduced vowels and schwas, silent letters, nasal
+vowels, liaisons) can be hidden on its own. Hint colors follow the page's
+background (light or dark palette), or a fixed choice.
 
 The page's text isn't changed. Copy, search, translation and screen readers
 see what they saw before; only the drawing changes.
@@ -47,6 +49,10 @@ id, and Safari needs an Xcode wrapper. Neither was tested.
   (`pre`, `code`, `kbd`, `samp`), math, SVG, and elements that look like
   icons (a class with "icon" or "material-symbols", Font Awesome's `fa-`,
   `aria-hidden`). Icon fonts keep their font, so pages keep their buttons.
+- A hidden kind of hint is the font's stylistic set for it (`ss01` to
+  `ss05`, numbered alike in the English and French fonts), which
+  `content.js` puts in a `--fontlex-features` variable on `<html>` and
+  `content.css` applies as `font-feature-settings`.
 - The palette is the page's: the first opaque background from `<body>` up
   decides light or dark.
 
@@ -60,9 +66,10 @@ Chromium 139 (headless, through Playwright) and checks:
   language;
 - that code and an icon font keep their fonts;
 - that the hints are drawn: each palette's hint colors appear in a screenshot;
-- the popup's choices, live, and the site switch.
+- the popup's choices, live, and the site switch;
+- hiding a kind of hint: its color leaves the screen, the others stay.
 
-All 17 checks pass. A live French Wikipedia article also renders with its
+All 21 checks pass. A live French Wikipedia article also renders with its
 links and icons intact.
 
 ```sh

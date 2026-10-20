@@ -47,7 +47,8 @@ textarea#code { min-height: 22rem; font-family: "Fontlex French", system-ui, san
   <span class="reduced">schwa</span> that speakers often drop (<i>samedi</i>, <i>petit</i>) is blue. A
   <span class="liaison">liaison</span>, a final consonant said before the next word's vowel, is bold and green,
   with a tie under the space: <i>les amis</i>, <i>nous avons</i>, <i>vont-ils</i>. French has no word stress
-  to mark.</p>
+  to mark. The switches above the text turn one kind of hint off; in other apps they are the font's stylistic
+  sets (ss01 silent letters, ss02 schwas, ss04 nasal vowels, ss05 liaisons).</p>
 
   <h2>Where the hints come from</h2>
   <p>The pronunciations are Lexique 3.83's. Each word's spelling is aligned with its sounds, letter groups such as
@@ -100,7 +101,10 @@ def main():
         print(f"{name}: {ok}/{len(texts)}")
     font = TTFont(io.BytesIO(ttf), recalcTimestamp=False)
     colors = {k: (frfont.PALETTES["light"][k], frfont.PALETTES["dark"][k]) for k in frfont.PALETTES["light"]}
-    box = ("Show hints", SAMPLE, 'lang="fr" aria-label="French text, with pronunciation hints"')
+    switches = pages.hint_switches([(frfont.HINT_SETS[k][0], k, label) for k, label in
+                                    (("silent", "Silent letters"), ("nasal", "Nasal vowels"), ("reduced", "Schwas"),
+                                     ("liaison", "Liaisons"))])
+    box = ("Show hints", SAMPLE, 'lang="fr" aria-label="French text, with pronunciation hints"', switches)
     page = pages.page(PAGE, pages.woff2(font), "Fontlex French", colors, box, {
         "ROWS": "\n    ".join(rows),
         "WORDS": f"{len(lex.words):,}",

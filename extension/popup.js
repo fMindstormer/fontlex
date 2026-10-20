@@ -1,4 +1,4 @@
-// The settings popup: which font, which palette, and off for the current site.
+// The settings popup: which font, which hints, which palette, and off for the current site.
 const api = globalThis.browser ?? globalThis.chrome;
 const modes = document.getElementById("modes");
 for (const [key, font] of [...Object.entries(FONTLEX_FONTS), ["off", { label: "Off" }]]) {
@@ -7,12 +7,26 @@ for (const [key, font] of [...Object.entries(FONTLEX_FONTS), ["off", { label: "O
   label.append(input, " " + font.label);
   modes.append(label);
 }
+const hints = document.getElementById("hints");
+for (const [key, hint] of Object.entries(FONTLEX_HINTS)) {
+  const label = document.createElement("label");
+  const input = Object.assign(document.createElement("input"), { type: "checkbox", name: "hint", value: key });
+  label.append(input, " " + hint.label);
+  hints.append(label);
+}
 
 api.storage.sync.get(FONTLEX_DEFAULTS, (settings) => {
   const save = () => api.storage.sync.set(settings);
   for (const input of modes.querySelectorAll("input")) {
     input.checked = input.value === settings.mode;
     input.addEventListener("change", () => { settings.mode = input.value; save(); });
+  }
+  for (const input of hints.querySelectorAll("input")) {
+    input.checked = !settings.hide.includes(input.value);
+    input.addEventListener("change", () => {
+      settings.hide = input.checked ? settings.hide.filter((h) => h !== input.value) : [...settings.hide, input.value];
+      save();
+    });
   }
   const palette = document.getElementById("palette");
   palette.value = settings.palette;
