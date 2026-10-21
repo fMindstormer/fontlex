@@ -32,8 +32,8 @@ the liaison ties are drawn by the font.
 | [Markdown](https://fmindstormer.github.io/fontlex/markdown.html) ([README](markdown/README.md)) | renders GitHub Flavored Markdown line by line: CommonMark's inline rules, strikethrough, autolinks, block markup; markup hidden; mono and proportional | within its bounds, every one-line spec example, 20,000 random lines and 10,723 lines of real documents exactly as GitHub renders them |
 | [German genders](https://fmindstormer.github.io/fontlex/german.html) ([README](german/README.md)) | colors nouns by gender, from lists learned from a treebank and Wiktionary | on held-out newspaper text, 97% of nouns colored, 99.5% of them right |
 | [German syllables](https://fmindstormer.github.io/fontlex/german-syllables.html) ([README](german/syllables/README.md)) | colors syllables in turn, as German schools teach reading | 97.5% of held-out first-reader words split exactly right |
-| [English pronunciation](https://fmindstormer.github.io/fontlex/english.html) ([README](english/README.md)) | marks stressed and reduced vowels and silent letters of 30,000 words; noun/verb pairs read the word before (*the record*, *to record*); a stylistic set turns each kind of hint off | 166,537 of 166,537 cases right in HarfBuzz and Core Text |
-| [French pronunciation](https://fmindstormer.github.io/fontlex/french.html) ([README](french/README.md)) | marks silent letters, nasal vowels, droppable schwas and obligatory liaison (*les‿amis*, but not *les héros*) for 30,000 words; a stylistic set turns each kind of hint off | 198,870 of 198,870 cases right in HarfBuzz and Core Text |
+| [English pronunciation](https://fmindstormer.github.io/fontlex/english.html) ([README](english/README.md)) | marks stressed and reduced vowels and silent letters of 30,000 words; noun/verb pairs read the word before (*the record*, *to record*) or an invisible [reading marker](markers/README.md); a stylistic set turns each kind of hint off | 170,817 of 170,817 cases right in HarfBuzz and Core Text |
+| [French pronunciation](https://fmindstormer.github.io/fontlex/french.html) ([README](french/README.md)) | marks silent letters, nasal vowels, droppable schwas and obligatory liaison (*les‿amis*, but not *les héros*) for 30,000 words; reading markers as in English; a stylistic set turns each kind of hint off | 202,190 of 202,190 cases right in HarfBuzz and Core Text |
 | [Browser extension](extension/README.md) | draws any web page in a learner font, matched to the page's language | 21 checks in Chromium, including a page with a strict CSP and hiding each kind of hint |
 
 ## What's interesting here
@@ -60,6 +60,12 @@ the liaison ties are drawn by the font.
   lists learned from a treebank, TeX hyphenation patterns. The pronunciation
   lexicons compile into class-based context rules, so their glyph count
   doesn't grow with the word list.
+- **A font that can be told.** Where a font can't decide (is *record* a
+  noun or a verb?), a tagger that reads the whole sentence puts an invisible
+  variation selector after the word and the font draws that reading
+  ([markers/](markers/README.md)). Other fonts show nothing. On the EWT
+  treebank this settles 99.6% of English pair words, against 37.5% from the
+  word before.
 
 ## Quick start
 
@@ -95,6 +101,7 @@ page byte for byte, so `git status` afterwards shows nothing.
 | `markdown/` | the GitHub Flavored Markdown font: model, compiler, verification, demo |
 | `english/` | the English pronunciation-hint font: aligner, lexicon, compiler, verification, demo, review sheet |
 | `french/` | the French pronunciation-hint font, with liaison: aligner, lexicon, compiler, verification, demo |
+| `markers/` | invisible reading markers for noun/verb pairs, and a spaCy script that adds them |
 | `extension/` | a browser extension that draws web pages in the learner fonts, with its Chromium test |
 | `docs/images/` | the screenshots above, of the demo pages in WebKit |
 | `.github/workflows/` | CI (`./check.sh` on Ubuntu, byte-identical rebuild) and the GitHub Pages deploy |

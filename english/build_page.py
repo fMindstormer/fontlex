@@ -22,7 +22,7 @@ from fontTools.ttLib import TTFont  # noqa: E402
 
 SAMPLE = """English spelling often hides the sound of a word. Which letters are silent in knife, write, island, listen, castle and honest? Where does the stress fall in photograph and photography, or in comfortable, chocolate and different?
 
-This font shows it as you read: the stressed vowel is bold and red, reduced vowels are blue, and silent letters fade. Where a word's stress depends on its use, the word before it decides: keep a record, then record it again; a present for you, to present to you. It knows the 30,000 most common words; others stay as they are. Type anything in this box."""
+This font shows it as you read: the stressed vowel is bold and red, reduced vowels are blue, and silent letters fade. Where a word's stress depends on its use, the word before it decides: a present for you, to present to you. Where it doesn't, an invisible marker after the word can: keep a new record︀, then record︁ it again. It knows the 30,000 most common words; others stay as they are. Type anything in this box."""
 
 PAGE = """<!doctype html>
 <html lang="en">
@@ -48,7 +48,9 @@ textarea#code { min-height: 16rem; font-family: "Fontlex English", system-ui, sa
   word, <span class="silent">silent letters</span> fade. A word whose stress moves between noun and verb
   (<i>record</i>, <i>present</i>, <i>object</i>) takes its reading from the word before it: <i>the</i>,
   <i>a</i>, <i>my</i> make it a noun, <i>to</i>, <i>will</i>, <i>we</i> a verb; with neither it shows only
-  what both readings share. The switches above the text turn one kind of hint off; in other apps they are the
+  what both readings share. An invisible character right after the word, which a tagger can add, overrides
+  that: U+FE00 for the noun, U+FE01 for the verb (in the sample, after <i>new record</i> and <i>then
+  record</i>). The switches above the text turn one kind of hint off; in other apps they are the
   font's stylistic sets (ss01 silent letters, ss02 reduced vowels, ss03 stress).</p>
 
   <h2>Where the hints come from</h2>

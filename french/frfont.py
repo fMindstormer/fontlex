@@ -19,8 +19,10 @@ hyphen ends one (`l'homme`, `peut-être`). The passes:
    letter becomes a noun-cue or verb-cue variant. Words before which there is
    no liaison (blockers.txt: `haricot`, `onze`): their first letter becomes a
    "blocking" variant.
-4. Verb/noun pairs (homographs.tsv) after a cue and one space get that
-   reading's hints: "le président", "ils président".
+4. Verb/noun pairs (homographs.tsv) right before a reading marker (U+FE00
+   noun or adjective, U+FE01 verb: markers/README.md), or else after a cue
+   and one space, get that reading's hints: "le président", "ils
+   président".
 5. Liaison: a listed trigger (liaison.txt: `les`, `nous`, `un`, `dans`, ...),
    not after a hyphen unless it is a number ("vingt-trois‿ans"), then one
    space, then a vowel or h that doesn't block: the trigger's last letter
@@ -48,7 +50,7 @@ sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE.parent / "markdown"))
 sys.path.insert(0, str(HERE.parent / "english"))
 import fontbuild as fb  # noqa: E402
-from enfont import HINT_SETS, context_subtables, coverage, read_table, record  # noqa: E402
+from enfont import HINT_SETS, MARKERS, context_subtables, coverage, read_table, record  # noqa: E402
 
 LETTERS = "abcdefghijklmnopqrstuvwxyzàâæçéèêëîïôœùûüÿ"
 LINKS_TO = set("aeiouyàâæéèêëîïôœùûüÿh")       # a liaison links to a vowel, or an h muet
@@ -115,6 +117,10 @@ class FrenchFont:
         self.name = {c: cmap[ord(c)] for c in LETTERS}
         self.apostrophes = [cmap[ord(c)] for c in APOSTROPHES]
         self.space, self.hyphen = cmap[ord(" ")], cmap[ord("-")]
+        self.marker = {}                 # noun|verb -> an empty glyph, so no font falls back for it
+        for kind, ch in MARKERS.items():
+            self.marker[kind] = f"uni{ord(ch):04X}"
+            b.add_base_glyph(self.marker[kind], ord(ch), 0)
         self.plain = sorted(self.letter, key=b.gid)
         self.form = {}                   # (glyph, form) -> variant
         self.hinted = {}                 # (glyph, hint) -> hinted glyph
@@ -290,8 +296,9 @@ class FrenchFont:
             r.BacktrackGlyphCount, r.InputGlyphCount, r.LookAheadGlyphCount = len(behind), len(keys), len(ahead)
             r.SubstLookupRecord, r.SubstCount = records, len(records)
             return r
-        # 4. Verb/noun pairs after a cue and a space. A reading without hints
-        # turns the first letter plain, so step 7 doesn't match the word.
+        # 4. Verb/noun pairs before a marker, or after a cue and a space. A
+        # reading without hints turns the first letter plain, so step 7
+        # doesn't match the word.
         back = {self.space: 1}
         for kind, forms in CUE_FORMS.items():
             for v in self.forms_of(letters, *forms):
@@ -299,10 +306,10 @@ class FrenchFont:
         pairs = {}
         for word, (noun, verb) in sorted(lex.homographs.items()):
             keys = self.keys(word)
-            for cue_class, hints in ((2, noun), (3, verb)):
+            for behind, ahead, hints in (([], [1], noun), ([], [2], verb), ([1, 2], [], noun), ([1, 3], [], verb)):
                 pairs.setdefault(classes[keys[0]], []).append(
-                    chain_rule([1, cue_class], keys, [], hint_records(hints) or [record(0, to_plain)]))
-        add(fb.lookup(6, [chain2(pairs, back, {})]))
+                    chain_rule(behind, keys, ahead, hint_records(hints) or [record(0, to_plain)]))
+        add(fb.lookup(6, [chain2(pairs, back, {self.marker["noun"]: 1, self.marker["verb"]: 2})]))
         # 5. Liaison after a trigger and a space; not after a hyphen, where the
         # trigger is an inverted subject ("ont-ils eu"), unless it is the end
         # of a number ("quatre-vingts‿ans").

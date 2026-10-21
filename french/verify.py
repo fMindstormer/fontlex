@@ -8,8 +8,9 @@ punctuation and inside a sentence, and every compound alone and in a
 sentence. Each letter must come out with its hint (silent, reduced, nasal,
 liaison) or plain, and each space or hyphen with its tie or plain. Listed
 words inside longer words, and words that aren't listed, must come out
-plain. Verb/noun pairs are shaped after every cue word and after other words
-or two spaces; liaison triggers before vowels, h muet, blockers and
+plain. Verb/noun pairs are shaped after every cue word, after other words
+or two spaces, and before each reading marker, which beats a cue; a marker
+after any other word does nothing, and markers add no width. Liaison triggers before vowels, h muet, blockers and
 consonants, after hyphens and apostrophes, and ending numbers
 (`vingt-trois ans`); inverted verbs before each
 clitic. Corpus files are checked line by line the same way. Every tenth
@@ -31,10 +32,11 @@ from fontTools.ttLib import TTFont  # noqa: E402
 
 sys.path.insert(0, str(HERE))
 import frfont  # noqa: E402
-from frfont import HINT_SETS, HINTS  # noqa: E402
+from frfont import HINT_SETS, HINTS, MARKERS  # noqa: E402
 
 LETTERS = frfont.LETTERS + frfont.LETTERS.upper() + "Ÿ"
 WORD = re.compile(f"[{LETTERS}]+")
+READING = {ch: kind for kind, ch in MARKERS.items()}
 Lexicon = frfont.Lexicon
 
 
@@ -51,9 +53,12 @@ def expected(text, lex):
         return low[toks[i][0] - 1] if toks[i][0] else ""
     out = ["."] * len(text)
     claimed, links = set(), set()
-    # 4. Verb/noun pairs after a cue and one space.
+    # 4. Verb/noun pairs before a marker, or after a cue and one space.
     for i, (s, e) in enumerate(toks):
-        if word(i) in lex.homographs and i and toks[i - 1][1] == s - 1 and before(i) == " " \
+        if word(i) in lex.homographs and low[e:e + 1] in READING:
+            out[s:e] = lex.homographs[word(i)][0 if READING[low[e]] == "noun" else 1]
+            claimed.add(i)
+        elif word(i) in lex.homographs and i and toks[i - 1][1] == s - 1 and before(i) == " " \
                 and word(i - 1) in lex.cues:
             out[s:e] = lex.homographs[word(i)][0 if lex.cues[word(i - 1)] == "noun" else 1]
             claimed.add(i)
@@ -97,9 +102,11 @@ class View:
     def hints(self, text):
         """What the font draws for each character: a hint letter, `T` for a
         tie, `.` for plain, or `?` for a glyph that should never be drawn."""
-        out = ["?"] * len(text)
+        out = ["." if c in READING else "?" for c in text]       # a marker draws nothing
         for gid, cluster, *_ in self.shaper.shape(text)[0]:
             name = self.order[gid] if gid is not None else ""    # None: drawn by a fallback font
+            if text[cluster] in READING:
+                continue
             if ".h" in name:
                 out[cluster] = name[name.index(".h") + 2]
             elif ".w" in name:
@@ -126,6 +133,13 @@ def cases(lex, rng):
             yield f"{c.capitalize()} {w.upper()}."
         yield f"le  {w}"           # two spaces: no cue
         yield f"alors {w}"
+        for kind, mark in MARKERS.items():
+            other = next(c for c, k in sorted(lex.cues.items()) if k != kind)
+            yield f"{w}{mark}"
+            yield f"{w.capitalize()}{mark}, puis"
+            yield f"{other} {w}{mark}."       # the marker beats the cue
+            yield f"un très {w}{mark} {w}"
+            yield f"{other} {w} {mark}"       # a marker after a space does nothing
     for t in lex.triggers:
         for nxt in rng.sample(vowel_words, 8) + ["homme", "heures", "haricots", "onze", "oui", "yeux", "y",
                                                  "livres", "Anne", "été", "à"] + rng.sample(blockers, 4):
@@ -149,8 +163,10 @@ def cases(lex, rng):
         yield f"Il dit : {c}, puis rien."
         yield c + "s"
         yield c.replace("'", "’")
-    for w in words:
+    for i, w in enumerate(words):
         yield w
+        if i % 10 == 0:
+            yield f"{w}{MARKERS['noun' if i % 20 else 'verb']} x"   # a marker after any other word does nothing
         yield w.capitalize()
         yield w.upper()
         yield f"({w}),"
@@ -181,6 +197,7 @@ def main():
             sets.append((f"lines of {path}", [l for l in Path(path).read_text(encoding="utf-8").splitlines() if l.strip()]))
         for label, texts in sets:
             failed += report(label, texts, view, lambda text: expected(text, lex), name, args.show)
+        failed += widths(view, lex, name)
         sample = [text for _, texts in sets for text in texts[::10]]
         for tags, off in hint_sets():
             view = View(data, test_fontlex.SHAPERS[name](data, features=tags))
@@ -194,6 +211,18 @@ def hint_sets():
     """Each stylistic set with the hints it turns off, then all of them at once."""
     sets = sorted((HINT_SETS[entry][0], h + ("T" if h == "L" else "")) for h, entry in HINTS.items())
     return [((tag,), off) for tag, off in sets] + [(tuple(t for t, _ in sets), "".join(o for _, o in sets))]
+
+
+def widths(view, lex, name):
+    """A marker adds no width: a pair with a marker is as wide as after a cue
+    that picks the same reading, and any other word as wide as without one."""
+    cue = {kind: next(c for c, k in sorted(lex.cues.items()) if k == kind) for kind in MARKERS}
+    texts = [(f"{cue[kind]} {w}{mark}", f"{cue[kind]} {w}") for w in lex.homographs for kind, mark in MARKERS.items()]
+    texts += [(w + mark, w) for w in list(lex.words)[::50] if w not in lex.homographs for mark in MARKERS.values()]
+    bad = [a for a, b in texts if view.shaper.shape(a)[1] != view.shaper.shape(b)[1]]
+    print(f"width with a marker: {len(texts) - len(bad)}/{len(texts)} the same ({name})"
+          + (f"; e.g. {bad[:5]}" if bad else ""))
+    return len(bad)
 
 
 def report(label, texts, view, want_of, name, show):

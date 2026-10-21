@@ -6,8 +6,9 @@ bold and red and **reduced vowels** (the schwa of *banana*) are blue. In any
 word, **silent letters** fade: the *k* of *knife*, the *gh* of *night*, the
 *b* of *debt*, the final *e* of *make*. Where the stress depends on whether a
 word is a noun or a verb (*record*, *present*, *object*), the word before it
-decides: *the record* is REcord, *to record* is reCORD. The text stays as
-typed; copy it and you get plain letters. `english/demo.html` is a text box in the font.
+decides: *the record* is REcord, *to record* is reCORD. A tagger or an
+editor can also pick the reading with an invisible marker after the word
+([markers/](../markers/README.md)). The text stays as typed; copy it and you get plain letters. `english/demo.html` is a text box in the font.
 
 It knows the 30,000 most frequent English words that the CMU Pronouncing
 Dictionary has (American English). By wordfreq's counts they make up 96.4%
@@ -21,10 +22,11 @@ lexicon's hint for it:
 
 | Text | Checked | Right, HarfBuzz | Right, Core Text |
 |---|---|---|---|
-| Every listed word alone, capitalized, in capitals, in punctuation and in a sentence; with a curly apostrophe; inside longer words and made-up words (must stay plain); every noun/verb pair after each cue word, after another word and after two spaces | 166,537 | 166,537 | 166,537 |
-| Lines of this project's English READMEs (`README.md`, `markdown/`, `theory/`) | 801 | 801 | 801 |
+| Every listed word alone, capitalized, in capitals, in punctuation and in a sentence; with a curly apostrophe; inside longer words and made-up words (must stay plain); every noun/verb pair after each cue word, after another word and after two spaces, and before each reading marker (also after a cue for the other reading); a marker after other words | 170,817 | 170,817 | 170,817 |
+| Width with a marker: each pair as wide as after a cue for the same reading, every 50th other word as wide as without one | 1,446 | 1,446 | 1,446 |
+| Lines of this project's English READMEs (`README.md`, `markdown/`, `theory/`) | 808 | 808 | 808 |
 
-The glyph count doesn't depend on the word list (3,410 glyphs, mostly the
+The glyph count doesn't depend on the word list (3,412 glyphs, mostly the
 letters' first-letter variants); the rules do. Before the two-letter keys and
 homographs:
 
@@ -39,7 +41,7 @@ The times are the best of five runs over this project's README lines, on a
 heavily loaded machine, so only their ratios mean much: about four times a
 plain font in HarfBuzz, twice in Core Text. A shaper tries a word against
 the rules for its first letter one after another. Keying them on the first
-two letters (the current font, 236 KB) cut the time by about a fifth in both
+two letters (the current font, 238 KB) cut the time by about a fifth in both
 engines, to roughly 0.2 ms a line in HarfBuzz and 0.13 ms in Core Text; the
 rest is spread over the passes. In WebKit the hints render in both palettes
 and survive soft wrapping, because each hint depends only on its own word.
@@ -99,8 +101,9 @@ Six GSUB passes, built by `enfont.py` on Noto Sans and Noto Sans Bold:
    rules for its first two letters.
 3. Cue words (`lexicon/cues.tsv`: *the*, *a*, *my*, ... for nouns; *to*,
    *will*, *we*, ... for verbs) mark their last letter as a noun or verb cue.
-4. A noun/verb pair right after a cue and one space gets that reading's
-   hints.
+4. A noun/verb pair right before a reading marker (U+FE00 noun, U+FE01
+   verb; [markers/](../markers/README.md)), or else right after a cue and
+   one space, gets that reading's hints.
 5. Then one context rule per listed word that has hints (25,643 of the
    30,000). Each rule is class-based, so case is ignored, and runs from an
    initial letter to a final one, so it matches whole words only. It applies
@@ -138,10 +141,13 @@ color, in WebKit.
   published page keeps the verdicts (with the hints judged) for reading back
   and turning into alignment rules or per-word fixes. The alignment was only
   spot-checked so far.
-- **More context for noun/verb pairs.** Only the word right before counts,
-  so *then record it* and *rose to record levels* (an adjective after *to*)
-  aren't decided right. Adjectives in between (*the new record*) block the
-  cue.
+- **More context for noun/verb pairs.** The font itself sees only the word
+  right before, so *then record it* and *rose to record levels* (an
+  adjective after *to*) aren't decided right, and adjectives in between
+  (*the new record*) block the cue. Markers from a tagger fix this:
+  `markers/annotate.py` decides 99.6% of pair words in the English EWT
+  treebank, 98.7% of them right, where the cues decide 37.5%. The font
+  could also learn longer cues (*the new*, *rose to*) from a treebank.
 - **Design.** Reduced vowels are now blue rather than gray, so the three
   hints differ in hue. Further options: vowel colors by sound behind a
   stylistic set, like ESL color-vowel charts.

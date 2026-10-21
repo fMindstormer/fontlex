@@ -9,7 +9,8 @@ final consonant said before the next word's vowel, is bold and green, with a
 green tie under the space or hyphen: *les‿amis*, *nous‿avons*, *un‿homme*,
 *vont-ils*, *peut-être*. Where a verb reads differently from the noun or
 adjective it is spelled like, the word before it decides: *le président*,
-*ils président* (silent *ent*). French has no word stress to mark. The text
+*ils président* (silent *ent*), or an invisible marker after the word does
+([markers/](../markers/README.md)). French has no word stress to mark. The text
 stays as typed; copy it and you get plain letters. `french/demo.html` is a
 text box in the font.
 
@@ -24,10 +25,11 @@ lexicon's hint for it, and each space's and hyphen's tie:
 
 | Text | Checked | Right, HarfBuzz | Right, Core Text |
 |---|---|---|---|
-| Every listed word alone, capitalized, in capitals, in punctuation, in a sentence and after *l'*; every compound alone, capitalized, in a sentence, with a curly apostrophe and with a letter added (must fall back to its parts); every verb/noun pair after each cue word, after another word and after two spaces; every liaison trigger before vowels, h muet, h aspiré, *onze*, *oui*, *yeux* and consonants, after a hyphen and an apostrophe, and with two spaces; numbers ending a longer one (*vingt-trois ans*); 400 words ending in s, x, t, d or z before each inverted clitic; listed words inside longer words and made-up words (must stay plain) | 198,870 | 198,870 | 198,870 |
-| The demo's sample (`sample.txt`) | 15 lines | 15 | 15 |
+| Every listed word alone, capitalized, in capitals, in punctuation, in a sentence and after *l'*; every compound alone, capitalized, in a sentence, with a curly apostrophe and with a letter added (must fall back to its parts); every verb/noun pair after each cue word, after another word and after two spaces, and before each reading marker (also after a cue for the other reading); a marker after other words; every liaison trigger before vowels, h muet, h aspiré, *onze*, *oui*, *yeux* and consonants, after a hyphen and an apostrophe, and with two spaces; numbers ending a longer one (*vingt-trois ans*); 400 words ending in s, x, t, d or z before each inverted clitic; listed words inside longer words and made-up words (must stay plain) | 202,190 | 202,190 | 202,190 |
+| Width with a marker: each pair as wide as after a cue for the same reading, every 50th other word as wide as without one | 1,262 | 1,262 | 1,262 |
+| The demo's sample (`sample.txt`) | 16 lines | 16 | 16 |
 
-The font has 6,246 glyphs (letters' first-letter variants, as in the English
+The font has 6,248 glyphs (letters' first-letter variants, as in the English
 font, plus "blocking" variants for the first letters of words that block
 liaison) and 26,337 word and compound rules; 240 KB as WOFF2. On the
 sample's lines it shapes in 0.27 ms a line in HarfBuzz and 0.19 ms in Core
@@ -102,8 +104,9 @@ Eight GSUB passes, built by `frfont.py` on Noto Sans and Noto Sans Bold:
    keyed on the second letter.
 3. Cue words mark their last letter as a noun or verb cue; blockers turn
    their first letter into a "blocking" initial, which liaison doesn't link to.
-4. A verb/noun pair right after a cue and one space gets that reading's
-   hints. A reading with no hints turns the first letter plain, so pass 7
+4. A verb/noun pair right before a reading marker (U+FE00 noun or
+   adjective, U+FE01 verb; [markers/](../markers/README.md)), or else right
+   after a cue and one space, gets that reading's hints. A reading with no hints turns the first letter plain, so pass 7
    leaves the word alone.
 5. A trigger, not after a hyphen unless it is a number, then one space and
    a vowel or h that isn't blocking: the trigger's last letter becomes its
@@ -141,7 +144,9 @@ each line on its own, so *les* at a line's end shows a silent *s*.
   h aspiré gets a wrong liaison. So does a letter's name (*un h*).
 - **Cue words are a guess.** *le* and *la* are also object pronouns: *je le
   sens* gets the noun reading of *sens*. *les*, which is as often a pronoun,
-  is no cue.
+  is no cue. A marker overrides the cue, and `markers/annotate.py` adds
+  markers with a tagger where no cue decides (98.6% right on the French GSD
+  treebank, with fr_core_news_lg).
 - **Lexique's pronunciation** is one standard French one, and has errors:
   *diocèses* with a said final s.
 - **Proper nouns**: Lexique has few. *France* is drawn plain, and

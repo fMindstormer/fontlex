@@ -15,8 +15,10 @@ letters, with apostrophes between letters (`don't`). The passes:
    letters.
 3. Cue words (lexicon/cues.tsv: `the`, `a`, `to`, `will`, ...): their last
    letter becomes a noun-cue or verb-cue variant of its final form.
-4. Noun/verb pairs (lexicon/homographs.tsv) after a cue and one space get
-   that reading's hints: "the record" REcord, "to record" reCORD.
+4. Noun/verb pairs (lexicon/homographs.tsv) right before a reading marker
+   (U+FE00 noun, U+FE01 verb: markers/README.md), or else after a cue and
+   one space, get that reading's hints: "the record" REcord, "to record"
+   reCORD, "a new record" + U+FE00 REcord.
 5. One context rule per listed word with hints, case-insensitive (glyph
    classes ignore case), from an initial letter to a final one, so it matches
    whole words only. It applies a hint lookup at each hinted letter. A pair
@@ -49,6 +51,8 @@ PALETTES = {
 HINT_SETS = {"silent": ("ss01", "No silent-letter hints"), "reduced": ("ss02", "No reduced-vowel hints"),
              "stress": ("ss03", "No stress hints"), "nasal": ("ss04", "No nasal-vowel hints"),
              "liaison": ("ss05", "No liaison hints")}
+# Invisible characters after a noun/verb pair that pick its reading (markers/README.md).
+MARKERS = {"noun": "\uFE00", "verb": "\uFE01"}
 SECOND = list(LETTERS) + ["'"]       # what an initial form can record as the next character
 CUE_FORMS = {"noun": ("FN", "IFN"), "verb": ("FV", "IFV")}
 SUBTABLE_BYTES = 40000               # rules per subtable, under its 16-bit offsets
@@ -130,6 +134,10 @@ class EnglishFont:
                     self.letter[cmap[ord(ch)]] = c
         self.apostrophes = [cmap[ord(c)] for c in APOSTROPHES if ord(c) in cmap]
         self.space = cmap[ord(" ")]
+        self.marker = {}                 # noun|verb -> an empty glyph, so no font falls back for it
+        for kind, ch in MARKERS.items():
+            self.marker[kind] = f"uni{ord(ch):04X}"
+            b.add_base_glyph(self.marker[kind], ord(ch), 0)
         self.plain = sorted(self.letter, key=b.gid)
         self.forms = ["F", "IF"] + [f"I{y}" for y in SECOND] + [f for fs in CUE_FORMS.values() for f in fs]
         self.form = {}                   # (glyph, form) -> variant
@@ -254,20 +262,22 @@ class EnglishFont:
 
         def hint_records(hints):
             return [record(i, hint_lookup[h]) for i, h in enumerate(hints) if h in HINTS]
-        # 4. Noun/verb pairs after a cue and a space.
+        # 4. Noun/verb pairs before a marker, or after a cue and a space.
         back = ot.ClassDef()
         back.classDefs = {self.space: 1}
         for kind, forms in CUE_FORMS.items():
             for g in letters:
                 for f in forms:
                     back.classDefs[self.form[(g, f)]] = 2 if kind == "noun" else 3
+        ahead = ot.ClassDef()
+        ahead.classDefs = {self.marker["noun"]: 1, self.marker["verb"]: 2}
         pair_rules = {}
         for word, (noun, verb) in sorted(homographs.items()):
             keys = self.keys(word)
-            for cue_class, hints in ((2, noun), (3, verb)):
+            for behind, after, hints in (([], [1], noun), ([], [2], verb), ([1, 2], [], noun), ([1, 3], [], verb)):
                 r = ot.ChainSubClassRule()
-                r.Backtrack, r.Input, r.LookAhead = [1, cue_class], [classes[k] for k in keys[1:]], []
-                r.BacktrackGlyphCount, r.InputGlyphCount, r.LookAheadGlyphCount = 2, len(keys), 0
+                r.Backtrack, r.Input, r.LookAhead = behind, [classes[k] for k in keys[1:]], after
+                r.BacktrackGlyphCount, r.InputGlyphCount, r.LookAheadGlyphCount = len(behind), len(keys), len(after)
                 r.SubstLookupRecord = hint_records(hints)
                 r.SubstCount = len(r.SubstLookupRecord)
                 pair_rules.setdefault(classes[keys[0]], []).append(r)
@@ -275,8 +285,7 @@ class EnglishFont:
         st.Format = 2
         st.Coverage = coverage([g for g, k in klass.items() if k in pair_rules], gid)
         st.BacktrackClassDef, st.InputClassDef = back, cd
-        st.LookAheadClassDef = ot.ClassDef()
-        st.LookAheadClassDef.classDefs = {}
+        st.LookAheadClassDef = ahead
         st.ChainSubClassSet = [None] * (len(classes) + 1)
         for k, rs in pair_rules.items():
             cs = ot.ChainSubClassSet()

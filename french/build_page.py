@@ -58,7 +58,9 @@ textarea#code { min-height: 22rem; font-family: "Fontlex French", system-ui, san
   Liaison is drawn only where it is obligatory: after {{TRIGGERS}} determiners, pronouns, short prepositions and
   numbers (<i>les</i>, <i>nous</i>, <i>dans</i>, <i>deux</i>), and in inversion; not before an h aspiré
   (<i>les héros</i>) or <i>onze</i>. A word whose verb reading differs (<i>le président</i>, <i>ils
-  président</i>) takes its reading from the word before it.</p>
+  président</i>) takes its reading from the word before it, or from an invisible character right after it,
+  which a tagger can add: U+FE00 for the noun or adjective, U+FE01 for the verb (in the sample, after <i>élèves
+  excellent</i>).</p>
 
   <h2>How exact it is</h2>
   <table>

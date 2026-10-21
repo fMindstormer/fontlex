@@ -8,8 +8,9 @@ punctuation and inside a sentence; a word with an apostrophe also with a
 curly one. Each letter must come out with its hint (stress, reduced, silent)
 or plain. Listed words inside longer words, and words that aren't listed,
 must come out plain. Noun/verb pairs are shaped after every cue word (their
-noun or verb reading) and after other words or two spaces (the hints both
-readings share). Corpus files are checked line by line the same way. Every
+noun or verb reading), after other words or two spaces (the hints both
+readings share), and before each reading marker, which beats a cue; a
+marker after any other word does nothing, and markers add no width. Corpus files are checked line by line the same way. Every
 tenth text is then shaped again with each stylistic set, and with all of
 them, where that set's hints must come out plain.
 """
@@ -25,9 +26,10 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 import test_fontlex  # noqa: E402
 from fontTools.ttLib import TTFont  # noqa: E402
-from enfont import HINT_SETS, HINTS  # noqa: E402
+from enfont import HINT_SETS, HINTS, MARKERS  # noqa: E402
 
 WORD = re.compile(r"[A-Za-z]+(?:['’][A-Za-z]+)*")
+READING = {ch: kind for kind, ch in MARKERS.items()}
 
 
 class Lexicon:
@@ -51,7 +53,10 @@ def expected(text, lex):
     for m in WORD.finditer(text):
         word = m.group().lower().replace("\u2019", "'")
         hints = lex.words.get(word)
-        if word in lex.homographs and prev and prev.end() == m.start() - 1 and text[prev.end()] == " ":
+        marker = READING.get(text[m.end():m.end() + 1])
+        if word in lex.homographs and marker:
+            hints = lex.homographs[word][0 if marker == "noun" else 1]
+        elif word in lex.homographs and prev and prev.end() == m.start() - 1 and text[prev.end()] == " ":
             cue = lex.cues.get(prev.group().lower().replace("\u2019", "'"))
             if cue:
                 hints = lex.homographs[word][0 if cue == "noun" else 1]
@@ -69,9 +74,11 @@ class View:
     def hints(self, text):
         """What the font draws for each character: a hint letter, `.` for
         plain, or `?` for a glyph that should never be drawn."""
-        out = ["?"] * len(text)
+        out = ["." if c in READING else "?" for c in text]       # a marker draws nothing
         for gid, cluster, *_ in self.shaper.shape(text)[0]:
             name = self.order[gid] if gid is not None else ""    # None: drawn by a fallback font
+            if text[cluster] in READING:
+                continue
             if ".h" in name:
                 out[cluster] = name[name.index(".h") + 2]
             elif ".w" in name:
@@ -89,8 +96,17 @@ def cases(lex, rng):
             yield f"{c.capitalize()} {w.upper()}."
         yield f"the  {w}"          # two spaces: no cue
         yield f"then {w}"
-    for w in words:
+        for kind, mark in MARKERS.items():
+            other = next(c for c, k in sorted(lex.cues.items()) if k != kind)
+            yield f"{w}{mark}"
+            yield f"{w.capitalize()}{mark}, then"
+            yield f"{other} {w}{mark}."       # the marker beats the cue
+            yield f"a new {w}{mark} {w}"
+            yield f"{other} {w} {mark}"       # a marker after a space does nothing
+    for i, w in enumerate(words):
         yield w
+        if i % 10 == 0:
+            yield f"{w}{MARKERS['noun' if i % 20 else 'verb']} x"   # a marker after any other word does nothing
         yield w.capitalize()
         yield w.upper()
         yield f"({w}),"
@@ -123,6 +139,7 @@ def main():
             sets.append((f"lines of {path}", [l for l in Path(path).read_text(encoding="utf-8").splitlines() if l.strip()]))
         for label, texts in sets:
             failed += report(label, texts, view, lambda text: expected(text, lex), name, args.show)
+        failed += widths(view, lex, name)
         sample = [text for _, texts in sets for text in texts[::10]]
         for tags, off in hint_sets():
             view = View(data, test_fontlex.SHAPERS[name](data, features=tags))
@@ -136,6 +153,18 @@ def hint_sets():
     """Each stylistic set with the hints it turns off, then all of them at once."""
     sets = sorted((HINT_SETS[entry][0], h + ("T" if h == "L" else "")) for h, entry in HINTS.items())
     return [((tag,), off) for tag, off in sets] + [(tuple(t for t, _ in sets), "".join(o for _, o in sets))]
+
+
+def widths(view, lex, name):
+    """A marker adds no width: a pair with a marker is as wide as after a cue
+    that picks the same reading, and any other word as wide as without one."""
+    cue = {kind: next(c for c, k in sorted(lex.cues.items()) if k == kind) for kind in MARKERS}
+    texts = [(f"{cue[kind]} {w}{mark}", f"{cue[kind]} {w}") for w in lex.homographs for kind, mark in MARKERS.items()]
+    texts += [(w + mark, w) for w in list(lex.words)[::50] if w not in lex.homographs for mark in MARKERS.values()]
+    bad = [a for a, b in texts if view.shaper.shape(a)[1] != view.shaper.shape(b)[1]]
+    print(f"width with a marker: {len(texts) - len(bad)}/{len(texts)} the same ({name})"
+          + (f"; e.g. {bad[:5]}" if bad else ""))
+    return len(bad)
 
 
 def report(label, texts, view, want_of, name, show):
