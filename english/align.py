@@ -102,17 +102,20 @@ def segmentations(word):
 
 
 def align(word, phones, cost):
-    """The cheapest alignment: a list of (grapheme, phoneme tuple), or None."""
+    """The cheapest alignment: a list of (grapheme, phoneme tuple), or None.
+    Of equally cheap ones, the one that gives each phoneme the earliest
+    letter that can say it (*been*: b-e, then a silent e; *pizza*: the first
+    z says "ts")."""
     letters = word.replace("'", "")
     bare = [re.sub(r"\d", "", p) for p in phones]
     nexts = segmentations(letters)
     n, m = len(letters), len(phones)
-    best = {(0, 0): (0.0, None)}
+    best = {(0, 0): (0.0, 0, None)}
     for i in range(n + 1):
         for j in range(m + 1):
             if (i, j) not in best or i == n:
                 continue
-            c0 = best[(i, j)][0]
+            c0, t0, _ = best[(i, j)]
             for g in nexts[i]:
                 for k in (0, 1, 2):
                     if j + k > m:
@@ -121,14 +124,15 @@ def align(word, phones, cost):
                     c = cost(g, ph)
                     if c is None:
                         continue
-                    key = (i + len(g), j + k)
-                    if key not in best or c0 + c < best[key][0]:
-                        best[key] = (c0 + c, (i, j, g, k))
+                    key, cand = (i + len(g), j + k), (c0 + c, t0 + k * i)
+                    if key not in best or cand[0] < best[key][0] - 1e-9 or (
+                            cand[0] < best[key][0] + 1e-9 and cand[1] < best[key][1]):
+                        best[key] = (*cand, (i, j, g, k))
     if (n, m) not in best:
         return None
     out, key = [], (n, m)
     while key != (0, 0):
-        i, j, g, k = best[key][1]
+        i, j, g, k = best[key][2]
         out.append((g, tuple(phones[j:j + k])))
         key = (i, j)
     return out[::-1]

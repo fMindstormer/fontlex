@@ -59,7 +59,7 @@ her	...	HH ER1
 which	.....	W IH1 CH
 time	...x	T AY1 M
 get	...	G EH1 T
-been	.x..	B IH1 N
+been	..x.	B IH1 N
 would	...x.	W UH1 D
 she	...	SH IY1
 new	...	N UW1
@@ -471,7 +471,7 @@ check	.....	CH EH1 K
 development	.r.S.r..r..	D IH0 V EH1 L AH0 P M AH0 N T
 form	....	F AO1 R M
 further	.SS..rr	F ER1 DH ER0
-heart	.x...	HH AA1 R T
+heart	.....	HH AA1 R T
 minutes	.S.r.x.	M IH1 N AH0 T S
 myself	...S..	M AY2 S EH1 L F
 services	.SS.r.r.	S ER1 V AH0 S AH0 Z
@@ -517,7 +517,7 @@ street	......	S T R IY1 T
 wasn't	.S....	W AA1 Z AH0 N T
 bring	.....	B R IH1 NG
 college	.S..r.x	K AA1 L IH0 JH
-current	.......	K ER1 AH0 N T
+current	...x...	K ER1 AH0 N T
 example	r.S...x	IH0 G Z AE1 M P AH0 L
 experience	r..S..r..x	IH0 K S P IH1 R IY0 AH0 N S
 heard	.....	HH ER1 D
@@ -833,7 +833,7 @@ considered	.r..S.rrx.	K AH0 N S IH1 D ER0 D
 continue	.r..S...	K AH0 N T IH1 N Y UW0
 council	.SS..r.	K AW1 N S AH0 L
 cover	.S.rr	K AH1 V ER0
-currently	.x..r....	K ER1 AH0 N T L IY0
+currently	.SSxr....	K ER1 AH0 N T L IY0
 door	.x..	D AO1 R
 election	r.S...r.	IH0 L EH1 K SH AH0 N
 european	x..r.Sr.	Y UH2 R AH0 P IY1 AH0 N
@@ -1052,7 +1052,7 @@ nearly	.SSS..	N IH1 R L IY0
 particular	....S...rr	P ER0 T IH1 K Y AH0 L ER0
 previous	..S..rr.	P R IY1 V IY0 AH0 S
 quickly	..S....	K W IH1 K L IY0
-region	.S.rx.	R IY1 JH AH0 N
+region	.S.xr.	R IY1 JH AH0 N
 reported	...SS.r.	R IY2 P AO1 R T IH0 D
 section	.S...r.	S EH1 K SH AH0 N
 sort	....	S AO1 R T
@@ -1502,7 +1502,7 @@ thomas	.xS.r.	T AA1 M AH0 S
 traditional	..r.S..r.r.	T R AH0 D IH1 SH AH0 N AH0 L
 twice	....x	T W AY1 S
 wind	....	W AY1 N D
-worry	.x...	W ER1 IY0
+worry	.SSx.	W ER1 IY0
 americans	r.S.r.r..	AH0 M EH1 R AH0 K AH0 N Z
 appeared	r..SSSx.	AH0 P IH1 R D
 becomes	.r.S.x.	B IH0 K AH1 M Z
@@ -1551,7 +1551,7 @@ click	.....	K L IH1 K
 estate	r..S.x	IH0 S T EY1 T
 failed	....x.	F EY1 L D
 faith	.....	F EY1 TH
-fashion	.S..rx.	F AE1 SH AH0 N
+fashion	.S..xr.	F AE1 SH AH0 N
 feature	.SS.rrx	F IY1 CH ER0
 fund	....	F AH1 N D
 generation	...rrS..r.	JH EH2 N ER0 EY1 SH AH0 N
@@ -1611,7 +1611,7 @@ apparently	r..SSr....	AH0 P EH1 R AH0 N T L IY0
 artist	SS.r..	AA1 R T AH0 S T
 chairman	..SS..r.	CH EH1 R M AH0 N
 edition	r.S..r.	AH0 D IH1 SH AH0 N
-engineering	S..r.xS.r..	EH1 N JH AH0 N IH1 R IH0 NG
+engineering	S..r.Sx.r..	EH1 N JH AH0 N IH1 R IH0 NG
 grade	....x	G R EY1 D
 happening	.S....r..	HH AE1 P AH0 N IH0 NG
 healthy	.SS....	HH EH1 L TH IY0
@@ -1634,14 +1634,14 @@ users	S.rr.	Y UW1 Z ER0 Z
 wild	....	W AY1 L D
 window	.S....	W IH1 N D OW0
 winner	.S..rr	W IH1 N ER0
-arrived	x..S.x.	ER0 AY1 V D
+arrived	rrxS.x.	ER0 AY1 V D
 bag	...	B AE1 G
 bet	...	B EH1 T
 camp	....	K AE1 M P
 cast	....	K AE1 S T
 christ	......	K R AY1 S T
 continues	.r..S....	K AH0 N T IH1 N Y UW0 Z
-correct	.x..S..	K ER0 EH1 K T
+correct	.rrxS..	K ER0 EH1 K T
 dangerous	.S..rrrr.	D EY1 N JH ER0 AH0 S
 ed	..	EH1 D
 extremely	....S.x..	EH0 K S T R IY1 M L IY0
@@ -1826,7 +1826,7 @@ ordered	SS.rrx.	AO1 R D ER0 D
 parliament	.SS.xr.r..	P AA1 R L AH0 M AH0 N T
 prepared	....SSx.	P R IY0 P EH1 R D
 reference	.S...r..x	R EH1 F ER0 AH0 N S
-religion	...S.rx.	R IH0 L IH1 JH AH0 N
+religion	...S.xr.	R IH0 L IH1 JH AH0 N
 sites	...x.	S AY1 T S
 somewhere	.S.x....x	S AH1 M W EH2 R
 stated	..S.r.	S T EY1 T IH0 D
@@ -1913,7 +1913,7 @@ prince	.....x	P R IH1 N S
 proper	..S.rr	P R AA1 P ER0
 providing	..r.S.r..	P R AH0 V AY1 D IH0 NG
 quarter	..SS.rr	K W AO1 R T ER0
-regional	.S.rx.r.	R IY1 JH AH0 N AH0 L
+regional	.S.xr.r.	R IY1 JH AH0 N AH0 L
 scott	.....	S K AA1 T
 session	.Sx..r.	S EH1 SH AH0 N
 shape	....x	SH EY1 P
@@ -1977,7 +1977,7 @@ vice	...x	V AY1 S
 warm	....	W AO1 R M
 afraid	r..SS.	AH0 F R EY1 D
 arts	....	AA1 R T S
-beer	.x..	B IH1 R
+beer	..x.	B IH1 R
 border	.SS.rr	B AO1 R D ER0
 canadian	.r.S..r.	K AH0 N EY1 D IY0 AH0 N
 command	.r..S..	K AH0 M AE1 N D
@@ -2160,7 +2160,7 @@ ireland	S.x.r..	AY1 ER0 L AH0 N D
 italian	..S..r.	IH2 T AE1 L Y AH0 N
 italy	S.r..	IH1 T AH0 L IY0
 jersey	.SS...	JH ER1 Z IY0
-laugh	..x..	L AE1 F
+laugh	.....	L AE1 F
 leg	...	L EH1 G
 letters	.S..rr.	L EH1 T ER0 Z
 liberal	.S...r.	L IH1 B ER2 AH0 L
@@ -2227,7 +2227,7 @@ applications	....r.S..r..	AE2 P L AH0 K EY1 SH AH0 N Z
 approved	r...S.x.	AH0 P R UW1 V D
 approximately	r...S.r.r.x..	AH0 P R AA1 K S AH0 M AH0 T L IY0
 argument	SS...r..	AA1 R G Y AH0 M AH0 N T
-arrested	x..S..r.	ER0 EH1 S T IH0 D
+arrested	rrxS..r.	ER0 EH1 S T IH0 D
 claimed	.....x.	K L EY1 M D
 conflict	........	K AA1 N F L IH0 K T
 considering	.r..S.rrr..	K AH0 N S IH1 D ER0 IH0 NG
@@ -2319,7 +2319,7 @@ trading	..S.r..	T R EY1 D IH0 NG
 tuesday	.SS....	T UW1 Z D IY0
 vision	.S..r.	V IH1 ZH AH0 N
 whenever	....S.rr	W EH0 N EH1 V ER0
-worried	.x.....	W ER1 IY0 D
+worried	.SSx...	W ER1 IY0 D
 zero	.S..	Z IH1 R OW0
 alex	S.r.	AE1 L AH0 K S
 allowing	r..SSr..	AH0 L AW1 IH0 NG
@@ -2395,7 +2395,7 @@ id	..	IH1 D
 improved	....S.x.	IH2 M P R UW1 V D
 jewish	.SSr..	JH UW1 IH0 SH
 largely	.SS.x..	L AA1 R JH L IY0
-laughing	.Sx..r..	L AE1 F IH0 NG
+laughing	.SS..r..	L AE1 F IH0 NG
 markets	.SS.r..	M AA1 R K AH0 T S
 medium	.S..r.	M IY1 D IY0 AH0 M
 ohio	..S.	OW0 HH AY1 OW0
@@ -2576,7 +2576,7 @@ lane	...x	L EY1 N
 mess	....	M EH1 S
 navy	.S..	N EY1 V IY0
 normally	.SS.....	N AO1 R M AH0 L IY0
-occurred	r..x..x.	AH0 K ER1 D
+occurred	r..SSxx.	AH0 K ER1 D
 opposition	...r.S..r.	AA2 P AH0 Z IH1 SH AH0 N
 parent	.SSr..	P EH1 R AH0 N T
 permanent	.SS.r.r..	P ER1 M AH0 N AH0 N T
@@ -2652,7 +2652,7 @@ victim	.S..r.	V IH1 K T AH0 M
 victims	.S..r..	V IH1 K T AH0 M Z
 agents	S.r...	EY1 JH AH0 N T S
 amazon	S.r...	AE1 M AH0 Z AA2 N
-arrest	x..S..	ER0 EH1 S T
+arrest	rrxS..	ER0 EH1 S T
 attend	r..S..	AH0 T EH1 N D
 ban	...	B AE1 N
 brilliant	..S...r..	B R IH1 L Y AH0 N T
@@ -2789,7 +2789,7 @@ protein	..S....	P R OW1 T IY2 N
 puts	....	P UH1 T S
 raw	...	R AA1
 reform	.r.SS.	R AH0 F AO1 R M
-regions	.S.rx..	R IY1 JH AH0 N Z
+regions	.S.xr..	R IY1 JH AH0 N Z
 represented	....r.S..r.	R EH2 P R IH0 Z EH1 N T IH0 D
 respond	....S..	R IH0 S P AA1 N D
 retirement	...S.x.r..	R IY0 T AY1 ER0 M AH0 N T
@@ -2922,7 +2922,7 @@ document	.S......	D AA1 K Y AH0 M EH0 N T
 eggs	....	EH1 G Z
 employee	....SS..	EH0 M P L OY1 IY0
 en	..	EH1 N
-engineer	S..r.xS.	EH1 N JH AH0 N IH1 R
+engineer	S..r.Sx.	EH1 N JH AH0 N IH1 R
 equivalent	r..S.r.r..	IH0 K W IH1 V AH0 L AH0 N T
 facing	.S.r..	F EY1 S IH0 NG
 fairly	.SS...	F EH1 R L IY0
@@ -3019,7 +3019,7 @@ sought	...xx.	S AO1 T
 speaker	..SS.rr	S P IY1 K ER0
 studied	..S....	S T AH1 D IY0 D
 suggests	.r..S...	S AH0 JH EH1 S T S
-surrounding	.x..SS..r..	S ER0 AW1 N D IH0 NG
+surrounding	.rrxSS..r..	S ER0 AW1 N D IH0 NG
 tone	...x	T OW1 N
 topic	.S.r.	T AA1 P IH0 K
 toronto	...S...	T ER0 AA1 N T OW0
@@ -3271,7 +3271,7 @@ unusual	r.S..r.	AH0 N Y UW1 ZH UW2 AH0 L
 waters	.S.rr.	W AO1 T ER0 Z
 woods	.....	W UH1 D Z
 yo	..	Y OW1
-arrival	x..S.r.	ER0 AY1 V AH0 L
+arrival	rrxS.r.	ER0 AY1 V AH0 L
 asks	....	AE1 S K S
 assault	r..SS..	AH0 S AO1 L T
 awareness	r.SSx.r..	AH0 W EH1 R N AH0 S
@@ -3291,7 +3291,7 @@ fiction	.S...r.	F IH1 K SH AH0 N
 guarantee	.x..r..SS	G EH2 R AH0 N T IY1
 happiness	.S....r..	HH AE1 P IY0 N AH0 S
 harris	.SSxr.	HH EH1 R IH0 S
-hearts	.x....	HH AA1 R T S
+hearts	......	HH AA1 R T S
 horrible	.S..r..x	HH AO1 R AH0 B AH0 L
 ideal	..SS.	AY0 D IY1 L
 illinois	...r.SS.	IH2 L AH0 N OY1
@@ -3366,7 +3366,7 @@ opens	S.r..	OW1 P AH0 N Z
 output	SS....	AW1 T P UH2 T
 persons	.SS.r..	P ER1 S AH0 N Z
 pitch	.....	P IH1 CH
-pizza	.Sx.r	P IY1 T S AH0
+pizza	.S.xr	P IY1 T S AH0
 plain	.....	P L EY1 N
 pushed	....x.	P UH1 SH T
 raising	.SS.r..	R EY1 Z IH0 NG
@@ -3466,7 +3466,7 @@ aspect	S.....	AE1 S P EH2 K T
 banned	....x.	B AE1 N D
 boost	.....	B UW1 S T
 bureau	.S.x..	B Y UH1 R OW0
-colonel	.xxS.r.	K ER1 N AH0 L
+colonel	.Sxx.r.	K ER1 N AH0 L
 comfort	.S..rr.	K AH1 M F ER0 T
 controls	.r...S..	K AH0 N T R OW1 L Z
 cousin	.SS.r.	K AH1 Z AH0 N
@@ -3478,7 +3478,7 @@ dragon	..S.r.	D R AE1 G AH0 N
 dramatic	..r.S.r.	D R AH0 M AE1 T IH0 K
 dust	....	D AH1 S T
 dutch	.....	D AH1 CH
-engineers	S..r.xS..	EH1 N JH AH0 N IH1 R Z
+engineers	S..r.Sx..	EH1 N JH AH0 N IH1 R Z
 evolution	....S..r.	EH2 V AH0 L UW1 SH AH0 N
 foods	.....	F UW1 D Z
 hired	.S.x.	HH AY1 ER0 D
@@ -3655,7 +3655,7 @@ allen	S..r.	AE1 L AH0 N
 amendment	r.S...r..	AH0 M EH1 N D M AH0 N T
 angle	S...x	AE1 NG G AH0 L
 arizona	..r.S.r	EH2 R IH0 Z OW1 N AH0
-arrive	x..S.x	ER0 AY1 V
+arrive	rrxS.x	ER0 AY1 V
 belong	.r.S..	B IH0 L AO1 NG
 berlin	.rr.S.	B ER0 L IH1 N
 bishop	.S..r.	B IH1 SH AH0 P
@@ -3719,7 +3719,7 @@ collect	.r..S..	K AH0 L EH1 K T
 commerce	.S..rr.x	K AA1 M ER0 S
 cop	...	K AA1 P
 creek	.....	K R IY1 K
-currency	.x..r...	K ER1 AH0 N S IY0
+currency	.SSxr...	K ER1 AH0 N S IY0
 emotions	.....r..	IH0 M OW1 SH AH0 N Z
 exhibition	..xr.S..r.	EH2 K S AH0 B IH1 SH AH0 N
 fraud	.....	F R AO1 D
@@ -3822,7 +3822,7 @@ script	......	S K R IH1 P T
 searching	.SSS..r..	S ER1 CH IH0 NG
 sections	.S...r..	S EH1 K SH AH0 N Z
 strip	.....	S T R IH1 P
-surrounded	.x..SS..r.	S ER0 AW1 N D IH0 D
+surrounded	.rrxSS..r.	S ER0 AW1 N D IH0 D
 threatened	...SS.r.x.	TH R EH1 T AH0 N D
 transferred	......x..x.	T R AE0 N S F ER1 D
 tube	...x	T UW1 B
@@ -3843,7 +3843,7 @@ chelsea	..S....	CH EH1 L S IY0
 chemistry	..S.r....	K EH1 M AH0 S T R IY0
 concluded	.r...S.r.	K AH0 N K L UW1 D AH0 D
 consumption	.r..S....r.	K AH0 N S AH1 M P SH AH0 N
-corruption	.x..S...r.	K ER0 AH1 P SH AH0 N
+corruption	.rrxS...r.	K ER0 AH1 P SH AH0 N
 cotton	.S..r.	K AA1 T AH0 N
 crossed	.....x.	K R AO1 S T
 detroit	.......	D IH0 T R OY1 T
@@ -4115,7 +4115,7 @@ wounded	.SS..r.	W UW1 N D IH0 D
 ali	S..	AA1 L IY0
 amongst	r.S....	AH0 M AH1 NG S T
 announcement	r..SS..x....	AH0 N AW1 N S M AH0 N T
-arranged	x..S..x.	ER0 EY1 N JH D
+arranged	rrxS..x.	ER0 EY1 N JH D
 arsenal	SS.r.r.	AA1 R S AH0 N AH0 L
 attending	r..S..r..	AH0 T EH1 N D IH0 NG
 attracted	r...S..r.	AH0 T R AE1 K T IH0 D
@@ -4325,7 +4325,7 @@ tale	...x	T EY1 L
 targets	.SS.r..	T AA1 R G AH0 T S
 timing	.S.r..	T AY1 M IH0 NG
 ton	...	T AH1 N
-volunteers	...r..xS..	V AA2 L AH0 N T IH1 R Z
+volunteers	...r..Sx..	V AA2 L AH0 N T IH1 R Z
 witnesses	.S..r..r.	W IH1 T N AH0 S AH0 Z
 wore	...x	W AO1 R
 worship	.SS..r.	W ER1 SH AH0 P
@@ -4403,7 +4403,7 @@ thompson	.xS...r.	T AA1 M P S AH0 N
 threats	.......	TH R EH1 T S
 tourism	.SSS...	T UH1 R IH2 Z AH0 M
 turkish	.SS.r..	T ER1 K IH0 SH
-volunteer	...r..xS.	V AA2 L AH0 N T IH1 R
+volunteer	...r..Sx.	V AA2 L AH0 N T IH1 R
 acceptable	...S..r..x	AE0 K S EH1 P T AH0 B AH0 L
 allies	......	AE1 L AY0 Z
 attempting	r..S...r..	AH0 T EH1 M P T IH0 NG
@@ -4442,7 +4442,7 @@ mars	....	M AA1 R Z
 maryland	.SSr.r..	M EH1 R AH0 L AH0 N D
 mechanism	.S..r....	M EH1 K AH0 N IH2 Z AH0 M
 moderate	.S.rr..x	M AA1 D ER0 AH0 T
-murray	......	M ER1 IY0
+murray	.S....	M ER1 IY0
 oklahoma	...r.S.r	OW2 K L AH0 HH OW1 M AH0
 opera	S.x.r	AA1 P R AH0
 overcome	S.rr...x	OW1 V ER0 K AH2 M
@@ -4550,7 +4550,7 @@ aimed	...x.	EY1 M D
 alpha	S...r	AE1 L F AH0
 approaches	r...SS..r.	AH0 P R OW1 CH AH0 Z
 arguing	SS..r..	AA1 R G Y UW0 IH0 NG
-arrangement	x..S..x.r..	ER0 EY1 N JH M AH0 N T
+arrangement	rrxS..x.r..	ER0 EY1 N JH M AH0 N T
 beliefs	.r.SS..	B IH0 L IY1 F S
 boats	.....	B OW1 T S
 boundaries	.SS.......	B AW1 N D ER0 IY0 Z
@@ -4663,7 +4663,7 @@ isolated	S.r...r.	AY1 S AH0 L EY2 T AH0 D
 jealous	.SS.rr.	JH EH1 L AH0 S
 knocked	x....x.	N AA1 K T
 landed	.S..r.	L AE1 N D AH0 D
-laughed	..x..x.	L AE1 F T
+laughed	.....x.	L AE1 F T
 laura	.SS.r	L AO1 R AH0
 lazy	.S..	L EY1 Z IY0
 mama	.S.r	M AA1 M AH0
@@ -4712,7 +4712,7 @@ actively	S..r.x..	AE1 K T IH0 V L IY0
 afghanistan	....S.r....	AE0 F G AE1 N AH0 S T AE2 N
 ai	..	AY1
 applies	r...SS.	AH0 P L AY1 Z
-arrangements	x..S..x.r...	ER0 EY1 N JH M AH0 N T S
+arrangements	rrxS..x.r...	ER0 EY1 N JH M AH0 N T S
 asset	S....	AE1 S EH2 T
 assuming	r..S.r..	AH0 S UW1 M IH0 NG
 backing	.S..r..	B AE1 K IH0 NG
@@ -4907,7 +4907,7 @@ closest	..S.r..	K L OW1 S AH0 S T
 collections	.r..S...r..	K AH0 L EH1 K SH AH0 N Z
 continuous	.r..S..rr.	K AH0 N T IH1 N Y UW0 AH0 S
 converted	.r..SS.r.	K AH0 N V ER1 T IH0 D
-correctly	.x..S....	K ER0 EH1 K T L IY0
+correctly	.rrxS....	K ER0 EH1 K T L IY0
 creator	...S.rr	K R IY0 EY1 T ER0
 creatures	..SS.rrx.	K R IY1 CH ER0 Z
 criteria	....S..r	K R AY0 T IH1 R IY0 AH0
@@ -5349,7 +5349,7 @@ annually	S...r...	AE1 N Y UW0 AH0 L IY0
 apologize	r.S.r...x	AH0 P AA1 L AH0 JH AY2 Z
 appreciated	r...S....r.	AH0 P R IY1 SH IY0 EY2 T IH0 D
 approached	r...SS..x.	AH0 P R OW1 CH T
-arriving	x..S.r..	ER0 AY1 V IH0 NG
+arriving	rrxS.r..	ER0 AY1 V IH0 NG
 ash	...	AE1 SH
 aunt	....	AE1 N T
 benjamin	.S..r.r.	B EH1 N JH AH0 M AH0 N
@@ -5436,7 +5436,7 @@ vancouver	....SS.rr	V AE0 N K UW1 V ER0
 vocal	.S.r.	V OW1 K AH0 L
 warrior	.S...rr	W AO1 R IY0 ER0
 woman's	.S.r...	W UH1 M AH0 N Z
-worries	.x.....	W ER1 IY0 Z
+worries	.SSx...	W ER1 IY0 Z
 yield	.....	Y IY1 L D
 accomplished	r..S...r..x.	AH0 K AA1 M P L IH0 SH T
 admission	...Sx..r.	AE0 D M IH1 SH AH0 N
@@ -5535,7 +5535,7 @@ commons	.S..r..	K AA1 M AH0 N Z
 conservatives	.r..SS.r.r.x.	K AH0 N S ER1 V AH0 T IH0 V Z
 contacts	.S......	K AA1 N T AE2 K T S
 conviction	.r..S...r.	K AH0 N V IH1 K SH AH0 N
-corrupt	.x..S..	K ER0 AH1 P T
+corrupt	.rrxS..	K ER0 AH1 P T
 cow	...	K AW1
 curve	....x	K ER1 V
 depressed	.r..S..x.	D IH0 P R EH1 S T
@@ -5556,7 +5556,7 @@ grandmother	..S......rr	G R AE1 N D M AH2 DH ER0
 harsh	.....	HH AA1 R SH
 heights	...xx..	HH AY1 T S
 horn	....	HH AO1 R N
-hurry	.x...	HH ER1 IY0
+hurry	.SSx.	HH ER1 IY0
 immune	...S.x	IH2 M Y UW1 N
 inflation	....S..r.	IH2 N F L EY1 SH AH0 N
 ingredients	....S..r...	IH2 N G R IY1 D IY0 AH0 N T S
@@ -5634,7 +5634,7 @@ breach	......	B R IY1 CH
 cabin	.S.r.	K AE1 B AH0 N
 cage	...x	K EY1 JH
 chancellor	..S.....rr	CH AE1 N S AH0 L ER0
-cheers	..x...	CH IH1 R Z
+cheers	...x..	CH IH1 R Z
 circles	.SS..x.	S ER1 K AH0 L Z
 closet	..S.r.	K L AA1 Z AH0 T
 combine	......x	K AA1 M B AY0 N
@@ -5733,9 +5733,9 @@ colony	.S.r..	K AA1 L AH0 N IY0
 complaining	.r...SS.r..	K AH0 M P L EY1 N IH0 NG
 cookies	.SS....	K UH1 K IY0 Z
 cruel	.....	K R UW1 AH0 L
-curriculum	.x..S...r.	K ER0 IH1 K Y AH0 L AH0 M
+curriculum	.rrxS...r.	K ER0 IH1 K Y AH0 L AH0 M
 deadline	.SS....x	D EH1 D L AY2 N
-deer	.x..	D IH1 R
+deer	..x.	D IH1 R
 delta	.S..r	D EH1 L T AH0
 demanded	.r.S..r.	D IH0 M AE1 N D AH0 D
 dive	...x	D AY1 V
@@ -5788,12 +5788,12 @@ tribe	....x	T R AY1 B
 unfortunate	r..SS...r.x	AH0 N F AO1 R CH AH0 N AH0 T
 variable	.SS.r..x	V EH1 R IY0 AH0 B AH0 L
 victorian	.r..SS.r.	V IH0 K T AO1 R IY0 AH0 N
-worrying	.x...r..	W ER1 IY0 IH0 NG
+worrying	.SSx.r..	W ER1 IY0 IH0 NG
 zones	...x.	Z OW1 N Z
 ace	..x	EY1 S
 adjusted	rx.S..r.	AH0 JH AH1 S T IH0 D
 alternate	S..rr...x	AO1 L T ER0 N AH0 T
-arrives	x..S.x.	ER0 AY1 V Z
+arrives	rrxS.x.	ER0 AY1 V Z
 artwork	SS.....	AA1 R T W ER2 K
 ashley	S.....	AE1 SH L IY0
 athlete	S.....x	AE1 TH L IY2 T
@@ -5881,7 +5881,7 @@ witch	.....	W IH1 CH
 advantages	...S..r.r.	AE0 D V AE1 N T IH0 JH IH0 Z
 ally	....	AE1 L AY0
 archives	SS....x.	AA1 R K AY2 V Z
-array	x..SS	ER0 EY1
+array	rrxSS	ER0 EY1
 assisted	r..S..r.	AH0 S IH1 S T IH0 D
 backs	.....	B AE1 K S
 belly	.S...	B EH1 L IY0
@@ -5916,13 +5916,13 @@ hardest	.SS.r..	HH AA1 R D AH0 S T
 holland	.S..r..	HH AA1 L AH0 N D
 honored	xS.rrx.	AA1 N ER0 D
 hunger	.S..rr	HH AH1 NG G ER0
-hurricane	.x..r...x	HH ER1 AH0 K EY2 N
+hurricane	.SSxr...x	HH ER1 AH0 K EY2 N
 implications	....r.S..r..	IH2 M P L AH0 K EY1 SH AH0 N Z
 import	......	IH2 M P AO1 R T
 innovative	S......r.x	IH1 N AH0 V EY2 T IH0 V
 ipad	S...	AY1 P AE2 D
 jurisdiction	...r..S...r.	JH UH2 R AH0 S D IH1 K SH AH0 N
-laughter	.Sx...rr	L AE1 F T ER0
+laughter	.SS...rr	L AE1 F T ER0
 lemon	.S.r.	L EH1 M AH0 N
 les	...	L EH1 S
 lifted	.S..r.	L IH1 F T AH0 D
@@ -6042,7 +6042,7 @@ slot	....	S L AA1 T
 smash	.....	S M AE1 SH
 statue	..S...	S T AE1 CH UW2
 surprisingly	.r...S.r....	S ER0 P R AY1 Z IH0 NG L IY0
-surrender	.x..S..rr	S ER0 EH1 N D ER0
+surrender	.rrxS..rr	S ER0 EH1 N D ER0
 suspicious	.r..S..rr.	S AH0 S P IH1 SH AH0 S
 team's	......	T IY1 M Z
 teenager	.SS...rr	T IY1 N EY2 JH ER0
@@ -6051,7 +6051,7 @@ thoroughly	..SS..xx..	TH ER1 OW0 L IY0
 todd	....	T AA1 D
 treatments	..SS..r...	T R IY1 T M AH0 N T S
 tweeted	..SS.r.	T W IY1 T IH0 D
-vacuum	.S.x..	V AE1 K Y UW0 M
+vacuum	.S..x.	V AE1 K Y UW0 M
 variations	....S..r..	V EH2 R IY0 EY1 SH AH0 N Z
 vi	..	V AY1
 where's	....x..	W EH1 R Z
@@ -6112,7 +6112,7 @@ inevitable	..S.r.r..x	IH2 N EH1 V AH0 T AH0 B AH0 L
 investigating	...S..r...r..	IH2 N V EH1 S T AH0 G EY2 T IH0 NG
 labels	.S.r..	L EY1 B AH0 L Z
 lacking	.S..r..	L AE1 K IH0 NG
-laughs	..x...	L AE1 F S
+laughs	......	L AE1 F S
 layout	.SS...	L EY1 AW2 T
 lined	...x.	L AY1 N D
 lodge	....x	L AA1 JH
@@ -6293,7 +6293,7 @@ blessing	..S..r..	B L EH1 S IH0 NG
 cemetery	.S.r....	S EH1 M AH0 T EH2 R IY0
 chambers	..S..rr.	CH EY1 M B ER0 Z
 cheat	.....	CH IY1 T
-cheer	..x..	CH IH1 R
+cheer	...x.	CH IH1 R
 chile	..S..	CH IH1 L IY0
 cigarette	...rrS..x	S IH2 G ER0 EH1 T
 compact	.......	K AA1 M P AE0 K T
@@ -6742,7 +6742,7 @@ flowing	..SSr..	F L OW1 IH0 NG
 fridge	.....x	F R IH1 JH
 functioning	.S....r.r..	F AH1 NG K SH AH0 N IH0 NG
 fusion	.S..r.	F Y UW1 ZH AH0 N
-gauge	..x.x	G EY1 JH
+gauge	....x	G EY1 JH
 goat	....	G OW1 T
 graduates	..S....x.	G R AE1 JH AH0 W AH0 T S
 gut	...	G AH1 T
@@ -6917,7 +6917,7 @@ acute	r.S.x	AH0 K Y UW1 T
 admiral	S..rrr.	AE1 D M ER0 AH0 L
 amanda	r.S..r	AH0 M AE1 N D AH0
 arnold	SS.r..	AA1 R N AH0 L D
-arrange	x..S..x	ER0 EY1 N JH
+arrange	rrxS..x	ER0 EY1 N JH
 banana	.r.S.r	B AH0 N AE1 N AH0
 behave	.r.S.x	B IH0 HH EY1 V
 betting	.S..r..	B EH1 T IH0 NG
@@ -7291,7 +7291,7 @@ manga	.S..r	M AE1 NG G AH0
 memorable	.S.rrr..x	M EH1 M ER0 AH0 B AH0 L
 merger	.SS.rr	M ER1 JH ER0
 minorities	...SSr....	M AY0 N AO1 R AH0 T IY0 Z
-occurring	r..x..r..	AH0 K ER1 IH0 NG
+occurring	r..SSxr..	AH0 K ER1 IH0 NG
 organizing	SS.r...r..	AO1 R G AH0 N AY2 Z IH0 NG
 performs	.rr.SS..	P ER0 F AO1 R M Z
 po	..	P OW1
@@ -7360,7 +7360,7 @@ concentrated	.S..r.....r.	K AA1 N S AH0 N T R EY2 T IH0 D
 conscience	.S.x..r..x	K AA1 N SH AH0 N S
 cooler	.SS.rr	K UW1 L ER0
 countless	.SS...r..	K AW1 N T L AH0 S
-curry	.....	K AH1 R IY0
+curry	.S...	K AH1 R IY0
 dame	...x	D EY1 M
 deceased	.r.SS.x.	D IH0 S IY1 S T
 dedication	...r.S..r.	D EH2 D AH0 K EY1 SH AH0 N
@@ -7430,7 +7430,7 @@ superb	.r.SS.	S UH0 P ER1 B
 supposedly	.r..S.r...	S AH0 P OW1 Z AH0 D L IY0
 tab	...	T AE1 B
 tendency	.S..r...	T EH1 N D AH0 N S IY0
-that'll	..S..x.	DH AE1 T AH0 L
+that'll	..S...x	DH AE1 T AH0 L
 theirs	......	DH EH1 R Z
 toast	.....	T OW1 S T
 toes	..x.	T OW1 Z
@@ -7472,8 +7472,8 @@ collision	.r..S..r.	K AH0 L IH1 ZH AH0 N
 colombia	.r.S...r	K AH0 L AH1 M B IY0 AH0
 compassion	.r..Sx..r.	K AH0 M P AE1 SH AH0 N
 consumed	.r..S.x.	K AH0 N S UW1 M D
-corrected	.x..S..r.	K ER0 EH1 K T AH0 D
-correction	.x..S...r.	K ER0 EH1 K SH AH0 N
+corrected	.rrxS..r.	K ER0 EH1 K T AH0 D
+correction	.rrxS...r.	K ER0 EH1 K SH AH0 N
 cough	.....	K AA1 F
 cousins	.SS.r..	K AH1 Z AH0 N Z
 critic	..S.r.	K R IH1 T IH0 K
@@ -7597,7 +7597,7 @@ dreaming	..SS.r..	D R IY1 M IH0 NG
 dull	....	D AH1 L
 enables	..S..x.	EH0 N EY1 B AH0 L Z
 fare	...x	F EH1 R
-fashioned	.S..rx.x.	F AE1 SH AH0 N D
+fashioned	.S..xr.x.	F AE1 SH AH0 N D
 feared	....x.	F IH1 R D
 float	.....	F L OW1 T
 generator	.S.rr..rr	JH EH1 N ER0 EY2 T ER0
@@ -7610,7 +7610,7 @@ hobby	.S...	HH AA1 B IY0
 hunters	.S..rr.	HH AH1 N T ER0 Z
 idol	S.r.	AY1 D AH0 L
 illusion	...S..r.	IH2 L UW1 ZH AH0 N
-incorrect	...x..S..	IH2 N K ER0 EH1 K T
+incorrect	...rrxS..	IH2 N K ER0 EH1 K T
 jun	...	JH AH1 N
 junction	.S....r.	JH AH1 NG K SH AH0 N
 lance	....x	L AE1 N S
@@ -7737,7 +7737,7 @@ implied	....SS.	IH2 M P L AY1 D
 impress	.......	IH2 M P R EH1 S
 inability	..r.S.r..	IH2 N AH0 B IH1 L IH0 T IY0
 incoming	S....r..	IH1 N K AH2 M IH0 NG
-isaac	S.xr.	AY1 Z AH0 K
+isaac	S.rx.	AY1 Z AH0 K
 jar	...	JH AA1 R
 kay	...	K EY1
 leicester	.SSxx..rr	L EH1 S T ER0
@@ -7787,7 +7787,7 @@ sonic	.S.r.	S AA1 N IH0 K
 soundtrack	.SS.......	S AW1 N D T R AE2 K
 speeches	..SS..r.	S P IY1 CH AH0 Z
 spine	....x	S P AY1 N
-steering	..xS.r..	S T IH1 R IH0 NG
+steering	..Sx.r..	S T IH1 R IH0 NG
 substances	.S...r..r.	S AH1 B S T AH0 N S AH0 Z
 sullivan	.S..r.r.	S AH1 L AH0 V AH0 N
 sustain	.r..SS.	S AH0 S T EY1 N
@@ -7945,7 +7945,7 @@ enjoyable	...SSr..x	EH2 N JH OY1 AH0 B AH0 L
 exotic	r.S.r.	IH0 G Z AA1 T IH0 K
 exterior	r..S..rr	IH0 K S T IH1 R IY0 ER0
 feminine	.S.r.r.x	F EH1 M AH0 N AH0 N
-firearms	.S.x....	F AY1 ER0 AA2 R M Z
+firearms	.S......	F AY1 ER0 AA2 R M Z
 fountain	.SS..rr.	F AW1 N T AH0 N
 fury	.S..	F Y UH1 R IY0
 genocide	.S.r...x	JH EH1 N AH0 S AY2 D
@@ -7982,7 +7982,7 @@ optional	S...r.r.	AA1 P SH AH0 N AH0 L
 papa	.S..	P AA1 P AH2
 parked	....x.	P AA1 R K T
 paste	....x	P EY1 S T
-pioneer	..r.xS.	P AY2 AH0 N IH1 R
+pioneer	..r.Sx.	P AY2 AH0 N IH1 R
 plaza	..S.r	P L AA1 Z AH0
 prescribed	......S.x.	P R IY0 S K R AY1 B D
 pressures	..S..rrx.	P R EH1 SH ER0 Z
@@ -7990,7 +7990,7 @@ prosperity	.....S.r..	P R AA0 S P EH1 R AH0 T IY0
 recreational	.....S..r.r.	R EH2 K R IY0 EY1 SH AH0 N AH0 L
 reds	....	R EH1 D Z
 refuge	.S...x	R EH1 F Y UW0 JH
-religions	...S.rx..	R IY0 L IH1 JH AH0 N Z
+religions	...S.xr..	R IY0 L IH1 JH AH0 N Z
 renewable	...SSr..x	R IY0 N UW1 AH0 B AH0 L
 richardson	.S..rr..r.	R IH1 CH ER0 D S AH0 N
 ricky	.S...	R IH1 K IY2
@@ -8038,7 +8038,7 @@ armstrong	SS.......	AA1 R M S T R AA2 NG
 assessed	r..S..x.	AH0 S EH1 S T
 attractions	r...S...r..	AH0 T R AE1 K SH AH0 N Z
 balloon	.r..SS.	B AH0 L UW1 N
-beers	.x...	B IH1 R Z
+beers	..x..	B IH1 R Z
 bells	.....	B EH1 L Z
 blamed	....x.	B L EY1 M D
 blunt	.....	B L AH1 N T
@@ -8264,7 +8264,7 @@ recruit	....SS.	R AH0 K R UW1 T
 resting	.S..r..	R EH1 S T IH0 NG
 rex	...	R EH1 K S
 rogue	...xx	R OW1 G
-roosevelt	..S.r....	R OW1 Z AH0 V EH2 L T
+roosevelt	.S..r....	R OW1 Z AH0 V EH2 L T
 salaries	.S.rr...	S AE1 L ER0 IY0 Z
 seated	.SS.r.	S IY1 T IH0 D
 sharply	..SS...	SH AA1 R P L IY0
@@ -8579,7 +8579,7 @@ judgement	.S..x.r..	JH AH1 JH M AH0 N T
 judiciary	...S.....	JH UW0 D IH1 SH IY0 EH2 R IY0
 jumps	.....	JH AH1 M P S
 lads	....	L AE1 D Z
-legion	.S.rx.	L IY1 JH AH0 N
+legion	.S.xr.	L IY1 JH AH0 N
 lethal	.S..r.	L IY1 TH AH0 L
 lime	...x	L AY1 M
 lively	.S.x..	L AY1 V L IY0
@@ -8897,7 +8897,7 @@ boyd	....	B OY1 D
 breakthrough	..SS......xx	B R EY1 K TH R UW2
 calif	.S.r.	K AE1 L IH0 F
 charities	..SSr....	CH EH1 R AH0 T IY0 Z
-cheering	..xS.r..	CH IH1 R IH0 NG
+cheering	..Sx.r..	CH IH1 R IH0 NG
 chooses	..SS.r.	CH UW1 Z AH0 Z
 churchill	..SS..r..	CH ER1 CH IH0 L
 combinations	....r.S..r..	K AA2 M B AH0 N EY1 SH AH0 N Z
@@ -9552,8 +9552,8 @@ stall	.....	S T AO1 L
 starving	..SS.r..	S T AA1 R V IH0 NG
 strap	.....	S T R AE1 P
 subjective	.r..S..r.x	S AH0 B JH EH1 K T IH0 V
-surround	.x..SS..	S ER0 AW1 N D
-surroundings	.x..SS..r...	S ER0 AW1 N D IH0 NG Z
+surround	.rrxSS..	S ER0 AW1 N D
+surroundings	.rrxSS..r...	S ER0 AW1 N D IH0 NG Z
 sweeping	..SS.r..	S W IY1 P IH0 NG
 swinging	..S..r..	S W IH1 NG IH0 NG
 tearing	.SS.r..	T EH1 R IH0 NG
@@ -9775,7 +9775,7 @@ guts	....	G AH1 T S
 hairs	.....	HH EH1 R Z
 hammond	.S..r..	HH AE1 M AH0 N D
 handing	.S..r..	HH AE1 N D IH0 NG
-hearted	.xSS.r.	HH AA1 R T AH0 D
+hearted	.SSS.r.	HH AA1 R T AH0 D
 herb	....	ER1 B
 herd	....	HH ER1 D
 husbands	.S..r...	HH AH1 Z B AH0 N D Z
@@ -9810,7 +9810,7 @@ nigel	.S.r.	N AY1 JH AH0 L
 objection	r..S...r.	AH0 B JH EH1 K SH AH0 N
 obliged	r..S.x.	AH0 B L AY1 JH D
 observers	r..SS.rr.	AH0 B Z ER1 V ER0 Z
-occurrence	r..x..r..x	AH0 K ER1 AH0 N S
+occurrence	r..SSxr..x	AH0 K ER1 AH0 N S
 offspring	S........	AO1 F S P R IH2 NG
 ou	..	UW1
 outrageous	....S.xrr.	AW0 T R EY1 JH AH0 S
@@ -9851,7 +9851,7 @@ specimens	..S.r.r..	S P EH1 S AH0 M AH0 N Z
 starbucks	..SS.....	S T AA1 R B AH2 K S
 stereo	..S...	S T EH1 R IY0 OW2
 supplements	.S...r.....	S AH1 P L AH0 M AH0 N T S
-surrey	.x....	S ER1 IY0
+surrey	.SSx..	S ER1 IY0
 sustainability	.r.....r.S.r..	S AH0 S T EY2 N AH0 B IH1 L IH0 T IY0
 symphony	.S...r..	S IH1 M F AH0 N IY0
 tesla	.S..r	T EH1 S L AH0
@@ -9980,7 +9980,7 @@ reckon	.S..r.	R EH1 K AH0 N
 recycling	...S..r..	R IY0 S AY1 K AH0 L IH0 NG
 restriction	.....S...r.	R IY0 S T R IH1 K SH AH0 N
 resumed	...S.x.	R IH0 Z UW1 M D
-resurrection	...x..S...r.	R EH2 Z ER0 EH1 K SH AH0 N
+resurrection	...rrxS...r.	R EH2 Z ER0 EH1 K SH AH0 N
 rover	.S.rr	R OW1 V ER0
 scars	.....	S K AA1 R Z
 scholarships	...S.rr.....	S K AA1 L ER0 SH IH2 P S
@@ -9999,7 +9999,7 @@ stubborn	..S..rr.	S T AH1 B ER0 N
 summoned	.S..r.x.	S AH1 M AH0 N D
 sussex	.S..r.	S AH1 S IH0 K S
 swords	.x....	S AO1 R D Z
-syrup	...r.	S ER1 AH0 P
+syrup	.S.r.	S ER1 AH0 P
 tackles	.S...x.	T AE1 K AH0 L Z
 tamil	.....	T AH0 M IH1 L
 tapping	.S..r..	T AE1 P IH0 NG
@@ -10186,7 +10186,7 @@ antibiotics	......S.r..	AE2 N T IY0 B AY0 AA1 T IH0 K S
 anticipation	.....r.S..r.	AE0 N T IH2 S AH0 P EY1 SH AH0 N
 anyone's	S....x..	EH1 N IY0 W AH2 N Z
 appropriately	r...S...r.x..	AH0 P R OW1 P R IY0 IH0 T L IY0
-arrests	x..S...	ER0 EH1 S T S
+arrests	rrxS...	ER0 EH1 S T S
 arrogant	SSxr.r..	EH1 R AH0 G AH0 N T
 assessing	r..S..r..	AH0 S EH1 S IH0 NG
 authorization	....rrr.S..r.	AO2 TH ER0 AH0 Z EY1 SH AH0 N
@@ -10311,7 +10311,7 @@ stud	....	S T AH1 D
 subsidies	.S..r....	S AH1 B S AH0 D IY0 Z
 sunk	....	S AH1 NG K
 supper	.S..rr	S AH1 P ER0
-sweetheart	..SS..x...	S W IY1 T HH AA2 R T
+sweetheart	..SS......	S W IY1 T HH AA2 R T
 systemic	.r..S.r.	S IH0 S T EH1 M IH0 K
 tempo	.S...	T EH1 M P OW2
 thereof	....xS.	DH EH2 R AH1 V
@@ -10615,7 +10615,7 @@ slogan	..S.r.	S L OW1 G AH0 N
 specimen	..S.r.r.	S P EH1 S AH0 M AH0 N
 sponsorship	..S..rr....	S P AA1 N S ER0 SH IH2 P
 steals	......	S T IY1 L Z
-steer	..x..	S T IH1 R
+steer	...x.	S T IH1 R
 stefan	..S...	S T EH1 F AA0 N
 strains	.......	S T R EY1 N Z
 strawberry	...SS.....	S T R AO1 B EH2 R IY0
@@ -10726,7 +10726,7 @@ invites	...S.x.	IH2 N V AY1 T S
 irene	..S.x	AY0 R IY1 N
 irving	SS.r..	ER1 V IH0 NG
 ja	..	Y AA1
-jacques	..x.xxx	ZH AA1 K
+jacques	...xxxx	ZH AA1 K
 jong	....	JH AO1 NG
 klein	.....	K L AY1 N
 limitation	...r.S..r.	L IH2 M IH0 T EY1 SH AH0 N
@@ -10763,7 +10763,7 @@ prophecy	..S..r..	P R AA1 F AH0 S IY0
 proudly	..SS...	P R AW1 D L IY0
 rebuilding	...SS..r..	R IY0 B IH1 L D IH0 NG
 recorder	...SS.rr	R IH0 K AO1 R D ER0
-recurring	...x..r..	R IH0 K ER1 IH0 NG
+recurring	...SSxr..	R IH0 K ER1 IH0 NG
 relaxation	.....S..r.	R IY2 L AE0 K S EY1 SH AH0 N
 resembles	...S...x.	R IH0 Z EH1 M B AH0 L Z
 respectable	....S..r..x	R IH0 S P EH1 K T AH0 B AH0 L
@@ -11015,7 +11015,7 @@ coated	.SS.r.	K OW1 T AH0 D
 constituency	.r...S..r...	K AH0 N S T IH1 CH UW0 AH0 N S IY0
 contingent	.r..S..r..	K AH0 N T IH1 N JH AH0 N T
 cornell	....S..	K AO0 R N EH1 L
-corrections	.x..S...r..	K ER0 EH1 K SH AH0 N Z
+corrections	.rrxS...r..	K ER0 EH1 K SH AH0 N Z
 costing	.S..r..	K AO1 S T IH0 NG
 cyclists	.S..r...	S AY1 K AH0 L IH0 S T S
 daniels	.S..r..	D AE1 N Y AH0 L Z
@@ -11034,7 +11034,7 @@ fallout	.S.....	F AO1 L AW2 T
 feather	.SS..rr	F EH1 DH ER0
 figuring	.S...r..	F IH1 G Y ER0 IH0 NG
 financed	......x.	F IH0 N AE1 N S T
-firearm	.S.x...	F AY1 ER0 AA2 R M
+firearm	.S.....	F AY1 ER0 AA2 R M
 fisheries	.S..rr...	F IH1 SH ER0 IY0 Z
 flock	.....	F L AA1 K
 flyers	..Srr.	F L AY1 ER0 Z
@@ -11350,7 +11350,7 @@ hal	...	HH AE1 L
 harness	.SS.r..	HH AA1 R N AH0 S
 hashtag	.S.....	HH AE1 SH T AE2 G
 hassan	.r..S.	HH AH0 S AA1 N
-heartbeat	.xSS.....	HH AA1 R T B IY2 T
+heartbeat	.SSS.....	HH AA1 R T B IY2 T
 heh	..x	HH EH1
 highlighting	.Sxx..xx.r..	HH AY1 L AY2 T IH0 NG
 holt	....	HH OW1 L T
@@ -11662,7 +11662,7 @@ elf	...	EH1 L F
 ev	..	EH1 V
 evenly	S.r...	IY1 V AH0 N L IY0
 exemption	r.S....r.	IH0 G Z EH1 M P SH AH0 N
-fashionable	.S...x.r..x	F AE1 SH AH0 N AH0 B AH0 L
+fashionable	.S..x..r..x	F AE1 SH AH0 N AH0 B AH0 L
 fetch	.....	F EH1 CH
 fishermen	.S..rr.r.	F IH1 SH ER0 M IH0 N
 flipped	.....x.	F L IH1 P T
@@ -11823,7 +11823,7 @@ coupons	..S....	K UW1 P AO2 N Z
 cove	...x	K OW1 V
 cozy	.S..	K OW1 Z IY0
 culturally	.S..rrr...	K AH1 L CH ER0 AH0 L IY2
-currents	.x..r...	K ER1 AH0 N T S
+currents	.SSxr...	K ER1 AH0 N T S
 deficiency	.r.S..r...	D IH0 F IH1 SH AH0 N S IY0
 deported	.r.SS.r.	D IH0 P AO1 R T AH0 D
 deposited	.r.S.r.r.	D AH0 P AA1 Z IH0 T IH0 D
@@ -12106,7 +12106,7 @@ styled	....x.	S T AY1 L D
 subdivision	.S..r....r.	S AH1 B D IH0 V IH2 ZH AH0 N
 succeeding	.r..SS.r..	S AH0 K S IY1 D IH0 NG
 sunderland	.S..rr.r..	S AH1 N D ER0 L AH0 N D
-surrendered	.x..S..rrx.	S ER0 EH1 N D ER0 D
+surrendered	.rrxS..rrx.	S ER0 EH1 N D ER0 D
 tar	...	T AA1 R
 tariffs	.SSr...	T EH1 R AH0 F S
 temporal	.S..rrr.	T EH1 M P ER0 AH0 L
@@ -12117,7 +12117,7 @@ unavailable	..r.SS.r..x	AH2 N AH0 V EY1 L AH0 B AH0 L
 universally	..r.SS.r...	Y UW2 N AH0 V ER1 S AH0 L IY0
 unlucky	r..S...	AH0 N L AH1 K IY0
 utilizing	S.r...r..	Y UW1 T AH0 L AY2 Z IH0 NG
-volunteered	...r..xS.x.	V AA2 L AH0 N T IH1 R D
+volunteered	...r..Sx.x.	V AA2 L AH0 N T IH1 R D
 vomiting	.S.r.r..	V AA1 M AH0 T IH0 NG
 warden	.SS.r.	W AO1 R D AH0 N
 warp	....	W AO1 R P
@@ -12160,7 +12160,7 @@ comprise	.r...S.x	K AH0 M P R AY1 Z
 computational	......S..r.r.	K AA2 M P Y UW0 T EY1 SH AH0 N AH0 L
 conceptual	.r..S...r.	K AH0 N S EH1 P CH UW0 AH0 L
 coolest	.SS.r..	K UW1 L AH0 S T
-currencies	.x..r.....	K ER1 AH0 N S IY0 Z
+currencies	.SSxr.....	K ER1 AH0 N S IY0 Z
 damp	....	D AE1 M P
 danielle	....S..x	D AE2 N IY0 EH1 L
 databases	.S.r...r.	D EY1 T AH0 B EY2 S IH0 Z
@@ -12367,7 +12367,7 @@ geo	.S.	JH IY1 OW0
 granny	..S...	G R AE1 N IY0
 handicap	.S......	HH AE1 N D IY0 K AE2 P
 hansen	.S..r.	HH AE1 N S AH0 N
-hmmm	.x..	HH M
+hmmm	...x	HH M
 homage	.S.r.x	AA1 M AH0 JH
 homo	.S..	HH OW1 M OW0
 hostility	....S.r..	HH AA0 S T IH1 L AH0 T IY0
@@ -12509,7 +12509,7 @@ cellar	.S..rr	S EH1 L ER0
 cerebral	......r.	S EH1 R AH0 B R AH0 L
 champs	......	CH AE1 M P S
 chant	.....	CH AE1 N T
-cheerful	..xS..r.	CH IH1 R F AH0 L
+cheerful	..Sx..r.	CH IH1 R F AH0 L
 cinematic	...r.S.r.	S IH2 N AH0 M AE1 T IH0 K
 climax	..S...	K L AY1 M AE2 K S
 clippers	..S..rr.	K L IH1 P ER0 Z
@@ -12535,7 +12535,7 @@ duh	..x	D AH1
 dundee	.r..SS	D AH0 N D IY1
 elaine	..SS.x	IH0 L EY1 N
 electrons	..S......	IH2 L EH1 K T R AA0 N Z
-emerald	S.x.r..	EH1 M R AH0 L D
+emerald	S...r..	EH1 M R AH0 L D
 ensures	...SSx.	EH0 N SH UH1 R Z
 equilibrium	...r.S...r.	IY2 K W AH0 L IH1 B R IY0 AH0 M
 europa	x..S.r	Y UH0 R OW1 P AH0
@@ -12564,7 +12564,7 @@ honduras	....SSr.	HH AA0 N D UH1 R AH0 S
 hotter	.S..rr	HH AA1 T ER0
 humorous	.S.rrrr.	HH Y UW1 M ER0 AH0 S
 ignores	...SSx.	IH2 G N AO1 R Z
-incurred	...x..x.	IH2 N K ER1 D
+incurred	...SSxx.	IH2 N K ER1 D
 indications	...r.S..r..	IH2 N D AH0 K EY1 SH AH0 N Z
 indoors	S..x...	IH1 N D AO2 R Z
 intercourse	S..rr.....x	IH1 N T ER0 K AO2 R S
@@ -12811,7 +12811,7 @@ sucker	.S..rr	S AH1 K ER0
 suns	....	S AH1 N Z
 superiority	...r..SSr..	S UW2 P IH0 R IY0 AO1 R IH0 T IY0
 supervised	.S.rr...x.	S UW1 P ER0 V AY2 Z D
-surreal	.x..SS.	S ER0 IY1 L
+surreal	.rrxSS.	S ER0 IY1 L
 tease	....x	T IY1 Z
 tendencies	.S..r.....	T EH1 N D AH0 N S IY0 Z
 tiffany	.S..r..	T IH1 F AH0 N IY0
@@ -12875,7 +12875,7 @@ contagious	.r..S.xrr.	K AH0 N T EY1 JH AH0 S
 contexts	.S......	K AA1 N T EH2 K S T S
 conveniently	.r..S..r....	K AH0 N V IY1 N Y AH0 N T L IY0
 courtroom	.SSS.....	K AO1 R T R UW2 M
-cushion	.S..rx.	K UH1 SH AH0 N
+cushion	.S..xr.	K UH1 SH AH0 N
 cyclist	.S..r..	S AY1 K AH0 L IH0 S T
 darkest	.SS.r..	D AA1 R K AH0 S T
 diaz	.S..	D IY1 AE2 Z
@@ -12919,7 +12919,7 @@ gomez	.S...	G OW1 M EH0 Z
 hindus	.S....	HH IH1 N D UW2 Z
 hu	..	HH UW1
 hunted	.S..r.	HH AH1 N T AH0 D
-hurricanes	.x..r...x.	HH ER1 AH0 K EY2 N Z
+hurricanes	.SSxr...x.	HH ER1 AH0 K EY2 N Z
 implying	....Sr..	IH2 M P L AY1 IH0 NG
 improper	....S.rr	IH2 M P R AA1 P ER0
 influx	S.....	IH1 N F L AH2 K S
@@ -13073,7 +13073,7 @@ goofy	.SS..	G UW1 F IY0
 hancock	.S.....	HH AE1 N K AA2 K
 handwriting	.S..x...r..	HH AE1 N D R AY2 T IH0 NG
 hassle	.S...x	HH AE1 S AH0 L
-heartbreaking	.xSS......r..	HH AA1 R T B R EY2 K IH0 NG
+heartbreaking	.SSS......r..	HH AA1 R T B R EY2 K IH0 NG
 hector	.S..rr	HH EH1 K T ER0
 hicks	.....	HH IH1 K S
 hobbies	.S.....	HH AA1 B IY0 Z
@@ -13082,7 +13082,7 @@ homeowners	.S.x...rr.	HH OW1 M OW2 N ER0 Z
 ibrahim	.....S.	IH2 B R AA0 HH IY1 M
 immensely	...S..x..	IH2 M EH1 N S L IY0
 inauguration	r......S..r.	IH0 N AO2 G Y ER0 EY1 SH AH0 N
-incorrectly	...x..S....	IH2 N K ER0 EH1 K T L IY0
+incorrectly	...rrxS....	IH2 N K ER0 EH1 K T L IY0
 indicative	...S.r.r.x	IH2 N D IH1 K AH0 T IH0 V
 inexpensive	..r..S..r.x	IH2 N IH0 K S P EH1 N S IH0 V
 instructors	.....S..rr.	IH2 N S T R AH1 K T ER0 Z
@@ -13264,7 +13264,7 @@ fraternity	..r.SS.r..	F R AH0 T ER1 N AH0 T IY0
 freaks	......	F R IY1 K S
 frogs	.....	F R AA1 G Z
 fronts	......	F R AH1 N T S
-furry	.x...	F ER1 IY0
+furry	.SSx.	F ER1 IY0
 glitter	..S..rr	G L IH1 T ER0
 graveyard	..S.x....	G R EY1 V Y AA2 R D
 hanged	....x.	HH AE1 NG D
@@ -13385,7 +13385,7 @@ ambassadors	...S..r.rr.	AE0 M B AE1 S AH0 D ER0 Z
 ambush	S.....	AE1 M B UH2 SH
 amelia	r.S..r	AH0 M IY1 L Y AH0
 amend	r.S..	AH0 M EH1 N D
-arranging	x..S..r..	ER0 EY1 N JH IH0 NG
+arranging	rrxS..r..	ER0 EY1 N JH IH0 NG
 arrogance	SSxr.r..x	EH1 R AH0 G AH0 N S
 attendees	r..S..SS.	AH0 T EH1 N D IY1 Z
 audrey	SS....	AO1 D R IY0
@@ -13429,7 +13429,7 @@ dat	...	D AE1 T
 deity	.Sr..	D IY1 AH0 T IY0
 desperation	....rrS..r.	D EH2 S P ER0 EY1 SH AH0 N
 detrimental	....r.S..r.	D EH2 T R AH0 M EH1 N T AH0 L
-diarrhea	..x..xSr	D AY2 ER0 IY1 AH0
+diarrhea	..rrxxSr	D AY2 ER0 IY1 AH0
 disposed	.r..S.x.	D IH0 S P OW1 Z D
 distortion	.r..SS..r.	D IH0 S T AO1 R SH AH0 N
 doctoral	.S..rrr.	D AA1 K T ER0 AH0 L
@@ -13501,7 +13501,7 @@ penetrate	.S.r....x	P EH1 N AH0 T R EY2 T
 phelps	......	F EH1 L P S
 phi	...	F AY1
 philippe	..r.S...	F IH0 L IY1 P EY0
-pioneers	..r.xS..	P AY2 AH0 N IH1 R Z
+pioneers	..r.Sx..	P AY2 AH0 N IH1 R Z
 plaintiff	..SS..r..	P L EY1 N T AH0 F
 planners	..S..rr.	P L AE1 N ER0 Z
 plum	....	P L AH1 M
@@ -13638,7 +13638,7 @@ fireplace	.S.x....x	F AY1 ER0 P L EY2 S
 flair	.....	F L EH1 R
 fossils	.S..r..	F AA1 S AH0 L Z
 fugitive	.S.r.r.x	F Y UW1 JH AH0 T IH0 V
-greenwich	...S.....	G R EH1 N IH0 CH
+greenwich	..S......	G R EH1 N IH0 CH
 gujarat	...rrS.	G Y UW2 JH ER0 AE1 T
 hah	..x	HH AA1
 hanson	.S..r.	HH AE1 N S AH0 N
@@ -13696,7 +13696,7 @@ patented	.S.r..r.	P AE1 T AH0 N T IH0 D
 pea	...	P IY1
 pearls	......	P ER1 L Z
 physiological	.....r.S.r.r.	F IH2 Z IY0 AH0 L AA1 JH IH0 K AH0 L
-pioneering	..r.xS.r..	P AY2 AH0 N IH1 R IH0 NG
+pioneering	..r.Sx.r..	P AY2 AH0 N IH1 R IH0 NG
 pleasures	..SS.rrx.	P L EH1 ZH ER0 Z
 policemen	.r.S.x.r.	P AH0 L IY1 S M IH0 N
 poo	...	P UW1
@@ -14141,7 +14141,7 @@ tyres	.S.x.	T AY1 ER0 Z
 unfit	r..S.	AH0 N F IH1 T
 uphold	r..S..	AH0 P HH OW1 L D
 vita	.S.r	V AY1 T AH0
-volunteering	...r..xS.r..	V AO2 L AH0 N T IH1 R IH0 NG
+volunteering	...r..Sx.r..	V AO2 L AH0 N T IH1 R IH0 NG
 wal	...	W AO1 L
 warwick	.SS.r..	W AO1 R W IH0 K
 waterloo	.S.rr...	W AO1 T ER0 L UW2
@@ -14339,7 +14339,7 @@ ankles	S...x.	AE1 NG K AH0 L Z
 annex	.....	AE1 N EH2 K S
 annexed	.....x.	AE1 N EH0 K S T
 antibiotic	......S.r.	AE2 N T IY0 B AY0 AA1 T IH0 K
-arresting	x..S..r..	ER0 EH1 S T IH0 NG
+arresting	rrxS..r..	ER0 EH1 S T IH0 NG
 augmented	....S..r.	AA0 G M EH1 N T IH0 D
 avenues	S.r....	AE1 V AH0 N UW2 Z
 avid	S.r.	AE1 V AH0 D
@@ -14573,8 +14573,8 @@ coincide	..r..S.x	K OW2 IH0 N S AY1 D
 comedians	.r.S..r..	K AH0 M IY1 D IY0 AH0 N Z
 commemorate	.r..S.rr..x	K AH0 M EH1 M ER0 EY2 T
 commits	.r..S..	K AH0 M IH1 T S
-concurrent	.r..x..r..	K AH0 N K ER1 AH0 N T
-corrupted	.x..S..r.	K ER0 AH1 P T IH0 D
+concurrent	.r..SSxr..	K AH0 N K ER1 AH0 N T
+corrupted	.rrxS..r.	K ER0 AH1 P T IH0 D
 coventry	.S.r....	K AH1 V AH0 N T R IY0
 crocodile	..S.r...x	K R AA1 K AH0 D AY2 L
 cub	...	K AH1 B
@@ -14754,7 +14754,7 @@ anthology	....S.r..	AE0 N TH AA1 L AH0 JH IY0
 antiques	...S.xx.	AE0 N T IY1 K S
 anyhow	S.....	EH1 N IY0 HH AW2
 ape	..x	EY1 P
-arrivals	x..S.r..	ER0 AY1 V AH0 L Z
+arrivals	rrxS.r..	ER0 AY1 V AH0 L Z
 assaults	r..SS...	AH0 S AO1 L T S
 assemblies	r..S......	AH0 S EH1 M B L IY0 Z
 auditor	SS.r.rr	AO1 D IH0 T ER0
@@ -14774,7 +14774,7 @@ bodied	.S....	B AA1 D IY0 D
 boosted	.SS..r.	B UW1 S T IH0 D
 bowler	.SS.rr	B OW1 L ER0
 broadcasters	..SS.....rr.	B R AO1 D K AE2 S T ER0 Z
-byrne	.x..x	B ER1 N
+byrne	..x.x	B ER1 N
 cadillac	.S.r....	K AE1 D AH0 L AE2 K
 cameo	.S...	K AE1 M IY0 OW2
 canals	.r.S..	K AH0 N AE1 L Z
@@ -14794,8 +14794,8 @@ contestant	.r..S..r..	K AH0 N T EH1 S T AH0 N T
 contradictory	.....r.S..rr.	K AA2 N T R AH0 D IH1 K T ER0 IY0
 convent	.S.....	K AA1 N V AH0 N T
 converse	.......x	K AA1 N V ER0 S
-correcting	.x..S..r..	K ER0 EH1 K T IH0 NG
-corrosion	.x..S..r.	K ER0 OW1 ZH AH0 N
+correcting	.rrxS..r..	K ER0 EH1 K T IH0 NG
+corrosion	.rrxS..r.	K ER0 OW1 ZH AH0 N
 crib	....	K R IH1 B
 crossroads	..S.......	K R AO1 S R OW2 D Z
 dearly	.SSS..	D IH1 R L IY0
@@ -14977,7 +14977,7 @@ benches	.S...r.	B EH1 N CH IH0 Z
 biodiversity	......SS.r..	B AY2 OW0 D AY0 V ER1 S AH0 T IY0
 biomedical	....S.r.r.	B AY2 OW0 M EH1 D IH0 K AH0 L
 blinded	..S..r.	B L AY1 N D IH0 D
-blurred	..x..x.	B L ER1 D
+blurred	....xx.	B L ER1 D
 boarded	.SS..r.	B AO1 R D AH0 D
 breadth	.......	B R EH1 D TH
 bullies	.S.....	B UH1 L IY0 Z
@@ -15242,12 +15242,12 @@ liars	.Srr.	L AY1 ER0 Z
 lineage	.S..r.x	L IH1 N IY0 AH0 JH
 liter	.S.rr	L IY1 T ER0
 looting	.SS.r..	L UW1 T IH0 NG
-lorraine	.x..SS.x	L ER0 EY1 N
+lorraine	.rrxSS.x	L ER0 EY1 N
 lyons	.Sr..	L AY1 AH0 N Z
 magnus	.S..r.	M AE1 G N AH0 S
 manpower	.S....rr	M AE1 N P AW2 ER0
 marley	.SS...	M AA1 R L IY0
-martyr	.SS.x.	M AA1 R T ER0
+martyr	.SS.rx	M AA1 R T ER0
 masturbation	....rr.S..r.	M AE2 S T ER0 B EY1 SH AH0 N
 mitigation	...r.S..r.	M IH2 T IH0 G EY1 SH AH0 N
 mont	....	M AA1 N T
@@ -15305,7 +15305,7 @@ stink	.....	S T IH1 NG K
 stormy	..SS..	S T AO1 R M IY0
 subcommittee	.S..r..S....	S AH1 B K AH0 M IH1 T IY0
 suffice	.r..S.x	S AH0 F AY1 S
-surrounds	.x..SS...	S ER0 AW1 N D Z
+surrounds	.rrxSS...	S ER0 AW1 N D Z
 swat	....	S W AA1 T
 swine	....x	S W AY1 N
 symbolism	.S..r....	S IH1 M B AH0 L IH2 Z AH0 M
@@ -15787,7 +15787,7 @@ collusion	.r..S..r.	K AH0 L UW1 ZH AH0 N
 contenders	.r..S..rr.	K AH0 N T EH1 N D ER0 Z
 contractual	.r...S...r.	K AH0 N T R AE1 K CH UW0 AH0 L
 coroner	.SSr.rr	K AO1 R AH0 N ER0
-correctional	.x..S...r.r.	K ER0 EH1 K SH AH0 N AH0 L
+correctional	.rrxS...r.r.	K ER0 EH1 K SH AH0 N AH0 L
 correspondents	....r..S..r...	K AO2 R AH0 S P AA1 N D AH0 N T S
 corridors	.S..r.rr.	K AO1 R IH0 D ER0 Z
 creamy	..SS..	K R IY1 M IY0
@@ -16131,7 +16131,7 @@ triangular	...S....rr	T R AY0 AE1 NG G Y AH0 L ER0
 tricked	.....x.	T R IH1 K T
 trooper	..SS.rr	T R UW1 P ER0
 truthful	..S...r.	T R UW1 TH F AH0 L
-turret	.x....	T ER1 AH0 T
+turret	...x..	T ER1 AH0 T
 ubiquitous	..S..r.rr.	Y UW0 B IH1 K W IH0 T AH0 S
 unbelievably	...r.SS.r...	AH2 N B AH0 L IY1 V AH0 B L IY0
 unconventional	...r..S...r.r.	AH2 N K AH0 N V EH1 N SH AH0 N AH0 L
@@ -16244,7 +16244,7 @@ glued	.....	G L UW1 D
 goo	...	G UW1
 goodwin	.SS..r.	G UH1 D W IH0 N
 hannibal	.S..r.r.	HH AE1 N IH0 B AH0 L
-heartbroken	.xSS.....r.	HH AA1 R T B R OW2 K AH0 N
+heartbroken	.SSS.....r.	HH AA1 R T B R OW2 K AH0 N
 heats	.....	HH IY1 T S
 helper	.S..rr	HH EH1 L P ER0
 hesitant	.S.r.r..	HH EH1 Z IH0 T AH0 N T
@@ -16457,7 +16457,7 @@ gu	..	G UW1
 gutted	.S..r.	G AH1 T IH0 D
 harp	....	HH AA1 R P
 hartley	.SS....	HH AA1 R T L IY0
-heartfelt	.xSS.....	HH AA1 R T F EH2 L T
+heartfelt	.SSS.....	HH AA1 R T F EH2 L T
 hinted	.S..r.	HH IH1 N T AH0 D
 housewife	.SS.x...x	HH AW1 S W AY2 F
 housewives	.SS.x...x.	HH AW1 S W AY2 V Z
@@ -16480,7 +16480,7 @@ localized	.S.r...x.	L OW1 K AH0 L AY2 Z D
 lori	.SS.	L AO1 R IY0
 malibu	.S.r..	M AE1 L AH0 B UW0
 mammoth	.S..r..	M AE1 M AH0 TH
-martyrs	.SS.x..	M AA1 R T ER0 Z
+martyrs	.SS.rx.	M AA1 R T ER0 Z
 marvellous	.SS.r..rr.	M AA1 R V AH0 L AH0 S
 matchup	.S...r.	M AE1 CH AH0 P
 merkel	.SS.r.	M ER1 K AH0 L
@@ -16586,7 +16586,7 @@ babes	...x.	B EY1 B Z
 bandits	.S..r..	B AE1 N D AH0 T S
 banished	.S.r..x.	B AE1 N IH0 SH T
 barefoot	.SSx....	B EH1 R F UH2 T
-barrage	.x..S.x	B ER0 AA1 ZH
+barrage	.rrxS.x	B ER0 AA1 ZH
 bartlett	.SS..r..	B AA1 R T L IH0 T
 beauties	.xxS....	B Y UW1 T IY0 Z
 bestowed	.r..SSx.	B IH0 S T OW1 D
@@ -16619,7 +16619,7 @@ conglomerate	.r...S.rrr.x	K AH0 N G L AA1 M ER0 AH0 T
 consultations	....r..S..r..	K AA2 N S AH0 L T EY1 SH AH0 N Z
 conversions	.r..SS..r..	K AH0 N V ER1 ZH AH0 N Z
 cornerstone	.SS.rr....x	K AO1 R N ER0 S T OW2 N
-correctness	.x..S...r..	K ER0 EH1 K T N AH0 S
+correctness	.rrxS...r..	K ER0 EH1 K T N AH0 S
 counterfeit	.SS..rr.x..	K AW1 N T ER0 F IH2 T
 damian	.S..r.	D EY1 M IY0 AH0 N
 dazzling	.S...r..	D AE1 Z AH0 L IH0 NG
@@ -16662,7 +16662,7 @@ grievances	..SS.r..r.	G R IY1 V AH0 N S AH0 Z
 gritty	..S...	G R IH1 T IY0
 hanoi	.S...	HH AE1 N OY0
 hayley	.SS...	HH EY1 L IY0
-heartbreak	.xSS......	HH AA1 R T B R EY2 K
+heartbreak	.SSS......	HH AA1 R T B R EY2 K
 heist	.....	HH AY1 S T
 heterosexual	...rr..S..r.	HH EH2 T ER0 OW0 S EH1 K SH AH0 W AH0 L
 hewitt	.SSr..	HH Y UW1 IH0 T
@@ -16711,7 +16711,7 @@ nesting	.S..r..	N EH1 S T IH0 NG
 nudity	.S.r..	N UW1 D IH0 T IY0
 obligatory	r..S.r....	AH0 B L IH1 G AH0 T AO2 R IY0
 oceanic	...S.r.	OW2 SH IY0 AE1 N IH0 K
-oooh	x..x	UW1
+oooh	..xx	UW1
 ornaments	SS.r.r...	AO1 R N AH0 M AH0 N T S
 outpost	SS.....	AW1 T P OW2 S T
 outputs	SS.....	AW1 T P UH2 T S
@@ -16736,7 +16736,7 @@ raphael	.......	R AA2 F AY0 EH1 L
 reborn	.S.SS.	R IY1 B AO1 R N
 reddish	.S..r..	R EH1 D IH0 SH
 refurbished	...SS.r..x.	R IY0 F ER1 B IH0 SH T
-region's	.S.rx...	R IY1 JH AH0 N Z
+region's	.S.xr...	R IY1 JH AH0 N Z
 repercussions	...rr.Sx..r..	R IY2 P ER0 K AH1 SH AH0 N Z
 reprint	....S..	R IY0 P R IH1 N T
 restroom	.S......	R EH1 S T R UW2 M
@@ -16836,7 +16836,7 @@ bulldog	.S.....	B UH1 L D AO2 G
 caterpillar	.S.r.....rr	K AE1 T AH0 P IH2 L ER0
 censored	.S..rrx.	S EH1 N S ER0 D
 chatter	..S..rr	CH AE1 T ER0
-cheered	..x..x.	CH IH1 R D
+cheered	...x.x.	CH IH1 R D
 chops	.....	CH AA1 P S
 cleric	..S.r.	K L EH1 R IH0 K
 colbert	.S..rr.	K OW1 L B ER0 T
@@ -16889,7 +16889,7 @@ gland	.....	G L AE1 N D
 gotcha	.S...r	G AA1 CH AH0
 guerrilla	.xx..S..r	G ER0 IH1 L AH0
 gutter	.S..rr	G AH1 T ER0
-hearty	.xSS..	HH AA1 R T IY0
+hearty	.SSS..	HH AA1 R T IY0
 highschool	.Sxx......	HH AY1 S K UW2 L
 hillside	.S.....x	HH IH1 L S AY2 D
 hitler's	.S..rr..	HH IH1 T L ER0 Z
@@ -16986,7 +16986,7 @@ spawn	.....	S P AA1 N
 successors	.r..S..rr.	S AH0 K S EH1 S ER0 Z
 suffrage	.S...r.x	S AH1 F R IH0 JH
 superiors	...S..rr.	S UW0 P IH1 R IY0 ER0 Z
-surrogate	.x..r...x	S ER1 AH0 G AH0 T
+surrogate	.SSxr...x	S ER1 AH0 G AH0 T
 synopsis	.r.S..r.	S IH0 N AA1 P S IH0 S
 tainted	.SS..r.	T EY1 N T IH0 D
 tanya	.S..r	T AA1 N Y AH0
@@ -17261,7 +17261,7 @@ boise	.SS..	B OY1 Z IY0
 bop	...	B AA1 P
 bordeaux	....xSSx	B AO0 R D OW1
 breached	......x.	B R IY1 CH T
-burr	.x..	B ER1
+burr	...x	B ER1
 carbs	.....	K AA1 R B Z
 cavaliers	...r.Sx..	K AE2 V AH0 L IH1 R Z
 censor	.S..rr	S EH1 N S ER0
@@ -17339,7 +17339,7 @@ insertion	...SS..r.	IH2 N S ER1 SH AH0 N
 interruption	...x..S...r.	IH2 N T ER0 AH1 P SH AH0 N
 intrigue	......xx	IH2 N T R IY1 G
 itch	....	IH1 CH
-jacqueline	.Sx....r.x	JH AE1 K W AH0 L IH0 N
+jacqueline	.S.....r.x	JH AE1 K W AH0 L IH0 N
 joaquin	x...SS.	W AA2 K IY1 N
 kurds	.....	K ER1 D Z
 lattice	.S..r.x	L AE1 T AH0 S
@@ -17813,7 +17813,7 @@ mitsubishi	......S...	M IH2 T S UW2 B IY1 SH IY0
 mongolia	....S..r	M AA0 NG G OW1 L IY0 AH0
 motivating	.S.r...r..	M OW1 T AH0 V EY2 T IH0 NG
 munitions	...S..r..	M Y UW0 N IH1 SH AH0 N Z
-myrtle	.x...x	M ER1 T AH0 L
+myrtle	.Sx..x	M ER1 T AH0 L
 nemesis	.S.r.r.	N EH1 M AH0 S IH0 S
 o'reilly	...SS...	OW0 R AY1 L IY0
 originality	rr..r.S.r..	ER0 IH2 JH AH0 N AE1 L IH0 T IY0
@@ -17833,7 +17833,7 @@ pharmacist	..SS.r.r..	F AA1 R M AH0 S IH0 S T
 phillies	..S.....	F IH1 L IY0 Z
 picky	.S...	P IH1 K IY0
 pistons	.S..r..	P IH1 S T AH0 N Z
-pizzas	.Sx.r.	P IY1 T S AH0 Z
+pizzas	.S.xr.	P IY1 T S AH0 Z
 poole	....x	P UW1 L
 populace	.S...r.x	P AA1 P Y AH0 L AH0 S
 pretoria	....SS.r	P R IY0 T AO1 R IY0 AH0
@@ -17948,7 +17948,7 @@ carb	....	K AA1 R B
 carver	.SS.rr	K AA1 R V ER0
 causal	.SS.r.	K AO1 Z AH0 L
 centrally	.S...r...	S EH1 N T R AH0 L IY0
-cheerleader	..xS.....rr	CH IH1 R L IY2 D ER0
+cheerleader	..Sx.....rr	CH IH1 R L IY2 D ER0
 christy	...S...	K R IH1 S T IY0
 circling	.SS..r..	S ER1 K AH0 L IH0 NG
 citadel	.S.r...	S IH1 T AH0 D EH2 L
@@ -17974,7 +17974,7 @@ doggy	.S...	D AO1 G IY0
 dole	...x	D OW1 L
 dreamt	......	D R EH1 M T
 dun	...	D AH1 N
-eerie	xS...	IH1 R IY0
+eerie	Sx...	IH1 R IY0
 electing	r.S..r..	IH0 L EH1 K T IH0 NG
 enraged	...S.x.	EH0 N R EY1 JH D
 envelopes	S..r...x.	EH1 N V AH0 L OW2 P S
@@ -18012,7 +18012,7 @@ handwritten	.S..x....r.	HH AE1 N D R IH2 T AH0 N
 hardships	.SS...r..	HH AA1 R D SH IH0 P S
 harmonic	....S.r.	HH AA0 R M AA1 N IH0 K
 headlights	.SS...xx..	HH EH1 D L AY2 T S
-heartless	.xSS..r..	HH AA1 R T L AH0 S
+heartless	.SSS..r..	HH AA1 R T L AH0 S
 hectic	.S..r.	HH EH1 K T IH0 K
 holistic	...S..r.	HH OW0 L IH1 S T IH0 K
 hooper	.SS.rr	HH UW1 P ER0
@@ -18076,7 +18076,7 @@ penetrating	.S.r....r..	P EH1 N AH0 T R EY2 T IH0 NG
 persuasion	.rr..S..r.	P ER0 S W EY1 ZH AH0 N
 phased	....x.	F EY1 Z D
 phyllis	..S..r.	F IH1 L IH0 S
-plaid	...x.	P L AE1 D
+plaid	.....	P L AE1 D
 playback	..SS....	P L EY1 B AE2 K
 plush	.....	P L AH1 SH
 portraying	.....SSr..	P AO0 R T R EY1 IH0 NG
@@ -18312,7 +18312,7 @@ quid	....	K W IH1 D
 receptive	...S..r.x	R IH0 S EH1 P T IH0 V
 redundancy	.r.S..r...	R IH0 D AH1 N D AH0 N S IY0
 reelection	..r.S...r.	R IY0 IH0 L EH1 K SH AH0 N
-reindeer	.SS..x..	R EY1 N D IH2 R
+reindeer	.SS...x.	R EY1 N D IH2 R
 relapse	...S..x	R IY0 L AE1 P S
 relish	.S.r..	R EH1 L IH0 SH
 rendezvous	.S..rx...x	R AA1 N D IH0 V UW2
@@ -18399,7 +18399,7 @@ blackwell	..S......	B L AE1 K W EH2 L
 bolster	.S...rr	B OW1 L S T ER0
 bray	....	B R EY1
 briefs	......	B R IY1 F S
-caitlin	.S.....	K EY1 T L IH0 N
+caitlin	.SS....	K EY1 T L IH0 N
 calais	.r.SSx	K AH0 L EY1
 cancelling	.S.....r..	K AE1 N S AH0 L IH0 NG
 canning	.S..r..	K AE1 N IH0 NG
@@ -18489,7 +18489,7 @@ insurgency	...SS.r...	IH2 N S ER1 JH AH0 N S IY0
 intimidate	...S.r...x	IH2 N T IH1 M IH0 D EY2 T
 irregularities	.......SSr....	IH2 R EH0 G Y AH0 L EH1 R AH0 T IY0 Z
 jamming	.S..r..	JH AE1 M IH0 NG
-labyrinth	.S.x.....	L AE1 B ER0 IH2 N TH
+labyrinth	.S.rx....	L AE1 B ER0 IH2 N TH
 lac	...	L AE1 K
 latency	.S.r...	L EY1 T AH0 N S IY0
 limbo	.S...	L IH1 M B OW0
@@ -18619,7 +18619,7 @@ asean	..Sr.	AH0 Z IY1 AH0 N
 aspiration	...rrS..r.	AE2 S P ER0 EY1 SH AH0 N
 atkins	S..r..	AE1 T K IH0 N Z
 attentive	r..S..r.x	AH0 T EH1 N T IH0 V
-auntie	S.....	AE1 N T IY0
+auntie	SS....	AE1 N T IY0
 austen	SS..r.	AO1 S T IH0 N
 awakened	r.S.r.x.	AH0 W EY1 K AH0 N D
 ballpark	.S......	B AO1 L P AA2 R K
@@ -18835,7 +18835,7 @@ akbar	S....	AE1 K B ER0
 alienated	S..r...r.	EY1 L IY0 AH0 N EY2 T IH0 D
 angered	S..rrx.	AE1 NG G ER0 D
 archers	SS..rr.	AA1 R CH ER0 Z
-arrays	x..SS.	ER0 EY1 Z
+arrays	rrxSS.	ER0 EY1 Z
 ascertain	..xrr.SS.	AE2 S ER0 T EY1 N
 assam	...S.	AA2 S AA1 M
 audits	SS.r..	AA1 D AH0 T S
@@ -18850,7 +18850,7 @@ boils	.....	B OY1 L Z
 breaths	.......	B R EH1 TH S
 brigades	..r.S.x.	B R IH0 G EY1 D Z
 bumping	.S..r..	B AH1 M P IH0 NG
-burrows	.x.....	B ER1 OW0 Z
+burrows	.SSx...	B ER1 OW0 Z
 cairns	......	K EH1 R N Z
 caracas	.rrS.r.	K ER0 AA1 K AH0 S
 cassie	.S....	K AE1 S IY0
@@ -18867,12 +18867,12 @@ clipped	.....x.	K L IH1 P T
 collide	.r..S.x	K AH0 L AY1 D
 commemoration	.r....rrS..r.	K AH0 M EH2 M ER0 EY1 SH AH0 N
 commuting	.r..S.r..	K AH0 M Y UW1 T IH0 NG
-complexion	.r...S.rx.	K AH0 M P L EH1 K SH AH0 N
+complexion	.r...S.xr.	K AH0 M P L EH1 K SH AH0 N
 compulsive	.r..S..r.x	K AH0 M P AH1 L S IH0 V
 congenital	.r..S.r.r.	K AH0 N JH EH1 N AH0 T AH0 L
 construed	.r....SS.	K AH0 N S T R UW1 D
 consular	.S..r.rr	K AA1 N S AH0 L ER0
-corrective	.x..S..r.x	K ER0 EH1 K T IH0 V
+corrective	.rrxS..r.x	K ER0 EH1 K T IH0 V
 costello	....S...	K AO2 S T EH1 L OW0
 coworker	.S.SS.rr	K OW1 W ER1 K ER0
 crumble	..S...x	K R AH1 M B AH0 L
@@ -18997,7 +18997,7 @@ pediatrics	....S..r..	P IY2 D IY0 AE1 T R IH0 K S
 perch	.....	P ER1 CH
 perpendicular	....r..S...rr	P ER2 P AH0 N D IH1 K Y AH0 L ER0
 physique	..r.S.xx	F AH0 Z IY1 K
-pioneered	..r.xS.x.	P AY2 AH0 N IH1 R D
+pioneered	..r.Sx.x.	P AY2 AH0 N IH1 R D
 playbook	..SS.rr.	P L EY1 B UH0 K
 pleases	..SS.r.	P L IY1 Z IH0 Z
 plywood	..S....	P L AY1 W UH2 D
@@ -19164,7 +19164,7 @@ fide	...x	F AY1 D
 finder	.S..rr	F AY1 N D ER0
 fishy	.S...	F IH1 SH IY0
 flooring	..xSSr..	F L AO1 R IH0 NG
-forearm	...x...	F AO0 R AA1 R M
+forearm	.......	F AO0 R AA1 R M
 frail	.....	F R EY1 L
 fray	....	F R EY1
 gathers	.S..rr.	G AE1 DH ER0 Z
@@ -19196,7 +19196,7 @@ lawless	.SS.r..	L AO1 L AH0 S
 leftists	.S..r...	L EH1 F T IH0 S T S
 legalized	.S.r...x.	L IY1 G AH0 L AY2 Z D
 leggings	.S..r...	L EH1 G IH0 NG Z
-legions	.S.rx..	L IY1 JH AH0 N Z
+legions	.S.xr..	L IY1 JH AH0 N Z
 leveled	.S.r.x.	L EH1 V AH0 L D
 liza	.S.r	L IY1 Z AH0
 locomotives	...r.S.r.x.	L OW2 K AH0 M OW1 T IH0 V Z
@@ -19334,7 +19334,7 @@ benchmarks	.S........	B EH1 N CH M AA2 R K S
 biz	...	B IH1 Z
 blazer	..S.rr	B L EY1 Z ER0
 blower	..SSrr	B L OW1 ER0
-blurry	..x...	B L ER1 IY0
+blurry	..SSx.	B L ER1 IY0
 bravely	..S.x..	B R EY1 V L IY0
 bret	....	B R EH1 T
 breweries	..SS.....	B R UW1 ER0 IY0 Z
@@ -19587,7 +19587,7 @@ blanks	......	B L AE1 NG K S
 borg	....	B AO1 R G
 brainwashed	..SS.....x.	B R EY1 N W AA2 SH T
 brothel	..S..r.	B R AA1 TH AH0 L
-burrito	.x..S..	B ER0 IY1 T OW0
+burrito	.rrxS..	B ER0 IY1 T OW0
 bytes	...x.	B AY1 T S
 calmed	....x.	K AA1 M D
 camper	.S..rr	K AE1 M P ER0
@@ -19605,7 +19605,7 @@ collided	.r..S.r.	K AH0 L AY1 D IH0 D
 commentaries	.S..r.......	K AA1 M AH0 N T EH2 R IY0 Z
 complicate	.S...r...x	K AA1 M P L AH0 K EY2 T
 concerto	.r..S...	K AH0 N CH EH1 R T OW0
-concurrently	.r..x..r....	K AH0 N K ER1 AH0 N T L IY0
+concurrently	.r..SSxr....	K AH0 N K ER1 AH0 N T L IY0
 contraception	.....r.S...r.	K AA2 N T R AH0 S EH1 P SH AH0 N
 convex	......	K AH0 N V EH1 K S
 crouch	......	K R AW1 CH
@@ -19724,7 +19724,7 @@ nino	.S..	N IY1 N OW0
 nonfiction	....S...r.	N AA0 N F IH1 K SH AH0 N
 nouns	.....	N AW1 N Z
 nuanced	.S...x.	N UW1 AA0 N S T
-occurrences	r..x..r..r.	AH0 K ER1 AH0 N S IH0 Z
+occurrences	r..SSxr..r.	AH0 K ER1 AH0 N S IH0 Z
 olympia	..S...r	OW0 L IH1 M P IY0 AH0
 orb	...	AO1 R B
 orchestral	....S...r.	AO0 R K EH1 S T R AH0 L
@@ -19784,7 +19784,7 @@ sorority	.rrSSr..	S ER0 AO1 R AH0 T IY0
 sped	....	S P EH1 D
 speechless	..SS...r..	S P IY1 CH L AH0 S
 spores	....x.	S P AO1 R Z
-spurred	..x..x.	S P ER1 D
+spurred	....xx.	S P ER1 D
 stair	.....	S T EH1 R
 starship	..SS....	S T AA1 R SH IH2 P
 stemming	..S..r..	S T EH1 M IH0 NG
@@ -19796,7 +19796,7 @@ supremacist	....S.r.r..	S UW0 P R EH1 M AH0 S IH0 S T
 tal	...	T AA1 L
 ter	...	T ER1
 toasted	.SS..r.	T OW1 S T IH0 D
-tortoise	.SS.xr.x	T AO1 R T AH0 S
+tortoise	.SS.rr.x	T AO1 R T AH0 S
 tragically	..S.r.x...	T R AE1 JH IH0 K L IY0
 transitioning	.....S..r.r..	T R AE0 N Z IH1 SH AH0 N IH0 NG
 translators	......S.rr.	T R AE0 N S L EY1 T ER0 Z
@@ -19931,8 +19931,8 @@ guideline	.SS.x...x	G AY1 D L AY2 N
 hadley	.S....	HH AE1 D L IY0
 hawthorne	.SS.....x	HH AO1 TH AO0 R N
 headmaster	.SS..S..rr	HH EH1 D M AE1 S T ER0
-heart's	.x.....	HH AA1 R T S
-heartland	.xSS.....	HH AA1 R T L AE2 N D
+heart's	.......	HH AA1 R T S
+heartland	.SSS.....	HH AA1 R T L AE2 N D
 hedgehog	.S..x...	HH EH1 JH HH AA2 G
 heinous	.SS.rr.	HH EY1 N AH0 S
 hens	....	HH EH1 N Z
@@ -20105,7 +20105,7 @@ braid	.....	B R EY1 D
 branching	..S...r..	B R AE1 N CH IH0 NG
 brewster	..SS..rr	B R UW1 S T ER0
 bulge	....x	B AH1 L JH
-byrd	.x..	B ER1 D
+byrd	..x.	B ER1 D
 cabaret	...rrSx	K AE2 B ER0 EY1
 camilla	.r.S..r	K AH0 M IH1 L AH0
 caregivers	.SSx...rr.	K EH1 R G IH2 V ER0 Z
@@ -20177,7 +20177,7 @@ gogh	..xx	G OW1
 gracie	..S...	G R EY1 S IY0
 grassy	..S...	G R AE1 S IY0
 greener	..SS.rr	G R IY1 N ER0
-greer	..x..	G R IH1 R
+greer	...x.	G R IH1 R
 greta	..S.r	G R IY1 T AH0
 hanger	.S..rr	HH AE1 NG ER0
 hawking	.SS.r..	HH AO1 K IH0 NG
@@ -20270,7 +20270,7 @@ raul	....	R AO1 L
 recon	.S...	R IY1 K AO0 N
 recount	...SS..	R IH0 K AW1 N T
 rectangle	.S......x	R EH1 K T AE0 NG G AH0 L
-recurrent	...x..r..	R IH0 K ER1 AH0 N T
+recurrent	...SSxr..	R IH0 K ER1 AH0 N T
 refill	......	R IY1 F IH0 L
 reflexes	.S....r.	R IY1 F L EH0 K S AH0 Z
 reinforces	..r..SS.r.	R IY2 IH0 N F AO1 R S IH0 Z
@@ -20280,7 +20280,7 @@ renewing	.r.SSr..	R IH0 N UW1 IH0 NG
 reopening	..S.r.r..	R IY0 OW1 P AH0 N IH0 NG
 requisite	.S..r.r.x	R EH1 K W AH0 Z AH0 T
 responsibly	.r..S..r...	R IH0 S P AA1 N S AH0 B L IY0
-resurrected	...x..S..r.	R EH2 Z ER0 EH1 K T IH0 D
+resurrected	...rrxS..r.	R EH2 Z ER0 EH1 K T IH0 D
 reuben	.SS.r.	R UW1 B AH0 N
 revolve	...S..x	R IY0 V AA1 L V
 rewind	.S....	R IY1 W AY0 N D
@@ -20646,7 +20646,7 @@ catalytic	...r.S.r.	K AE2 T AH0 L IH1 T IH0 K
 cemeteries	.S.r......	S EH1 M AH0 T EH2 R IY0 Z
 ceylon	....S.	S IH0 L AA1 N
 chases	..S.r.	CH EY1 S AH0 Z
-cheerleaders	..xS.....rr.	CH IH1 R L IY2 D ER0 Z
+cheerleaders	..Sx.....rr.	CH IH1 R L IY2 D ER0 Z
 cheesecake	..SS.x...x	CH IY1 Z K EY2 K
 choral	..SSr.	K AO1 R AH0 L
 chronology	...r.S.r..	K R AH0 N AA1 L AH0 JH IY0
@@ -20687,7 +20687,7 @@ envious	S...rr.	EH1 N V IY0 AH0 S
 erroneous	...S..rr.	EH0 R OW1 N IY0 AH0 S
 exacerbated	r.S.rr...r.	IH0 G Z AE1 S ER0 B EY2 T AH0 D
 familial	.r.S..r.	F AH0 M IH1 L Y AH0 L
-fashions	.S..rx..	F AE1 SH AH0 N Z
+fashions	.S..xr..	F AE1 SH AH0 N Z
 feces	.S...	F IY1 S IY2 Z
 federer	.S.rrrr	F EH1 D ER0 ER0
 filings	.S.r...	F AY1 L IH0 NG Z
@@ -20964,7 +20964,7 @@ golfing	.S..r..	G AA1 L F IH0 NG
 goons	.....	G UW1 N Z
 guesses	.SS..r.	G EH1 S AH0 Z
 gums	....	G AH1 M Z
-haas	.x..	HH AA1 S
+haas	..x.	HH AA1 S
 halle	.....	HH AE1 L
 hana	.S.r	HH AE1 N AH0
 handcuffs	.S.......	HH AE1 N D K AH2 F S
@@ -21232,7 +21232,7 @@ har	...	HH AA1 R
 harcourt	.SS.....	HH AA1 R K AO2 R T
 harlan	.SS.r.	HH AA1 R L AH0 N
 haute	....x	HH OW1 T
-heartache	.xSS....x	HH AA1 R T EY2 K
+heartache	.SSS....x	HH AA1 R T EY2 K
 homeowner	.S.x...rr	HH OW1 M OW2 N ER0
 hooray	.rr.SS	HH UH0 R EY1
 hypotheses	...S..r...	HH AY0 P AA1 TH AH0 S IY2 Z
@@ -21303,7 +21303,7 @@ rattling	.S...r..	R AE1 T L IH0 NG
 realisation	.SS.r.S..r.	R IY1 L AH0 Z EY1 SH AH0 N
 recapture	...S..rrx	R IY0 K AE1 P CH ER0
 recounted	...SS..r.	R IH0 K AW1 N T IH0 D
-recurrence	...x..r..x	R IH0 K ER1 AH0 N S
+recurrence	...SSxr..x	R IH0 K ER1 AH0 N S
 referrals	.r.x..r..	R IH0 F ER1 AH0 L Z
 refinement	.r.S.x.r..	R AH0 F AY1 N M AH0 N T
 regis	.S.r.	R IY1 JH IH0 S
@@ -21441,7 +21441,7 @@ counteract	.SS..rr...	K AW1 N T ER0 AE2 K T
 courtship	.SSS.xx..	K AO1 R CH IH2 P
 crammed	.....x.	K R AE1 M D
 craven	..S.r.	K R EY1 V AH0 N
-cushions	.S..rx..	K UH1 SH AH0 N Z
+cushions	.S..xr..	K UH1 SH AH0 N Z
 daley	.S...	D EY1 L IY0
 debilitating	.r.S.r...r..	D AH0 B IH1 L AH0 T EY2 T IH0 NG
 deepen	.SS.r.	D IY1 P AH0 N
@@ -21796,7 +21796,7 @@ karim	.rrS.	K ER0 IY1 M
 kinks	.....	K IH1 NG K S
 klan	....	K L AE1 N
 kristina	..r..S.r	K R IH0 S T IY1 N AH0
-laughable	.Sx..r..x	L AE1 F AH0 B AH0 L
+laughable	.SS..r..x	L AE1 F AH0 B AH0 L
 lennox	.S..r.	L EH1 N AH0 K S
 lion's	.Sr...	L AY1 AH0 N Z
 locus	.S.r.	L OW1 K AH0 S
@@ -22061,7 +22061,7 @@ incomprehensible	.......r.S..r..x	IH2 NG K AA2 M P R AH0 HH EH1 N S IH0 B AH0 L
 incumbents	...S..r...	IH2 N K AH1 M B AH0 N T S
 inertia	..SS..r	IH2 N ER1 SH AH0
 infestation	...S..S..r.	IH2 N F EH1 S T EY1 SH AH0 N
-insurrection	...x..S...r.	IH2 N S ER0 EH1 K SH AH0 N
+insurrection	...rrxS...r.	IH2 N S ER0 EH1 K SH AH0 N
 intolerable	...S.rrr..x	IH2 N T AA1 L ER0 AH0 B AH0 L
 isla	Sx.r	IY1 L AH0
 jordanian	....S..r.	JH AO2 R D EY1 N IY0 AH0 N
@@ -22212,7 +22212,7 @@ capitalized	.S.r.r...x.	K AE1 P IH0 T AH0 L AY2 Z D
 carte	....x	K AA1 R T
 cavendish	.S.r..r..	K AE1 V AH0 N D IH0 SH
 celine	.r.S.x	S AH0 L IY1 N
-cheerleading	..xS.....r..	CH IH1 R L IY2 D IH0 NG
+cheerleading	..Sx.....r..	CH IH1 R L IY2 D IH0 NG
 chipping	..S..r..	CH IH1 P IH0 NG
 cliche	.....S	K L IY0 SH EY1
 clutches	..S...r.	K L AH1 CH AH0 Z
@@ -22301,7 +22301,7 @@ loathing	.SS..r..	L OW1 TH IH0 NG
 loyalists	.SSr.r...	L OY1 AH0 L IH0 S T S
 mahmoud	..x....	M AE1 M UW0 D
 manhood	.S.....	M AE1 N HH UH2 D
-martyrdom	.SS.x..r.	M AA1 R T ER0 D AH0 M
+martyrdom	.SS.rx.r.	M AA1 R T ER0 D AH0 M
 mcdermott	...SS.r..	M AH0 K D ER1 M AH0 T
 mcmillan	...S..r.	M AH0 K M IH1 L AH0 N
 menopause	.S.r....x	M EH1 N AH0 P AW2 Z
@@ -22439,7 +22439,7 @@ apprentices	r...S..r.r.	AH0 P R EH1 N T AH0 S IH0 Z
 aqueous	S...rr.	EY1 K W IY0 AH0 S
 ariana	...S.r	AA0 R IY0 AE1 N AH0
 attainment	r..SS..r..	AH0 T EY1 N M AH0 N T
-auctioneer	.....r.xS.	AA2 K SH AH0 N IH1 R
+auctioneer	.....r.Sx.	AA2 K SH AH0 N IH1 R
 authorship	SS..rr....	AO1 TH ER0 SH IH2 P
 awoke	r.S.x	AH0 W OW1 K
 axial	S..r.	AE1 K S IY0 AH0 L
@@ -22696,7 +22696,7 @@ transplants	.......S...	T R AE0 N S P L AE1 N T S
 tributaries	..S........	T R IH1 B Y AH0 T EH2 R IY0 Z
 tributary	..S......	T R IH1 B Y AH0 T EH2 R IY0
 trumpets	..S..r..	T R AH1 M P AH0 T S
-turrets	.x..r..	T ER1 AH0 T S
+turrets	.SSxr..	T ER1 AH0 T S
 tuscany	.S..r..	T AH1 S K AH0 N IY0
 tutors	.S.rr.	T UW1 T ER0 Z
 tweaks	......	T W IY1 K S
@@ -22713,7 +22713,7 @@ verlag	.SS...	V ER1 L AE0 G
 walcott	.S.....	W AO1 L K AA0 T
 warship	.SS....	W AO1 R SH IH2 P
 weathered	.SS..rrx.	W EH1 DH ER0 D
-wholeheartedly	..S.x.x...r...	HH OW1 L HH AA0 R T IH0 D L IY0
+wholeheartedly	..S.x.....r...	HH OW1 L HH AA0 R T IH0 D L IY0
 whooping	..SS.r..	W UW1 P IH0 NG
 widowed	.S...x.	W IH1 D OW0 D
 willed	....x.	W IH1 L D
@@ -22835,7 +22835,7 @@ himalayan	...r.SSr.	HH IH2 M AH0 L EY1 AH0 N
 hollis	.S..r.	HH AA1 L IH0 S
 horticultural	....r.S..rrr.	HH AO2 R T AH0 K AH1 L CH ER0 AH0 L
 hurling	.SS.r..	HH ER1 L IH0 NG
-hurried	.x.....	HH ER1 IY0 D
+hurried	.SSx...	HH ER1 IY0 D
 hypocrites	.S.r....x.	HH IH1 P AH0 K R IH2 T S
 ide	..x	AY1 D
 idealistic	.....S..r.	AY0 D IY2 AH0 L IH1 S T IH0 K
@@ -23198,12 +23198,12 @@ soulful	.SS..r.	S OW1 L F AH0 L
 stampede	.....S.x	S T AE0 M P IY1 D
 standoff	..S.....	S T AE1 N D AO2 F
 stately	..S.x..	S T EY1 T L IY0
-steered	..x..x.	S T IH1 R D
+steered	...x.x.	S T IH1 R D
 straightened	...SSxx.r.x.	S T R EY1 T AH0 N D
 sugary	.S.rr.	SH UH1 G ER0 IY0
 suitably	.SS.r...	S UW1 T AH0 B L IY0
 supernova	...rr.S.r	S UW2 P ER0 N OW1 V AH0
-surrendering	.x..S..rrr..	S ER0 EH1 N D ER0 IH0 NG
+surrendering	.rrxS..rrr..	S ER0 EH1 N D ER0 IH0 NG
 synonym	.S.r...	S IH1 N AH0 N IH2 M
 tanned	....x.	T AE1 N D
 tantrum	.S...r.	T AE1 N T R AH0 M
@@ -23225,7 +23225,7 @@ urbana	rr.S.r	ER0 B AE1 N AH0
 vaccinations	....r.S..r..	V AE2 K S AH0 N EY1 SH AH0 N Z
 valentino	...r..S..	V AE2 L AH0 N T IY1 N OW0
 valuations	....S..r..	V AE0 L Y UW0 EY1 SH AH0 N Z
-veneer	.r.xS.	V AH0 N IH1 R
+veneer	.r.Sx.	V AH0 N IH1 R
 verona	.rrS.r	V ER0 OW1 N AH0
 viewership	..SSrr....	V Y UW1 ER0 SH IH2 P
 viscosity	.r..S.r..	V IH0 S K AA1 S AH0 T IY0
@@ -23349,7 +23349,7 @@ freshness	..S...r..	F R EH1 SH N AH0 S
 fronted	..S..r.	F R AH1 N T IH0 D
 galilee	.S.r...	G AE1 L AH0 L IY2
 gallup	.S..r.	G AE1 L AH0 P
-gauges	.Sx.r.	G EY1 JH AH0 Z
+gauges	.SS.r.	G EY1 JH AH0 Z
 gonzales	....S.r.	G AA0 N Z AA1 L AH0 S
 grandma's	..S......	G R AE1 N D M AA2 Z
 grapple	..S...x	G R AE1 P AH0 L
@@ -23566,7 +23566,7 @@ conspiring	.r...SSr..	K AH0 N S P AY1 R IH0 NG
 contours	.S......	K AA1 N T UH2 R Z
 contraceptive	.....r.S..r.x	K AA2 N T R AH0 S EH1 P T IH0 V
 conversational	....rr.S..r.r.	K AA2 N V ER0 S EY1 SH AH0 N AH0 L
-corrosive	.x..S.r.x	K ER0 OW1 S IH0 V
+corrosive	.rrxS.r.x	K ER0 OW1 S IH0 V
 counterpoint	.SS..rr.....	K AW1 N T ER0 P OY2 N T
 courting	.SSS.r..	K AO1 R T IH0 NG
 cowardice	.SSrr.r.x	K AW1 ER0 D AH0 S
@@ -23603,7 +23603,7 @@ firemen	.SSx.r.	F AY1 R M AH0 N
 fission	.Sx..r.	F IH1 SH AH0 N
 fives	...x.	F AY1 V Z
 fleas	.....	F L IY1 Z
-flurry	..x...	F L ER1 IY0
+flurry	..SSx.	F L ER1 IY0
 folio	.S...	F OW1 L IY2 OW0
 fosters	.S..rr.	F AA1 S T ER0 Z
 franc	.....	F R AE1 NG K
@@ -23724,7 +23724,7 @@ rollin	.S..r.	R AA1 L IH0 N
 roundtable	.SS......x	R AW1 N D T EY2 B AH0 L
 rower	.SSrr	R OW1 ER0
 rut	...	R AH1 T
-salaam	.r.xS.	S AH0 L AA1 M
+salaam	.r.Sx.	S AH0 L AA1 M
 sanjay	.S....	S AE1 N JH EY0
 scapegoat	..S.x....	S K EY1 P G OW2 T
 schooled	......x.	S K UW1 L D
@@ -23818,7 +23818,7 @@ blackstone	..S......x	B L AE1 K S T OW2 N
 bonkers	.S..rr.	B AA1 NG K ER0 Z
 brazen	..S.r.	B R EY1 Z AH0 N
 burlesque	.rr.S..xx	B ER0 L EH1 S K
-burrow	.x....	B ER1 OW0
+burrow	.SSx..	B ER1 OW0
 calculates	.S......x.	K AE1 L K Y AH0 L EY2 T S
 calder	.S..rr	K AO1 L D ER0
 callers	.S..rr.	K AO1 L ER0 Z
@@ -23887,7 +23887,7 @@ eton	S.r.	IY1 T AH0 N
 evangelist	..S..r.r..	IH0 V AE1 N JH AH0 L IH0 S T
 explorations	......S..r..	EH2 K S P L ER0 EY1 SH AH0 N Z
 extraterrestrial	....r.x..S....r.	EH2 K S T R AH0 T ER0 EH1 S T R IY0 AH0 L
-exxon	Sx...	EH1 K S AA0 N
+exxon	S.x..	EH1 K S AA0 N
 eyeball	SSx....	AY1 B AO2 L
 faso	.S..	F AA1 S OW0
 fiend	.....	F IY1 N D
@@ -23908,9 +23908,9 @@ gypsies	.S.....	JH IH1 P S IY0 Z
 happenings	.S....r...	HH AE1 P AH0 N IH0 NG Z
 haw	...	HH AO1
 hawke	....x	HH AO1 K
-hearth	.x....	HH AA1 R TH
+hearth	......	HH AA1 R TH
 heathen	.SS..r.	HH IY1 DH AH0 N
-hemorrhage	.S.x..xr.x	HH EH1 M ER0 IH0 JH
+hemorrhage	.S....xr.x	HH EH1 M ER0 IH0 JH
 hereafter	.r.xS..rr	HH IH0 R AE1 F T ER0
 hijacking	.S....r..	HH AY1 JH AE2 K IH0 NG
 hill's	......	HH IH1 L Z
@@ -23977,7 +23977,7 @@ mormons	.SS.r..	M AO1 R M AH0 N Z
 movie's	.S.....	M UW1 V IY0 Z
 mow	...	M OW1
 mower	.SSrr	M OW1 ER0
-mozzarella	..x.r.S..r	M AA2 T S AH0 R EH1 L AH0
+mozzarella	...xr.S..r	M AA2 T S AH0 R EH1 L AH0
 multilateral	......S.rrr.	M AH2 L T IH0 L AE1 T ER0 AH0 L
 munster	.S...rr	M AH1 N S T ER0
 mutated	.S...r.	M Y UW1 T EY2 T IH0 D
@@ -24183,7 +24183,7 @@ crazier	..S..rr	K R EY1 Z IY0 ER0
 crisps	......	K R IH1 S P S
 crockett	..S..r..	K R AA1 K IH0 T
 crowning	..SS.r..	K R AW1 N IH0 NG
-crucifixion	....r.S.rx.	K R UW2 S IH0 F IH1 K SH AH0 N
+crucifixion	....r.S.xr.	K R UW2 S IH0 F IH1 K SH AH0 N
 cursor	.SS.rr	K ER1 S ER0
 daniel's	.S..r...	D AE1 N Y AH0 L Z
 deduct	.r.S..	D IH0 D AH1 K T
@@ -24344,7 +24344,7 @@ robo	.S..	R OW1 B OW0
 romantically	...S..r.....	R OW0 M AE1 N T IH0 K AH0 L IY0
 rosario	...SS..	R OW0 Z AA1 R IY0 OW0
 rout	....	R AW1 T
-saab	.x..	S AA1 B
+saab	..x.	S AA1 B
 salmonella	....r.S..r	S AE2 L M AH0 N EH1 L AH0
 sargent	.SS.r..	S AA1 R JH AH0 N T
 savoy	.r.SS	S AH0 V OY1
@@ -24437,7 +24437,7 @@ brazilians	..r.S..r..	B R AH0 Z IH1 L Y AH0 N Z
 bridesmaid	..S.x.....	B R AY1 D Z M EY2 D
 brie	....	B R IY1
 brochures	.....SSx.	B R OW0 SH UH1 R Z
-burroughs	......xx.	B AH1 R OW0 Z
+burroughs	.S....xx.	B AH1 R OW0 Z
 capping	.S..r..	K AE1 P IH0 NG
 cartier	.SS..rr	K AA1 R T IY0 ER0
 cashing	.S..r..	K AE1 SH IH0 NG
@@ -24461,7 +24461,7 @@ cornerback	.SS.rr....	K AO1 R N ER0 B AE2 K
 credence	..S.r..x	K R IY1 D AH0 N S
 creeks	......	K R IY1 K S
 crossfire	..S.....x	K R AO1 S F AY0 R
-currie	.x....	K ER1 IY0
+currie	.SSx..	K ER1 IY0
 customer's	.S..r.rr..	K AH1 S T AH0 M ER0 Z
 dada	.S..	D AA1 D AA2
 dax	...	D AE1 K S
@@ -24477,7 +24477,7 @@ dissolving	.r..S..r..	D IH0 Z AO1 L V IH0 NG
 distort	.r..SS.	D IH0 S T AO1 R T
 diverting	...SS.r..	D AY0 V ER1 T IH0 NG
 dobbs	.....	D AA1 B Z
-draught	...x...	D R AE1 F T
+draught	.......	D R AE1 F T
 dreary	..SSS.	D R IH1 R IY0
 dropout	..S....	D R AA1 P AW2 T
 duped	...x.	D UW1 P T
@@ -25066,12 +25066,12 @@ congregational	.....r.S..r.r.	K AA2 NG G R AH0 G EY1 SH AH0 N AH0 L
 cooperatives	..S.x.r.r.x.	K OW0 AA1 P R AH0 T IH0 V Z
 copa	.S.r	K OW1 P AH0
 corals	.SSr..	K AO1 R AH0 L Z
-corral	.x..S.	K ER0 AE1 L
+corral	.rrxS.	K ER0 AE1 L
 cortical	.SS.r.r.	K AO1 R T AH0 K AH0 L
 countering	.SS..rrr..	K AW1 N T ER0 IH0 NG
 cremation	....S..r.	K R IY0 M EY1 SH AH0 N
 cubans	.S.r..	K Y UW1 B AH0 N Z
-curricular	.x..S.....	K ER0 IH1 K Y AH0 L ER2
+curricular	.rrxS.....	K ER0 IH1 K Y AH0 L ER2
 curving	.SS.r..	K ER1 V IH0 NG
 deans	.....	D IY1 N Z
 decked	....x.	D EH1 K T
@@ -25223,7 +25223,7 @@ nonviolent	....Sr.r..	N AA0 N V AY1 AH0 L AH0 N T
 nuremberg	.SSr..rr.	N UH1 R AH0 M B ER0 G
 ozzy	S...	AA1 Z IY2
 palatable	.S.r.r..x	P AE1 L AH0 T AH0 B AH0 L
-parishioners	.rrS..rx.rr.	P ER0 IH1 SH AH0 N ER0 Z
+parishioners	.rrS..xr.rr.	P ER0 IH1 SH AH0 N ER0 Z
 parkland	.SS.....	P AA1 R K L AE2 N D
 payouts	.SS....	P EY1 AW2 T S
 pensacola	....r.S.r	P EH2 N S AH0 K OW1 L AH0
@@ -25251,7 +25251,7 @@ reimburse	..r..SS.x	R IY2 IH0 M B ER1 S
 reinvent	..r..S..	R IY2 IH0 N V EH1 N T
 repatriation	.......S..r.	R IY0 P EY2 T R IY0 EY1 SH AH0 N
 requiem	.S.....	R EH1 K W IY0 AH0 M
-resurrect	...x..S..	R EH2 Z ER0 EH1 K T
+resurrect	...rrxS..	R EH2 Z ER0 EH1 K T
 ringer	.S..rr	R IH1 NG ER0
 rockville	.S......x	R AA1 K V IH2 L
 rollout	.S.....	R OW1 L AW2 T
@@ -25343,7 +25343,7 @@ albino	...S..	AE0 L B AY1 N OW2
 antrim	S...r.	AE1 N T R IH0 M
 aquaculture	S..r....rrx	AE1 K W AH0 K AH2 L CH ER0
 argus	SS.r.	AA1 R G AH0 S
-arrears	x..SSS.	ER0 IH1 R Z
+arrears	rrxSSS.	ER0 IH1 R Z
 asp	...	AE1 S P
 assimilate	r..S.r...x	AH0 S IH1 M AH0 L EY2 T
 asterisk	S..rrr..	AE1 S T ER0 IH0 S K
@@ -25441,7 +25441,7 @@ genevieve	.S.r....x	JH EH1 N AH0 V IY2 V
 globes	....x.	G L OW1 B Z
 glorify	..SSr..	G L AO1 R AH0 F AY2
 gunnar	.S..rr	G AH1 N ER0
-heartwarming	.xSS.....r..	HH AA1 R T W AO2 R M IH0 NG
+heartwarming	.SSS.....r..	HH AA1 R T W AO2 R M IH0 NG
 henrietta	.....S..r	HH EH2 N R IY0 EH1 T AH0
 heretics	.S.r.r..	HH EH1 R AH0 T IH0 K S
 hiccups	.S..r..	HH IH1 K AH0 P S
@@ -25642,7 +25642,7 @@ cabal	.r.S.	K AH0 B AA1 L
 cabrera	....S.r	K AA0 B R EH1 R AH0
 cadre	.S...	K AE1 D R IY0
 campground	.S........	K AE1 M P G R AW2 N D
-canaan	.S.xr.	K EY1 N AH0 N
+canaan	.S.rx.	K EY1 N AH0 N
 canyons	.S..r..	K AE1 N Y AH0 N Z
 causeway	.SS.x...	K AA1 Z W EY2
 childrens	..S...r..	CH IH1 L D R AH0 N Z
@@ -25665,8 +25665,8 @@ covent	.S.r..	K AH1 V AH0 N T
 covington	.S.r...r.	K AH1 V IH0 NG T AH0 N
 cramp	.....	K R AE1 M P
 cucumbers	.S.r..rr.	K Y UW1 K AH0 M B ER0 Z
-curran	.x..r.	K ER1 AH0 N
-curricula	.x..S....	K ER0 IH1 K Y AH0 L AA2
+curran	.SSxr.	K ER1 AH0 N
+curricula	.rrxS....	K ER0 IH1 K Y AH0 L AA2
 dearborn	.SSS....	D IH1 R B AO2 R N
 decadent	.S.r.r..	D EH1 K AH0 D AH0 N T
 decoy	.r.SS	D AH0 K OY1
@@ -25721,7 +25721,7 @@ graciously	..S..rr...	G R EY1 SH AH0 S L IY0
 grammys	..S....	G R AE1 M IY0 Z
 grassland	..S......	G R AE1 S L AE2 N D
 hackett	.S..r..	HH AE1 K IH0 T
-hajj	..x.	HH AE1 JH
+hajj	...x	HH AE1 JH
 hampstead	.S.......	HH AE1 M P S T EH2 D
 hap	...	HH AE1 P
 hatfield	.S......	HH AE1 T F IY2 L D
@@ -25987,7 +25987,7 @@ conley	.S....	K AA1 N L IY0
 connors	.S..rr.	K AA1 N ER0 Z
 consequential	....r..S...r.	K AA2 N S AH0 K W EH1 N SH AH0 L
 constitutions	.....r.S..r..	K AA2 N S T IH0 T UW1 SH AH0 N Z
-contagion	.r..S.rx.	K AH0 N T EY1 JH AH0 N
+contagion	.r..S.xr.	K AH0 N T EY1 JH AH0 N
 convoys	.S.....	K AA1 N V OY2 Z
 corset	.SS.r.	K AO1 R S AH0 T
 cortisol	.SS.r...	K AO1 R T IH0 S AO2 L
@@ -26289,7 +26289,7 @@ brothels	..S..r..	B R AA1 TH AH0 L Z
 buckeyes	.S....x.	B AH1 K AY2 Z
 buffers	.S..rr.	B AH1 F ER0 Z
 buffs	.....	B AH1 F S
-burrell	.x..S..	B ER0 EH1 L
+burrell	.rrxS..	B ER0 EH1 L
 buzzed	....x.	B AH1 Z D
 bylaws	.S....	B AY1 L AO2 Z
 bystander	.S.....rr	B AY1 S T AE2 N D ER0
@@ -26306,7 +26306,7 @@ concave	......x	K AA0 N K EY1 V
 confuses	.r..S.r.	K AH0 N F Y UW1 Z IH0 Z
 consequent	.S..r..r..	K AA1 N S AH0 K W AH0 N T
 contraceptives	.....r.S..r.x.	K AA2 N T R AH0 S EH1 P T IH0 V Z
-corrects	.x..S...	K ER0 EH1 K T S
+corrects	.rrxS...	K ER0 EH1 K T S
 coughs	......	K AO1 F S
 cree	....	K R IY1
 crucifix	..S.r...	K R UW1 S AH0 F IH2 K S
@@ -26318,7 +26318,7 @@ dealerships	.SS.rr.....	D IY1 L ER0 SH IH2 P S
 decode	.r.S.x	D IH0 K OW1 D
 depriving	.r..S.r..	D IH0 P R AY1 V IH0 NG
 diagnosing	..r..S.r..	D AY2 AH0 G N OW1 S IH0 NG
-diarrhoea	..x..xxSr	D AY2 ER0 IY1 AH0
+diarrhoea	..rrxxxSr	D AY2 ER0 IY1 AH0
 dieter	.SS.rr	D IY1 T ER0
 discerning	.r.xSS.r..	D IH0 S ER1 N IH0 NG
 disintegration	.r....r..S..r.	D IH0 S IH2 N T AH0 G R EY1 SH AH0 N
@@ -26529,7 +26529,7 @@ unhinged	r..S..x.	AH0 N HH IH1 N JH D
 uninterested	r.S..x.r..r.	AH0 N IH1 N T R AH0 S T IH0 D
 uterine	S.rrr.x	Y UW1 T ER0 AH0 N
 vanishes	.S.r..r.	V AE1 N IH0 SH IH0 Z
-veer	.x..	V IH1 R
+veer	..x.	V IH1 R
 versace	.rr.S..	V ER0 S AA1 CH EY0
 warheads	.SS.....	W AO1 R HH EH2 D Z
 waxing	.S.r..	W AE1 K S IH0 NG
@@ -26583,7 +26583,7 @@ catapult	.S.r....	K AE1 T AH0 P AH2 L T
 censors	.S..rr.	S EH1 N S ER0 Z
 centro	.S....	S EH1 N T R OW0
 cervix	.SS.r.	S ER1 V IH0 K S
-cheery	..xS..	CH IH1 R IY0
+cheery	..Sx..	CH IH1 R IY0
 chimneys	..S.....	CH IH1 M N IY0 Z
 chit	....	CH IH1 T
 chomsky	..S....	CH AA1 M S K IY2
@@ -27255,7 +27255,7 @@ escorting	S.....r..	EH1 S K AO0 R T IH0 NG
 ethnographic	....r..S..r.	EH2 TH N AH0 G R AE1 F IH0 K
 eurasian	x..S..r.	Y UH0 R EY1 ZH IH0 N
 examiners	r.S.r.rr.	IH0 G Z AE1 M IH0 N ER0 Z
-extracurricular	....r.x..S...rr	EH2 K S T R AH0 K ER0 IH1 K Y AH0 L ER0
+extracurricular	....r.rrxS...rr	EH2 K S T R AH0 K ER0 IH1 K Y AH0 L ER0
 faraway	.SSr.SS	F AA1 R AH0 W EY1
 fenway	.S....	F EH1 N W EY2
 figurines	.....S.x.	F IH2 G Y ER0 IY1 N Z
@@ -27270,7 +27270,7 @@ footpath	.SS.....	F UH1 T P AE2 TH
 fordham	.SS.xr.	F AO1 R D AH0 M
 forerunner	.SSxx...rr	F AO1 R AH2 N ER0
 forgo	....S	F AO0 R G OW1
-foxx	..x.	F AA1 K S
+foxx	...x	F AA1 K S
 freer	..Srr	F R IY1 ER0
 frontage	..S..r.x	F R AH1 N T IH0 JH
 frustrate	..S.....x	F R AH1 S T R EY2 T
@@ -27410,7 +27410,7 @@ recessed	...S..x.	R IH0 S EH1 S T
 recklessly	.S...r....	R EH1 K L AH0 S L IY0
 redefined	...r.S.x.	R IY0 D IH0 F AY1 N D
 reflux	.S....	R IY1 F L AH2 K S
-regionally	.S.rx.r...	R IY1 JH AH0 N AH0 L IY0
+regionally	.S.xr.r...	R IY1 JH AH0 N AH0 L IY0
 reinhardt	.SS....x.	R AY1 N HH AA2 R T
 reinstatement	..r...S.x.r..	R IY2 IH0 N S T EY1 T M AH0 N T
 relinquished	...S...r..x.	R IH0 L IH1 NG K W IH0 SH T
@@ -27547,7 +27547,7 @@ caverns	.S.rr..	K AE1 V ER0 N Z
 chairmanship	..SS..r.....	CH EH1 R M AH0 N SH IH2 P
 chardonnay	.....S....	CH AA0 R D AA1 N EY0
 checkmate	..S.....x	CH EH1 K M EY2 T
-cheerfully	..xS......	CH IH1 R F AH0 L IY0
+cheerfully	..Sx......	CH IH1 R F AH0 L IY0
 chou	....	CH UW1
 clarissa	..rrS..r	K L ER0 IH1 S AH0
 clem	....	K L EH1 M
@@ -27670,7 +27670,7 @@ locale	...S.x	L OW0 K AE1 L
 loosened	.SS.r.x.	L UW1 S AH0 N D
 ludlow	.S....	L AH1 D L OW2
 lutz	....	L AH1 T S
-mademoiselle	...r.xr.S..x	M AE2 D AH0 M AH0 Z EH1 L
+mademoiselle	...r.rr.S..x	M AE2 D AH0 M AH0 Z EH1 L
 maia	.SSr	M AY1 AH0
 manifesting	.S.r....r..	M AE1 N AH0 F EH2 S T IH0 NG
 martha's	.SS..r..	M AA1 R TH AH0 Z
@@ -27748,7 +27748,7 @@ riga	.S.r	R IY1 G AH0
 roddy	.S...	R AA1 D IY0
 rousing	.SS.r..	R AW1 Z IH0 NG
 roving	.S.r..	R OW1 V IH0 NG
-saas	.x..	S AA1 S
+saas	..x.	S AA1 S
 sagan	.S.r.	S EY1 G AH0 N
 sandman	.S.....	S AE1 N D M AE2 N
 sarah's	.SSrx..	S EH1 R AH0 Z
@@ -28138,7 +28138,7 @@ thump	.....	TH AH1 M P
 totalled	.S.r..x.	T OW1 T AH0 L D
 trombone	.....S.x	T R AA0 M B OW1 N
 truer	..Srr	T R UW1 ER0
-tyrannical	.x.S..r.r.	T ER0 AE1 N IH0 K AH0 L
+tyrannical	.rxS..r.r.	T ER0 AE1 N IH0 K AH0 L
 underscore	...rr..SSx	AH2 N D ER0 S K AO1 R
 unusable	r.S.r..x	AH0 N Y UW1 Z AH0 B AH0 L
 uprisings	S....r...	AH1 P R AY2 Z IH0 NG Z
@@ -28195,7 +28195,7 @@ bereavement	.rrSS.x.r..	B ER0 IY1 V M AH0 N T
 bertram	.SS..r.	B ER1 T R AH0 M
 bikinis	.r.S...	B AH0 K IY1 N IY0 Z
 bionic	..S.r.	B AY2 AO1 N IH0 K
-blurring	..x..r..	B L ER1 IH0 NG
+blurring	..SSxr..	B L ER1 IH0 NG
 boardroom	.SS......	B AO1 R D R UW2 M
 bobcats	.S.....	B AA1 B K AE2 T Z
 bok	...	B AA1 K
@@ -28247,7 +28247,7 @@ descartes	..x.SS.xx	D EY0 K AA1 R T
 devoting	.r.S.r..	D IH0 V OW1 T IH0 NG
 diabolical	..r.S.r.r.	D AY2 AH0 B AA1 L IH0 K AH0 L
 dilated	...S.r.	D AY2 L EY1 T IH0 D
-disarray	......SS	D IH2 S ER0 EY1
+disarray	...r..SS	D IH2 S ER0 EY1
 disinformation	.r....rr.S..r.	D IH0 Z IH2 N F ER0 M EY1 SH AH0 N
 disintegrated	.r.S..r....r.	D IH0 S IH1 N T AH0 G R EY2 T IH0 D
 dismayed	.r..SSx.	D IH0 S M EY1 D
@@ -28277,7 +28277,7 @@ fracturing	..S..rrr..	F R AE1 K CH ER0 IH0 NG
 freedman	..SS..r.	F R IY1 D M AH0 N
 frisbee	..S....	F R IH1 S B IY0
 futility	...S.r..	F Y UW0 T IH1 L AH0 T IY0
-gaal	.x..	G AA1 L
+gaal	..x.	G AA1 L
 geiger	.SS.rr	G AY1 G ER0
 geraldine	...r..S.x	JH EH0 R AH0 L D IY1 N
 grantham	..S...r.	G R AE1 N TH AH0 M
@@ -28490,7 +28490,7 @@ antioxidants	....S.r.r...	AE2 N T IY0 AA1 K S AH0 D AH0 N T S
 antlers	S...rr.	AE1 N T L ER0 Z
 argh	....	AA1 R G
 armaments	SS.r.r...	AA1 R M AH0 M AH0 N T S
-arroyo	x..SS.	ER0 OY1 OW0
+arroyo	rrxSS.	ER0 OY1 OW0
 audacious	...S..rr.	AA0 D EY1 SH AH0 S
 audubon	SS.r...	AO1 D AH0 B AA0 N
 auth	....	AO1 TH
@@ -28730,7 +28730,7 @@ shithole	..S....x	SH IH1 T HH OW2 L
 shivers	..S.rr.	SH IH1 V ER0 Z
 sleepover	..SS...rr	S L IY1 P OW2 V ER0
 slingshot	..S......	S L IH1 NG SH AA2 T
-slurry	..x...	S L ER1 IY0
+slurry	..SSx.	S L ER1 IY0
 smarts	......	S M AA1 R T S
 sosa	.S.r	S OW1 S AH0
 sown	....	S OW1 N
@@ -28822,7 +28822,7 @@ brandenburg	..S..r..rr.	B R AE1 N D AH0 N B ER0 G
 bride's	....x..	B R AY1 D Z
 bulgarians	.r..SS.r..	B AH0 L G EH1 R IY0 AH0 N Z
 bureaus	.S.x...	B Y UH1 R OW0 Z
-burritos	.x..S...	B ER0 IY1 T OW0 S
+burritos	.rrxS...	B ER0 IY1 T OW0 S
 campos	.S....	K AE1 M P OW0 Z
 carcasses	.SS.r..r.	K AA1 R K AH0 S IH0 Z
 caress	.rrS..	K ER0 EH1 S
@@ -29011,7 +29011,7 @@ ronda	.S..r	R AA1 N D AH0
 rosberg	.S..rr.	R AA1 S B ER0 G
 runny	.S...	R AH1 N IY0
 ruskin	.S..r.	R AH1 S K IH0 N
-saad	.x..	S AA1 D
+saad	..x.	S AA1 D
 saddled	.S...x.	S AE1 D AH0 L D
 sander	.S..rr	S AE1 N D ER0
 sarcastically	....S..r.x...	S AA0 R K AE1 S T IH0 K L IY0
@@ -29260,7 +29260,7 @@ immigrated	S..r....r.	IH1 M AH0 G R EY2 T IH0 D
 immobile	...S...x	IH2 M OW1 B AH0 L
 impair	...SS.	IH2 M P EH1 R
 irradiated	...S....r.	IH2 R EY1 D IY0 EY2 T IH0 D
-isaacs	S.xr..	AY1 Z IH0 K S
+isaacs	S.rx..	AY1 Z IH0 K S
 jacob's	.S.r...	JH EY1 K AH0 B Z
 jerked	....x.	JH ER1 K T
 jugs	....	JH AH1 G Z
@@ -29290,7 +29290,7 @@ mcdaniel	...S..r.	M AH0 K D AE1 N Y AH0 L
 medicated	.S.r...r.	M EH1 D IH0 K EY2 T IH0 D
 memento	.r.S...	M IH0 M EH1 N T OW0
 midwifery	.S....rr.	M IH1 D W AY2 F ER0 IY0
-milieu	.r..xS	M IH0 L Y UH1
+milieu	.r..SS	M IH0 L Y UH1
 mistresses	.S...r..r.	M IH1 S T R AH0 S AH0 Z
 modus	.S.r.	M OW1 D AH0 S
 moonshine	.SS.....x	M UW1 N SH AY2 N
@@ -29453,7 +29453,7 @@ antigens	S..r.r..	AE1 N T IH0 JH AH0 N Z
 aorta	.SS.r	EY0 AO1 R T AH0
 argyll	...S..	AA0 R G AY1 L
 artistically	...S..r.x...	AA0 R T IH1 S T IH0 K L IY0
-ascii	S..x.	AE1 S K IY0
+ascii	S...x	AE1 S K IY0
 asda	S..r	AE1 S D AH0
 ashram	S.....	AE1 SH R AA0 M
 attentions	r..S...r..	AH0 T EH1 N SH AH0 N Z
@@ -29519,8 +29519,8 @@ congresswoman	.S...r.....r.	K AA1 NG G R AH0 S W UH2 M AH0 N
 constructor	.r....S..rr	K AH0 N S T R AH1 K T ER0
 coolers	.SS.rr.	K UW1 L ER0 Z
 copycat	.S.....	K AA1 P IY0 K AE2 T
-corroborate	.x..S.rr..x	K ER0 AA1 B ER0 EY2 T
-corroborated	.x..S.rr..r.	K ER0 AA1 B ER0 EY2 T IH0 D
+corroborate	.rrxS.rr..x	K ER0 AA1 B ER0 EY2 T
+corroborated	.rrxS.rr..r.	K ER0 AA1 B ER0 EY2 T IH0 D
 cur	...	K ER1
 curd	....	K ER1 D
 cursory	.SS.rr.	K ER1 S ER0 IY0
@@ -29617,7 +29617,7 @@ ironed	S.x.x.	AY1 ER0 N D
 jacuzzi	.r.S...	JH AH0 K UW1 Z IY0
 kenya's	.S..r..	K EH1 N Y AH0 Z
 kohler	.Sx.rr	K OW1 L ER0
-lacquer	.Sx.xrr	L AE1 K ER0
+lacquer	.S.xxrr	L AE1 K ER0
 lakeland	.S.x.r..	L EY1 K L AH0 N D
 laments	.r.S...	L AH0 M EH1 N T S
 langer	.S..rr	L AE1 NG ER0
@@ -29631,7 +29631,7 @@ maidens	.SS.r..	M EY1 D AH0 N Z
 malevolent	.r.S.r.r..	M AH0 L EH1 V AH0 L AH0 N T
 manchuria	.....SS.r	M AE0 N CH UH1 R IY0 AH0
 mano	.S..	M AA1 N OW0
-martyred	.SS.x.x.	M AA1 R T ER0 D
+martyred	.SS.rxx.	M AA1 R T ER0 D
 matchups	.S...r..	M AE1 CH AH0 P S
 mated	.S.r.	M EY1 T IH0 D
 matrimony	.S..r....	M AE1 T R AH0 M OW2 N IY0
@@ -29649,7 +29649,7 @@ mogadishu	...r.S...	M OW2 G AH0 D IY1 SH UW2
 mombasa	....S.r	M AA0 M B AA1 S AH0
 monash	.S....	M AA1 N AE2 SH
 murmur	.SS.rr	M ER1 M ER0
-murray's	.x......	M ER1 IY0 Z
+murray's	.SSx....	M ER1 IY0 Z
 musings	.S.r...	M Y UW1 Z IH0 NG Z
 nair	....	N EH1 R
 napoleonic	.r....S.r.	N AH0 P OW2 L IY0 AA1 N IH0 K
@@ -29864,7 +29864,7 @@ dali	.S..	D AA1 L IY0
 damping	.S..r..	D AE1 M P IH0 NG
 dapper	.S..rr	D AE1 P ER0
 deathly	.SS....	D EH1 TH L IY0
-deere	.x..x	D IH1 R
+deere	..x.x	D IH1 R
 defection	.r.S...r.	D IH0 F EH1 K SH AH0 N
 delightfully	.r.Sxx..r...	D IH0 L AY1 T F AH0 L IY0
 dermatitis	....r.S.r.	D ER2 M AH0 T AY1 T IH0 S
@@ -29935,7 +29935,7 @@ harbinger	.SS.r..rr	HH AA1 R B IH0 N JH ER0
 harnessed	.SS.r..x.	HH AA1 R N AH0 S T
 harvests	.SS.r...	HH AA1 R V AH0 S T S
 headshot	.SS.....	HH EH1 D SH AA2 T
-heartily	.xSS.r..	HH AA1 R T AH0 L IY0
+heartily	.SSS.r..	HH AA1 R T AH0 L IY0
 helplessness	.S...r...r..	HH EH1 L P L AH0 S N AH0 S
 henchman	.S....r.	HH EH1 N CH M AH0 N
 hiccup	.S..r.	HH IH1 K AH0 P

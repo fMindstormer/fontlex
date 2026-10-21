@@ -56,6 +56,12 @@ and survive soft wrapping, because each hint depends only on its own word.
 - **Learned costs.** Each grapheme gets 0, 1 or 2 phonemes, with costs learned
   by hard EM over the 30,000 most frequent words. The search starts from
   which letters plausibly spell which sounds.
+- **Ties.** Of equally cheap alignments, each phoneme goes to the earliest
+  letter that can say it: *been* is b-e plus a silent *e*, and the first *z*
+  of *pizza* says "ts". Before this rule, ties fell to floating-point noise,
+  so *beer* and *peer* silenced different letters, and the vowel before a
+  double *r* came out silent (*arrive*, *correct*, *hurry*) instead of
+  reduced or stressed.
 - **Hints from the alignment.**
   - A grapheme that spells nothing is silent.
   - A vowel grapheme spelling the primary-stressed vowel is stressed.
@@ -95,7 +101,7 @@ Six GSUB passes, built by `enfont.py` on Noto Sans and Noto Sans Bold:
    *will*, *we*, ... for verbs) mark their last letter as a noun or verb cue.
 4. A noun/verb pair right after a cue and one space gets that reading's
    hints.
-5. Then one context rule per listed word that has hints (25,649 of the
+5. Then one context rule per listed word that has hints (25,643 of the
    30,000). Each rule is class-based, so case is ignored, and runs from an
    initial letter to a final one, so it matches whole words only. It applies
    the stress, reduced or silent lookup at each hinted letter. The colors are
