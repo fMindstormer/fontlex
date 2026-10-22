@@ -32,11 +32,20 @@ open `chrome://extensions`, turn on Developer mode, choose **Load unpacked**
 and pick the unzipped folder. This works in Chrome, Edge, Brave and other
 Chromium browsers.
 
-From the repository: `python extension/package.py` writes the same folder to
-`build/extension/` (the fonts must be built; `./check.sh` builds them).
+In Firefox 140 or later, download `fontlex-reading-hints-<version>-firefox.zip`,
+open `about:debugging#/runtime/this-firefox`, choose **Load Temporary
+Add-on…** and pick the zip. Firefox keeps a temporary add-on until it
+quits. To keep it installed, it must be signed by Mozilla (through
+addons.mozilla.org, listed or not); Firefox Developer Edition and Nightly
+can instead set `xpinstall.signatures.required` to false in `about:config`.
 
-Firefox and Safari aren't supported yet: the manifest has no Firefox add-on
-id, and Safari needs an Xcode wrapper. Neither was tested.
+From the repository: `python extension/package.py` writes both folders,
+`build/extension/` and `build/extension-firefox/` (the fonts must be built;
+`./check.sh` builds them). The Firefox manifest adds an add-on id and
+leaves out `use_dynamic_url`, which Firefox doesn't support; the code is
+the same.
+
+Safari isn't supported: it needs an Xcode wrapper.
 
 ## How it works
 

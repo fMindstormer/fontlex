@@ -15,7 +15,7 @@ for (const [key, hint] of Object.entries(FONTLEX_HINTS)) {
   hints.append(label);
 }
 
-api.storage.sync.get(FONTLEX_DEFAULTS, (settings) => {
+api.storage.sync.get(FONTLEX_DEFAULTS).then((settings) => {
   const save = () => api.storage.sync.set(settings);
   for (const input of modes.querySelectorAll("input")) {
     input.checked = input.value === settings.mode;
@@ -32,7 +32,7 @@ api.storage.sync.get(FONTLEX_DEFAULTS, (settings) => {
   palette.value = settings.palette;
   palette.addEventListener("change", () => { settings.palette = palette.value; save(); });
 
-  api.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+  api.tabs.query({ active: true, currentWindow: true }).then(([tab]) => {
     let url = null;
     try { url = new URL(tab?.url ?? ""); } catch {}
     if (!url || !["http:", "https:"].includes(url.protocol)) return;      // a web page, not the browser's own

@@ -67,7 +67,7 @@
     html.dataset.fontlex = key;
   }
 
-  const refresh = () => api.storage.sync.get(FONTLEX_DEFAULTS, apply);
+  const refresh = () => api.storage.sync.get(FONTLEX_DEFAULTS).then(apply);   // promises: Firefox's browser.* takes no callbacks
   refresh();
   api.storage.onChanged.addListener(refresh);
 })();
