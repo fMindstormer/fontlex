@@ -6,8 +6,8 @@ Each test font turns `a` into a helper glyph at a chosen glyph id, and a
 format 2 chain context rule turns that glyph into `B`. A shaper that matches
 the rule draws "BBB" for "aaa". HarfBuzz from 12.3.1 caches whether a glyph
 is covered in an hb_cache_t<14, 1, 8>, whose empty slots read as "not
-covered" for ids 32512 to 32767, so there it draws "aaa". HarfBuzz main fixed
-it in commit b98ffb1 (harfbuzz/harfbuzz#6419), after 14.6.0. With --page, the
+covered" for ids 32512 to 32767, so there it draws "aaa". HarfBuzz 15.0.0
+fixed it (commit b98ffb1, harfbuzz/harfbuzz#6419). With --page, the
 fonts go into an HTML page, to see what a browser does.
 """
 

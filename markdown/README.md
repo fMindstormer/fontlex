@@ -82,8 +82,8 @@ boxes, bars and rules are a figure wide.
 Three things only showed up with the second base font:
 
 - **HarfBuzz 12.3.1 to 14.6.0 never matches a glyph with id 32,512 to 32,767
-  in a context lookup of format 2** (harfbuzz/harfbuzz#6418, fixed in
-  HarfBuzz main by #6419 after 14.6.0). Its
+  in a context lookup of format 2** (harfbuzz/harfbuzz#6418, fixed by
+  #6419 in HarfBuzz 15.0.0). Its
   per-subtable coverage cache
   (`hb_cache_t<14, 1, 8>`) stores 7 bits per byte and starts each byte as
   0xFF, but checks for an empty slot only when the stored bits fill the

@@ -441,7 +441,7 @@ lexers), so every glyph can be checked in every engine. That makes each
 compiled font a large differential test. The proportional edition of
 Fontlex Markdown failed in HarfBuzz, and only there, on lines like `<a>x`.
 
-*Measured*: HarfBuzz from 12.3.1 (released 2026-01-20) through at least
+*Measured*: HarfBuzz from 12.3.1 (released 2026-01-20) through
 14.6.0 never matches a glyph with id **32,512 to 32,767** in a context or
 chain context subtable of format 2; formats 1 and 3 are fine, and 12.3.0
 is too. The cause is HarfBuzz commit a78994395, which enlarged the format 2
@@ -468,10 +468,10 @@ window. The bug was reported upstream as
 [harfbuzz/harfbuzz#6418](https://github.com/harfbuzz/harfbuzz/issues/6418)
 and fixed in HarfBuzz main on 2026-10-20 by
 [#6419](https://github.com/harfbuzz/harfbuzz/pull/6419) (commit b98ffb1,
-which checks the key's range on reads as well as writes). No release has
-the fix yet. *Measured*: built from b98ffb1, HarfBuzz draws "BBB" for all
-seven of `hbcache.py`'s fonts; built from its parent, it draws "aaa" for
-the three in the window. The padding stays for the releases already out.
+which checks the key's range on reads as well as writes), released in 15.0.0
+on 2026-10-22. *Measured*: built from 15.0.0, HarfBuzz draws "BBB" for all
+seven of `hbcache.py`'s fonts; built from the fix's parent, "aaa" for the
+three in the window. The padding stays while browsers ship older releases.
 
 The general point: an engine's fast paths are tuned on fonts that people
 draw, and compiled fonts are far out of that distribution. They hit glyph-id
