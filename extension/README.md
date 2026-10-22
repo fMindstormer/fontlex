@@ -68,7 +68,9 @@ Safari isn't supported: it needs an Xcode wrapper.
 ## Tested
 
 *Measured* with `test_extension.mjs`, which loads `build/extension/` into
-Chromium 139 (headless, through Playwright) and checks:
+Chromium 139 (headless, through Playwright), or `build/extension-firefox/`
+into Firefox 158 (headless, through Puppeteer and WebDriver BiDi, as a
+temporary add-on), and checks:
 
 - local pages in English (`lang="en-GB"`, dark background), French (with
   `Content-Security-Policy: default-src 'none'`) and German, and one with no
@@ -78,16 +80,20 @@ Chromium 139 (headless, through Playwright) and checks:
 - the popup's choices, live, and the site switch;
 - hiding a kind of hint: its color leaves the screen, the others stay.
 
-All 21 checks pass. A live French Wikipedia article also renders with its
-links and icons intact.
+All 21 checks pass in each browser; CI runs both on Linux. A live French
+Wikipedia article also renders in Chromium with its links and icons intact.
 
 ```sh
-npm install playwright-core          # once
+npm install playwright-core puppeteer-core @puppeteer/browsers      # once
 CHROMIUM=/path/to/Chromium node extension/test_extension.mjs
+FIREFOX=$(npx @puppeteer/browsers install firefox@stable_158.0.1 --format "{{path}}") \
+  node extension/test_extension.mjs firefox
 ```
 
 Branded Chrome no longer loads unpacked extensions from the command line, so
-the test needs Chromium or Chrome for Testing.
+the test needs Chromium or Chrome for Testing. In Firefox the test sets
+`MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1`, without which WebDriver BiDi won't open
+the popup's `moz-extension://` page.
 
 ## Limits
 
