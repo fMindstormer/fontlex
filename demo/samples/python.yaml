@@ -24,3 +24,4 @@ sample: |
       if p.x is None or p.y < 0:  # skip "bad" rows, don't stop
           continue
       print(i, p.x * 2.5e3, 'it\'s fine', 0xFF)
+  print("done")  # past PEP 8's 79 characters, a line gets a bar under the characters after

@@ -27,8 +27,8 @@ import unicodedata
 import uharfbuzz as hb
 from fontTools.ttLib import TTFont
 
-from fontlex import (DROPPED_TABLES, START_SUFFIX, SUFFIX, SYLLABLE_INFIX, WORD_SUFFIX, Model,
-                     _unify_gpos_scripts, load_spec, subset_font)
+from fontlex import (DROPPED_TABLES, RULER_PREFIX, RULER_SUFFIX, START_SUFFIX, SUFFIX, SYLLABLE_INFIX,
+                     WORD_SUFFIX, Model, _unify_gpos_scripts, load_spec, subset_font)
 
 HAND_CASES = [
     'def f(x): return x + 1',
@@ -63,7 +63,18 @@ HAND_CASES = [
 MARKS = ["́", "̣", "̈", "̱"]
 
 
+def unruled(name: str) -> str:
+    """The glyph a space past the ruler stands for."""
+    return name[:-len(RULER_SUFFIX)] if name.endswith(RULER_SUFFIX) else name
+
+
+def lexed(glyphs, order):
+    """The shaped glyphs without the ruler's own (its slots and bars)."""
+    return [g for g in glyphs if g[0] is None or not order[g[0]].startswith(RULER_PREFIX)]
+
+
 def glyph_info(name: str, start: str):
+    name = unruled(name)
     if WORD_SUFFIX in name:
         base, wset = name.split(WORD_SUFFIX)
         return "WORD", wset
@@ -74,6 +85,7 @@ def glyph_info(name: str, start: str):
 
 
 def base_name(name: str) -> str:
+    name = unruled(name)
     for infix in (WORD_SUFFIX, START_SUFFIX, SYLLABLE_INFIX, SUFFIX):
         name = name.split(infix)[0]
     return name
@@ -258,7 +270,7 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
 
     def check(shaper, text):
         expect = model.lex(text, cluster_fallback(text) if shaper.falls_back_clusters else frozenset())
-        glyphs, _ = shaper.shape(text)
+        glyphs = lexed(shaper.shape(text)[0], order)
         if len(glyphs) != len(text):
             return f"glyph count {len(glyphs)} != {len(text)}"
         for i, (gid, cluster, _, _) in enumerate(glyphs):
@@ -281,6 +293,7 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
     def check_positions(shaper, ref_shaper, text):
         nonlocal skipped_marks, skipped_fallback
         (got, got_w), (want, want_w) = shaper.shape(text), ref_shaper.shape(text)
+        got = lexed(got, order)
         got_g = [name_in(order, g) for g, *_ in got]
         got_g = [None if g is None else base_name(g) for g in got_g]
         want_g = [name_in(ref_order, g) for g, *_ in want]
@@ -407,8 +420,42 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
                 queue.append(delta[s][k])
     transitions = [path[s] + rng.choice(reps[k]) + random_text(alphabet)[:rng.randint(0, 8)]
                    for s in path for k in spec.class_names if reps[k] for _ in range(20)]
+    # The ruler: a bar under every character from column spec.ruler on,
+    # counting every character but combining marks.
+    gdef = tt["GDEF"].table.GlyphClassDef.classDefs if "GDEF" in tt else {}
+
+    def is_mark_char(ch):
+        g = model.cmap.get(ord(ch))
+        return gdef.get(g) == 3 if g else unicodedata.category(ch).startswith("M")
+
+    def check_ruler(shaper, text):
+        barred = set()
+        for gid, cluster, _, _ in shaper.shape(text)[0]:
+            name = order[gid] if gid is not None else ""
+            if name == RULER_PREFIX + "_bar" or name.endswith(RULER_SUFFIX):
+                barred.add(cluster)
+        col, want = 0, set()
+        for i, ch in enumerate(text):
+            if is_mark_char(ch):
+                continue
+            if col >= spec.ruler:
+                want.add(i)
+            col += 1
+        if barred != want:
+            first = min(barred ^ want)
+            return f"char {first} {text[first]!r}: bar {'missing' if first in want else 'not wanted'}"
+        return None
+    if spec.ruler:
+        ruled_alphabet = alphabet + [" "] * 8 + ["\u00a0", "q" + MARKS[0], "x" + MARKS[1] + MARKS[2]]
+        ruled = ["".join(rng.choice(ruled_alphabet) for _ in range(rng.randint(0, 2 * spec.ruler + 20)))
+                 for _ in range(max(n // 10, 200))]
+        ruled += ["x" * k for k in range(spec.ruler - 2, spec.ruler + 3)]
+        ruled += [" " * spec.ruler + "x", "\u00a0" * (spec.ruler + 1)]
+
     for sname in shapers:
         shaper = SHAPERS[sname](font_data)
+        if spec.ruler:
+            run(f"{sname}: ruler at column {spec.ruler}", ruled, lambda t: check_ruler(shaper, t))
         run(f"{sname}: hand-written cases", hand, lambda t: check(shaper, t))
         run(f"{sname}: random cases", fuzz, lambda t: check(shaper, t))
         run(f"{sname}: transition cases", transitions, lambda t: check(shaper, t))

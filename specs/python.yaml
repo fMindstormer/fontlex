@@ -7,6 +7,10 @@
 
 name: Fontlex Python
 
+# PEP 8 limits lines to 79 characters: a bar goes under every character from
+# the 80th on (combining marks don't count).
+ruler: 79
+
 # Character classes. First match wins; every other character in the font is
 # in the implicit class `other`. Ranges use a-z syntax; escape a literal dash
 # by putting it first.
@@ -81,6 +85,7 @@ themes:
     number: "#F78C6C"
     comment: "#7A8296"
     decorator: "#FFCB6B"
+    ruler: "#F07178"
   light:
     keyword: "#8E3FB8"
     builtin: "#2F5FBF"
@@ -88,6 +93,7 @@ themes:
     number: "#B5521B"
     comment: "#7C8290"
     decorator: "#9A6A00"
+    ruler: "#D23C2A"
 
 # Lines with the token expected for each character ('.' = uncolored),
 # checked by the tests against the lexer this spec defines.

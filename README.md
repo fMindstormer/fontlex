@@ -28,7 +28,7 @@ the liaison ties are drawn by the font.
 
 | Font | What the shaper does | Measured |
 |---|---|---|
-| [Python](https://fmindstormer.github.io/fontlex/python.html), [JavaScript](https://fmindstormer.github.io/fontlex/javascript.html) | runs a lexer compiled from a YAML spec ([below](#the-spec)) and colors each token | every glyph's state matches a reference lexer: 20,000 random strings, every transition, every spec example; HarfBuzz and Core Text |
+| [Python](https://fmindstormer.github.io/fontlex/python.html), [JavaScript](https://fmindstormer.github.io/fontlex/javascript.html) | runs a lexer compiled from a YAML spec ([below](#the-spec)) and colors each token; Python also puts a bar under every character past PEP 8's 79 columns | every glyph's state matches a reference lexer: 20,000 random strings, every transition, every spec example; the ruler's bars on 2,007 lines; HarfBuzz and Core Text |
 | [Markdown](https://fmindstormer.github.io/fontlex/markdown.html) ([README](markdown/README.md)) | renders GitHub Flavored Markdown line by line: CommonMark's inline rules, strikethrough, autolinks, block markup; markup hidden; mono and proportional | within its bounds, every one-line spec example, 20,000 random lines and 10,723 lines of real documents exactly as GitHub renders them |
 | [German genders](https://fmindstormer.github.io/fontlex/german.html) ([README](german/README.md)) | colors nouns by gender, from lists learned from a treebank and Wiktionary | on held-out newspaper text, 97% of nouns colored, 99.5% of them right |
 | [German syllables](https://fmindstormer.github.io/fontlex/german-syllables.html) ([README](german/syllables/README.md)) | colors syllables in turn, as German schools teach reading | 97.5% of held-out first-reader words split exactly right |
@@ -133,7 +133,7 @@ page byte for byte, so `git status` afterwards shows nothing.
 
   | Font | Full base font | With `--unicodes` |
   |---|---|---|
-  | Python | 6,207 glyphs, 112 KB WOFF2 | 3,868 glyphs, 62 KB |
+  | Python | 6,406 glyphs, 125 KB WOFF2 | 4,067 glyphs, 70 KB |
   | JavaScript | 13,094 glyphs, 144 KB | 8,265 glyphs, 88 KB |
 
   Characters left out fall back to another font, which resets the lexer.
@@ -170,6 +170,10 @@ page byte for byte, so `git status` afterwards shows nothing.
   of `letters` classes, split by TeX/Liang hyphenation patterns (`patterns`
   files), with `min_left`/`min_right` (1 or 2) forbidding breaks next to a
   word's edges, and colored with `colors` in turn, one per syllable.
+- `ruler` (optional): a column. A bar goes under every character from there
+  on, in the themes' `ruler` color. The Python spec's 79 is PEP 8's limit, so
+  the 80th character and the ones after it get a bar. Combining marks don't
+  count as columns.
 - `examples` (optional): lines with the token expected for each character,
   written as a code string under a `legend`. The tests check the spec's lexer
   against them, which catches spec bugs that font-versus-spec checks can't.
@@ -204,7 +208,17 @@ and escapes inside regexes.
    lookup); the German font has 32,000 of them and compiles in 3 seconds.
 5. **Color.** COLR v0 paints each colored variant with the original outline in
    a palette color. Uncolored glyphs follow the CSS text color.
-6. **Positioning and metrics.** The base font's GPOS, GDEF and legacy `kern`
+6. **Ruler** (optional). After everything else, a multiple substitution puts
+   an empty mark, a *slot*, after every glyph that isn't a mark. Two
+   left-to-right passes that see only the slots count columns on them: units
+   mod 10, then tens. Slots past the column become a bar under their
+   character. A space becomes its own slot instead, since WebKit gives every
+   glyph of a space character a space's width. This is a cascade from
+   [theory/README.md](theory/README.md#cascades-and-what-else-fits). One
+   counter to 79 would take 81 states, and on variants of every character it
+   would take more glyphs than a font can have. The two counters take 19
+   states and 199 glyphs.
+7. **Positioning and metrics.** The base font's GPOS, GDEF and legacy `kern`
    table are kept, and every variant is added wherever its original glyph
    appears, so kerning and mark anchors still apply to lexed glyphs. Other
    per-glyph tables (`hdmx`, `LTSH`, `vmtx`, `VORG`, and `gvar`/`HVAR`/`VVAR`
@@ -244,6 +258,10 @@ with `--shaper coretext`, Core Text (Safari, native Mac apps), and checks:
 - **Examples.** The spec's `examples` against the spec's own lexer.
 - **Color records.** Every glyph meant to be drawn in a token's color has a
   COLR record (shaping alone can't show a missing color table).
+- **Ruler** (if the spec has one). Random lines up to twice the column long,
+  with spaces, no-break spaces and combining marks, must have a bar under
+  exactly the characters past the column. The other checks skip the ruler's
+  glyphs.
 
 Core Text needs two allowances, both reported with counts: it improvises
 positions for marks the base font has no anchor for, but not once a mark or
@@ -252,8 +270,8 @@ to another font per character cluster, sometimes differently for the compiled
 and the base font.
 
 Results with JetBrains Mono, both shapers: everything passes for all four
-specs. Python: 7/7 examples, 33 hand cases, 20,000 random, 1,980 transition
-and 41,980 positioning cases. JavaScript: 14/14 examples, 40 hand cases,
+specs. Python: 7/7 examples, 33 hand cases, 20,000 random, 1,980 transition,
+41,980 positioning and 2,007 ruler cases. JavaScript: 14/14 examples, 40 hand cases,
 20,000 random, 7,840 transition and 47,840 positioning cases. German: 12/12
 examples, 38 hand cases, 20,000 random, 180 transition and 40,180
 positioning cases. German syllables: 6/6 examples, 32 hand cases, 20,000
@@ -302,8 +320,13 @@ which theme's colors dominate the code box's pixels.
   at all. JetBrains Mono, STIX Two, SF Pro and Trattatello don't trigger it.
 - In Core Text, a mark the base font has no anchor for is drawn unpositioned
   when it or its base glyph has been lexed, where the base font alone would
-  get Core Text's improvised position. HarfBuzz never improvises when GPOS is
+  get Core Text's improvised position. In Fontlex Python that's always the
+  case, since the ruler puts a slot after every base glyph. HarfBuzz never improvises when GPOS is
   present, so there both fonts draw it unpositioned.
+- The ruler counts within one shaping run as well. Chrome starts a new run
+  at a tab or a change of script (a Cyrillic string, say), and the count
+  starts over there; WebKit counts across scripts. It counts characters, not
+  their widths, so it suits monospace fonts.
 - Not checked on Windows (DirectWrite), or in native apps other than through
   Core Text directly.
 

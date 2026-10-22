@@ -41,6 +41,11 @@ where each state has a token type, plus optional word lists.
 5. Color. Each colored variant gets a COLR v0 record that paints the base
    outline with a CPAL palette entry, one palette per theme.
 
+6. The ruler (optional). After everything else, every glyph that isn't a
+   mark gets an empty mark after it, a slot, and two passes that see only
+   the slots count columns on them. A bar goes under every character past
+   the spec's column.
+
 Usage:
     python fontlex.py specs/python.yaml --base Font.ttf --out build/
 """
@@ -59,6 +64,7 @@ import yaml
 from fontTools import subset
 from fontTools.colorLib.builder import buildCOLR, buildCPAL
 from fontTools.feaLib.builder import addOpenTypeFeaturesFromString
+from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.ttLib import TTFont
 from fontTools.ttLib.tables import otTables as ot
 from fontTools.ttLib.tables._g_l_y_f import Glyph, GlyphComponent
@@ -77,6 +83,11 @@ MIN_LEVEL = 8
 DROPPED_TABLES = ("GSUB", "morx", "mort", "feat")
 # Word and suffix rules per GSUB subtable, small enough for its 16-bit offsets.
 SUFFIX_CHUNK = 1000
+RULER_PREFIX = "_ruler"    # the ruler's slots and its bar
+RULER_SUFFIX = ".ruler"    # a space past the ruler's column, underlined
+RULER_TOKEN = "ruler"      # the bar's color in the spec's themes
+RULER_COLOR = "#E0533D"
+RULER_RADIX = 10           # the ruler's first counter; the second counts its carries
 
 
 # --------------------------------------------------------------------------
@@ -160,6 +171,8 @@ class Spec:
     # Expected tokens per character for sample lines, checked by the tests.
     examples: list[tuple[str, list[str | None]]] = field(default_factory=list)
     syllables: "Syllables | None" = None
+    # Mark every character past this column (0-based: the first one marked).
+    ruler: int | None = None
 
     # -- derived ---------------------------------------------------------
     @property
@@ -227,6 +240,7 @@ def load_spec(path: str | Path) -> Spec:
         suffix_sets=suffix_sets,
         themes=themes,
         examples=_load_examples(raw.get("examples")),
+        ruler=raw.get("ruler"),
     )
     if raw.get("syllables"):
         spec.syllables = _load_syllables(raw["syllables"], base_dir, classes)
@@ -257,6 +271,9 @@ def _validate(spec: Spec) -> None:
             if key in st and st[key] not in spec.states:
                 raise SpecError(f"state {s!r}: {key} {st[key]!r} is not a state")
     spec.table()  # raises on missing transitions or like-cycles
+    if spec.ruler is not None and (not isinstance(spec.ruler, int) or isinstance(spec.ruler, bool)
+                                   or spec.ruler < 1):
+        raise SpecError("ruler must be a column number, 1 or more")
     if spec.word_sets:
         if spec.word_state not in spec.states:
             raise SpecError("words.state must name a state")
@@ -884,6 +901,12 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
         fea_text += "\n".join("#   sub " + " ".join(f"\\{g}" for g in b) + f" \\{i}' lookup {w};"
                                for b, i, w in match_rules) + "\n"
 
+    bars = _add_ruler(font, spec.ruler, alias, cmap) if spec.ruler else []
+    if bars:
+        fea_text += (f"\n# Then the ruler: a slot after every glyph that isn't a mark, columns counted\n"
+                     f"# on the slots (units mod {RULER_RADIX}, then tens), and a bar under every\n"
+                     f"# character from column {spec.ruler + 1} on (built after feaLib).\n")
+
     # 3. Color.
     tokens: list[str] = []
     for s in spec.states:
@@ -894,16 +917,22 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
         if sname not in tokens:
             tokens.append(sname)
     colored_tokens = [t for t in tokens if any(t in th for _, th in spec.themes)]
+    if bars:
+        colored_tokens.append(RULER_TOKEN)
     color_glyphs = {}
     for name, info in glyphmap.items():
         tok = info["set"] or spec.token(info["state"])
         if tok in colored_tokens:
             color_glyphs[name] = [(info["base"], colored_tokens.index(tok))]
+    for name in bars:
+        color_glyphs[name] = [(name, colored_tokens.index(RULER_TOKEN))]
     if color_glyphs and spec.themes:
         first = spec.themes[0][1]
         palettes, types, = [], []
         for tname, th in spec.themes:
-            palettes.append([_hex_to_rgba(th.get(t) or first.get(t) or "#000000") for t in colored_tokens])
+            palettes.append([_hex_to_rgba(th.get(t) or first.get(t)
+                                          or (RULER_COLOR if t == RULER_TOKEN else "#000000"))
+                             for t in colored_tokens])
             types.append({"light": 1, "dark": 2}.get(tname.lower(), 0))
         font["CPAL"] = buildCPAL(palettes, paletteTypes=types)
         font["COLR"] = buildCOLR(color_glyphs, version=0)
@@ -925,6 +954,7 @@ def compile_font(spec: Spec, base_path: str | Path, unify_scripts: bool = False,
         "skipped_suffixes": skipped_suffixes,
         "tokens": colored_tokens,
         "layout_notes": layout_notes,
+        "ruler": spec.ruler,
     }
     return Result(font, fea_text, glyphmap, stats)
 
@@ -1098,6 +1128,162 @@ def _chain_format1(font: TTFont, rules: list[tuple[list[str], str, int]]) -> lis
         st.ChainSubRuleSetCount = len(st.ChainSubRuleSet)
         out.append(st)
     return out
+
+
+def _add_ruler(font: TTFont, column: int, alias: dict[str, list[str]], cmap: dict[int, str]) -> list[str]:
+    """Put a bar under every character from index `column` on (PEP 8's limit
+    of 79 characters is column 79). Returns the glyphs that draw a bar.
+
+    Runs after every other lookup. A multiple substitution puts an empty mark,
+    a slot, after every glyph that isn't a mark (so combining marks don't
+    count as columns). Two left-to-right passes see only the slots: base
+    glyphs are skipped, and marks outside a mark filtering set. The first
+    counts units mod 10 on the slots; the second reads its zeros as carries
+    and counts tens, up to one past the column's. A last substitution turns
+    the slots past the column into the bar.
+
+    WebKit gives every glyph of a space character a space's width, so a
+    space (and a no-break space, and their variants) gets no slot after it:
+    it becomes a slot of its own kind, which turns back into the same glyph
+    at the end, or into an underlined copy.
+    """
+    gdef = font["GDEF"].table
+    classes = gdef.GlyphClassDef.classDefs
+    order = font.getGlyphOrder()
+    # Passes that skip base glyphs only skip glyphs GDEF calls base glyphs.
+    for g in order:
+        classes.setdefault(g, 1)
+    spaces = [g for c in (0x20, 0xA0) if c in cmap for g in [cmap[c]] + alias.get(cmap[c], [])]
+    letters = [g for g in order if classes[g] != 3 and g not in spaces]
+    q, r = divmod(column, RULER_RADIX)
+    tens = list(range(q)) + [(q, False), (q, True), q + 1]     # (q, past r) splits the column's ten
+
+    def past(t):
+        return t == q + 1 or t == (q, True)
+
+    def recorded(t):
+        return t[0] if isinstance(t, tuple) else t
+    families = [""] + [str(i) for i in range(len(spaces))]       # "" is the plain slot
+    names = {(f, k): f"{RULER_PREFIX}{f}_{k}" for f in families
+             for k in ["in"] + [f"u{u}" for u in range(RULER_RADIX)]
+             + [f"t{t[0]}{'x' if t[1] else ''}" if isinstance(t, tuple) else f"t{t}" for t in tens]}
+
+    def tname(f, t):
+        return names[(f, f"t{t[0]}{'x' if t[1] else ''}" if isinstance(t, tuple) else f"t{t}")]
+    slot, bar = RULER_PREFIX, RULER_PREFIX + "_bar"
+    underlined = {s: s + RULER_SUFFIX for s in spaces}
+    blank = cmap[0x20]
+    _add_glyphs(font, [(n, blank) for n in names.values()] + [(slot, blank), (bar, blank)]
+                + [(u, s) for s, u in underlined.items()])
+    glyf, hmtx = font["glyf"], font["hmtx"]
+    width = hmtx[cmap.get(ord("0"), blank)][0]
+    pen = TTGlyphPen(None)
+    pen.moveTo((-width, -260))
+    pen.lineTo((-width, -200))
+    pen.lineTo((0, -200))
+    pen.lineTo((0, -260))
+    pen.closePath()
+    glyf[bar] = pen.glyph()
+    for n in list(names.values()) + [slot, bar]:
+        hmtx[n] = (0, -width if n == bar else 0)
+        classes[n] = 1 if n == bar else 3
+    for s, u in underlined.items():
+        g = Glyph()
+        comp = GlyphComponent()
+        comp.glyphName, comp.x, comp.y, comp.flags = bar, hmtx[s][0], 0, 0x0002 | 0x0004
+        g.numberOfContours, g.components = -1, [comp]
+        glyf[u] = g
+        hmtx[u] = (hmtx[s][0], 0)
+        classes[u] = classes[s]
+    glyf[bar].recalcBounds(glyf)
+    gid = font.getGlyphID
+
+    def coverage(glyphs):
+        cov = ot.Coverage()
+        cov.glyphs = sorted(set(glyphs), key=gid)
+        return cov
+
+    def mark_set(glyphs):
+        sets = gdef.MarkGlyphSetsDef
+        if sets is None:
+            gdef.Version = 0x00010002
+            sets = gdef.MarkGlyphSetsDef = ot.MarkGlyphSetsDef()
+            sets.MarkSetTableFormat, sets.Coverage = 1, []
+        sets.Coverage.append(coverage(glyphs))
+        sets.MarkSetCount = len(sets.Coverage)
+        return sets.MarkSetCount - 1
+
+    lookups = font["GSUB"].table.LookupList.Lookup
+
+    def add(kind, subtables, flag=0, marks=None):
+        lk = ot.Lookup()
+        lk.LookupType, lk.LookupFlag, lk.SubTable = kind, flag, subtables
+        lk.SubTableCount = len(subtables)
+        if marks is not None:
+            lk.LookupFlag |= 0x0010
+            lk.MarkFilteringSet = marks
+        lookups.append(lk)
+        return len(lookups) - 1
+
+    def single(mapping):
+        st = ot.SingleSubst()
+        st.mapping = mapping
+        return add(1, [st])
+
+    def rule(back, inp, lookup):
+        st = ot.ChainContextSubst()
+        st.Format = 3
+        st.BacktrackCoverage = [coverage(back)] if back else []
+        st.InputCoverage, st.LookAheadCoverage = [coverage(inp)], []
+        st.BacktrackGlyphCount, st.InputGlyphCount, st.LookAheadGlyphCount = len(st.BacktrackCoverage), 1, 0
+        rec = ot.SubstLookupRecord()
+        rec.SequenceIndex, rec.LookupListIndex = 0, lookup
+        st.SubstLookupRecord, st.SubstCount = [rec], 1
+        return st
+    skip_bases = 0x0002 | 0x0004
+    top = []
+    ins = ot.MultipleSubst()
+    ins.mapping = {g: [g, names[("", "in")]] for g in letters}
+    ins.mapping.update({s: [names[(str(i), "in")]] for i, s in enumerate(spaces)})
+    top.append(add(2, [ins]))
+    # Units: each slot is one more than the slot before, mod 10; the first is 0.
+    inputs = [names[(f, "in")] for f in families]
+    units = [[names[(f, f"u{u}")] for f in families] for u in range(RULER_RADIX)]
+    to_unit = [single({names[(f, "in")]: names[(f, f"u{u}")] for f in families}) for u in range(RULER_RADIX)]
+    rules = [rule(units[u], inputs, to_unit[(u + 1) % RULER_RADIX]) for u in range(RULER_RADIX)]
+    top.append(add(6, rules + [rule(None, inputs, to_unit[0])], skip_bases,
+                   mark_set(inputs + sum(units, []))))
+    # Tens: one more where the units wrapped to 0, up to one past the column's.
+    def ten(t, u):
+        if t == q:
+            return (q, u >= r)
+        return min(t, q + 1)
+    to_ten = {t: single({names[(f, f"u{u}")]: tname(f, ten(t, u)) for f in families for u in range(RULER_RADIX)})
+              for t in range(q + 2)}
+    carry, other = units[0], sum(units[1:], [])
+    rules = []
+    for t in range(q + 2):
+        before = [tname(f, x) for f in families for x in tens if recorded(x) == t]
+        rules += [rule(before, carry, to_ten[min(t + 1, q + 1)]), rule(before, other, to_ten[t])]
+    outs = [tname(f, t) for f in families for t in tens]
+    top.append(add(6, rules + [rule(None, carry, to_ten[0])], skip_bases, mark_set(sum(units, []) + outs)))
+    # The bar, and the spaces back.
+    final = {}
+    for t in tens:
+        final[tname("", t)] = bar if past(t) else slot
+        for i, s in enumerate(spaces):
+            final[tname(str(i), t)] = underlined[s] if past(t) else s
+    st = ot.SingleSubst()
+    st.mapping = final
+    top.append(add(1, [st]))
+    done = set()
+    for fr in font["GSUB"].table.FeatureList.FeatureRecord:
+        if fr.FeatureTag == "calt" and id(fr.Feature) not in done:
+            done.add(id(fr.Feature))
+            fr.Feature.LookupListIndex += top
+            fr.Feature.LookupCount = len(fr.Feature.LookupListIndex)
+    font["GSUB"].table.LookupList.LookupCount = len(lookups)
+    return [bar] + list(underlined.values())
 
 
 def _add_glyphs(font: TTFont, new_glyphs: list[tuple[str, str]]) -> None:
