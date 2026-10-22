@@ -56,7 +56,8 @@
     }
     if (call !== latest) return;
     html.dataset.fontlexPalette = settings.palette === "auto" ? (darkPage() ? "dark" : "light") : settings.palette;
-    const hide = settings.hide.filter((h) => FONTLEX_HINTS[h]).map((h) => `"${FONTLEX_HINTS[h].feature}" 1`);
+    // Sorted, as Firefox lists them in the computed style (Chromium keeps the order given).
+    const hide = settings.hide.filter((h) => FONTLEX_HINTS[h]).map((h) => `"${FONTLEX_HINTS[h].feature}" 1`).sort();
     if (hide.length) {
       html.style.setProperty("--fontlex-features", hide.join(", "));
       html.dataset.fontlexHide = "";

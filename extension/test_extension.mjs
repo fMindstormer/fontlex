@@ -227,7 +227,7 @@ await popup.uncheck('input[name="hint"][value="stress"]');
 await popup.uncheck('input[name="hint"][value="silent"]');
 await state(page);
 seen = await colorsOnScreen(page, COLORS["en-dark"]);
-check("popup: English stress and silent letters hidden", (await features()) === '"ss03", "ss01"'
+check("popup: English stress and silent letters hidden", (await features()) === '"ss01", "ss03"'
       && seen.stress === 0 && seen.reduced > 20, `${await features()} ${JSON.stringify(seen)}`);
 await popup.check('input[name="hint"][value="stress"]');
 await popup.check('input[name="hint"][value="silent"]');
