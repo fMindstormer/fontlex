@@ -80,6 +80,9 @@ async function firefox() {
     browser: "firefox", executablePath: process.env.FIREFOX, headless: true,
     userDataDir: mkdtempSync(join(tmpdir(), "fontlex-")),
     extraPrefsFirefox: { "extensions.webextensions.uuids": JSON.stringify({ [gecko]: uuid }) },
+    // WebDriver BiDi only navigates to http(s), data: and the like unless
+    // told otherwise; the popup is a moz-extension:// page.
+    env: { ...process.env, MOZ_REMOTE_ALLOW_SYSTEM_ACCESS: "1" },
   });
   await browser.installExtension(ext);
   const setChecked = (page, sel, on) => page.$eval(sel, (el, on) => { if (el.checked !== on) el.click(); }, on);
