@@ -8,3 +8,4 @@ build/*.glyphmap.json
 french/data/
 build/extension/
 build/*.zip
+build/extension-firefox/

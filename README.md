@@ -34,7 +34,7 @@ the liaison ties are drawn by the font.
 | [German syllables](https://fmindstormer.github.io/fontlex/german-syllables.html) ([README](german/syllables/README.md)) | colors syllables in turn, as German schools teach reading | 97.5% of held-out first-reader words split exactly right |
 | [English pronunciation](https://fmindstormer.github.io/fontlex/english.html) ([README](english/README.md)) | marks stressed and reduced vowels and silent letters of 30,000 words; noun/verb pairs read the word before (*the record*, *to record*) or an invisible [reading marker](markers/README.md); a stylistic set turns each kind of hint off | 170,817 of 170,817 cases as the lexicon says, in HarfBuzz and Core Text; the lexicon awaits review by fluent speakers |
 | [French pronunciation](https://fmindstormer.github.io/fontlex/french.html) ([README](french/README.md)) | marks silent letters, nasal vowels, droppable schwas and obligatory liaison (*les‿amis*, but not *les héros*) for 30,000 words; reading markers as in English; a stylistic set turns each kind of hint off | 202,190 of 202,190 cases as the lexicon says, in HarfBuzz and Core Text; the lexicon awaits review by fluent speakers |
-| [Browser extension](extension/README.md) | draws any web page in a learner font, matched to the page's language | 21 checks in Chromium, including a page with a strict CSP and hiding each kind of hint |
+| [Browser extension](extension/README.md) | draws any web page in a learner font, matched to the page's language | 21 checks in Chromium and the same 21 in Firefox, including a page with a strict CSP and hiding each kind of hint |
 
 ## What's interesting here
 
@@ -109,7 +109,7 @@ page byte for byte, so `git status` afterwards shows nothing.
 | `english/` | the English pronunciation-hint font: aligner, lexicon, compiler, verification, demo, review sheet |
 | `french/` | the French pronunciation-hint font, with liaison: aligner, lexicon, compiler, verification, demo |
 | `markers/` | invisible reading markers for noun/verb pairs, and a spaCy script that adds them |
-| `extension/` | a browser extension that draws web pages in the learner fonts, with its Chromium test |
+| `extension/` | a browser extension that draws web pages in the learner fonts, with its Chromium and Firefox test |
 | `docs/images/` | the screenshots above, of the demo pages in WebKit |
 | `.github/workflows/` | CI (`./check.sh` on Ubuntu, byte-identical rebuild) and the GitHub Pages deploy |
 | `theory/` | what font compilation can reach, with two experiments |

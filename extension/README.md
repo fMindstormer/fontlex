@@ -32,11 +32,20 @@ open `chrome://extensions`, turn on Developer mode, choose **Load unpacked**
 and pick the unzipped folder. This works in Chrome, Edge, Brave and other
 Chromium browsers.
 
-From the repository: `python extension/package.py` writes the same folder to
-`build/extension/` (the fonts must be built; `./check.sh` builds them).
+In Firefox 140 or later, download `fontlex-reading-hints-<version>-firefox.zip`,
+open `about:debugging#/runtime/this-firefox`, choose **Load Temporary
+Add-on…** and pick the zip. Firefox keeps a temporary add-on until it
+quits. To keep it installed, it must be signed by Mozilla (through
+addons.mozilla.org, listed or not); Firefox Developer Edition and Nightly
+can instead set `xpinstall.signatures.required` to false in `about:config`.
 
-Firefox and Safari aren't supported yet: the manifest has no Firefox add-on
-id, and Safari needs an Xcode wrapper. Neither was tested.
+From the repository: `python extension/package.py` writes both folders,
+`build/extension/` and `build/extension-firefox/` (the fonts must be built;
+`./check.sh` builds them). The Firefox manifest adds an add-on id and
+leaves out `use_dynamic_url`, which Firefox doesn't support; the code is
+the same.
+
+Safari isn't supported: it needs an Xcode wrapper.
 
 ## How it works
 
@@ -59,7 +68,9 @@ id, and Safari needs an Xcode wrapper. Neither was tested.
 ## Tested
 
 *Measured* with `test_extension.mjs`, which loads `build/extension/` into
-Chromium 139 (headless, through Playwright) and checks:
+Chromium 139 (headless, through Playwright), or `build/extension-firefox/`
+into Firefox 158 (headless, through Puppeteer and WebDriver BiDi, as a
+temporary add-on), and checks:
 
 - local pages in English (`lang="en-GB"`, dark background), French (with
   `Content-Security-Policy: default-src 'none'`) and German, and one with no
@@ -69,16 +80,20 @@ Chromium 139 (headless, through Playwright) and checks:
 - the popup's choices, live, and the site switch;
 - hiding a kind of hint: its color leaves the screen, the others stay.
 
-All 21 checks pass. A live French Wikipedia article also renders with its
-links and icons intact.
+All 21 checks pass in each browser; CI runs both on Linux. A live French
+Wikipedia article also renders in Chromium with its links and icons intact.
 
 ```sh
-npm install playwright-core          # once
+npm install playwright-core puppeteer-core @puppeteer/browsers      # once
 CHROMIUM=/path/to/Chromium node extension/test_extension.mjs
+FIREFOX=$(npx @puppeteer/browsers install firefox@stable_158.0.1 --format "{{path}}") \
+  node extension/test_extension.mjs firefox
 ```
 
 Branded Chrome no longer loads unpacked extensions from the command line, so
-the test needs Chromium or Chrome for Testing.
+the test needs Chromium or Chrome for Testing. In Firefox the test sets
+`MOZ_REMOTE_ALLOW_SYSTEM_ACCESS=1`, without which WebDriver BiDi won't open
+the popup's `moz-extension://` page.
 
 ## Limits
 

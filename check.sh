@@ -137,6 +137,12 @@ if wants extension; then
     else
         echo "(extension test skipped: needs node, playwright-core and CHROMIUM=/path/to/Chromium)"
     fi
+    if [ -n "$FIREFOX" ] && node -e 'require("puppeteer-core")' 2>/dev/null; then
+        echo "== extension: test in Firefox"
+        node extension/test_extension.mjs firefox
+    else
+        echo "(Firefox extension test skipped: needs node, puppeteer-core and FIREFOX=/path/to/firefox)"
+    fi
 fi
 
 if wants theory; then

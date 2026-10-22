@@ -16,9 +16,10 @@ jobs:
       - name: Install
         run: |
           pip install -r requirements.txt
-          npm install --no-save playwright-core@1.54.2
+          npm install --no-save playwright-core@1.54.2 puppeteer-core@25.15.0 @puppeteer/browsers@3.2.5
           npx playwright-core install --with-deps chromium
           echo "CHROMIUM=$(node -e 'console.log(require("playwright-core").chromium.executablePath())')" >> "$GITHUB_ENV"
+          echo "FIREFOX=$(npx @puppeteer/browsers install firefox@stable_158.0.1 --path "$RUNNER_TEMP/browsers" --format "{{path}}")" >> "$GITHUB_ENV"
       - name: Build every font and page, and run every check HarfBuzz and Chromium can do
         run: ./check.sh
       - name: The rebuild matches the repository byte for byte
