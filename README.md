@@ -45,7 +45,12 @@ the liaison ties are drawn by the font.
   Fonts can't count, yet `theory/depth.py` matches brackets 4,000 deep.
   `theory/split.py` tries every way of splitting a lexer into passes. For
   raw HTML, ordinary state minimization needs 305,568 glyphs, and 5 passes
-  need 2,484, the same as the 8 done by hand.
+  need 2,484, the same as the 8 done by hand. `theory/cascade.py` searches
+  cascades, where a pass reads an earlier one's output. From the link-tail
+  machine alone, it finds two passes that run 2.2 times as fast as the 8
+  done by hand. Putting a pass's state on a glyph of its own needs a tenth
+  of the glyphs. That fits a bar under every character past column 80, and
+  an IBAN check that underlines a wrong number.
 - **Checked, not eyeballed.** Each font is compared glyph by glyph with a
   reference model in HarfBuzz (Chrome, Firefox, Android) and Core Text
   (Safari, macOS), and the demo pages are rendered in WebKit. CI rebuilds every

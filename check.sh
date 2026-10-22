@@ -150,6 +150,10 @@ if wants theory; then
     "$PY" theory/depth.py --distinct --rounds 10 300 $shapers
     echo "== theory: splitting the link-tail recognizers into passes, every split built and checked ($shapers)"
     "$PY" theory/split.py tails --build --lines 300 $shapers
+    echo "== theory: cascades: the link-tail machine split by search, a ruler, an IBAN check ($shapers)"
+    "$PY" theory/cascade.py --lines 300 $shapers serial
+    "$PY" theory/cascade.py --lines 300 $shapers ruler 80 - 10
+    "$PY" theory/cascade.py --lines 300 $shapers iban
     echo "== theory: HarfBuzz's coverage cache (ids 32512-32767 read aaa in HarfBuzz 12.3.1 to 14.6.0)"
     "$PY" theory/hbcache.py
 fi

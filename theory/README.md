@@ -3,7 +3,7 @@
 Fontlex compiles lexers, a learner's grammar and GitHub Flavored Markdown into
 OpenType fonts. This note works out what that kind of compilation can reach
 in principle, what actually limits it, and what follows from fonts being
-programs. The claims marked *measured* come from the three scripts here and the
+programs. The claims marked *measured* come from the four scripts here and the
 fonts in this repository; the theory is classical automata theory applied to
 OpenType's lookups.
 
@@ -66,6 +66,9 @@ O(1) states instead of one pass of about 14,000 states. It splits link
 destinations into eight passes of 6 to 35 states instead of one of 364. In
 automata terms this is a cascade decomposition (Krohn and Rhodes): a big
 machine as a chain of small ones, each reading the previous one's output.
+All of this assumes a pass keeps its state in variants of the characters.
+[Cascades](#cascades-and-what-else-fits) moves the state onto glyphs of
+its own, and then time becomes the scarce resource.
 
 **OpenType says 65,535 lookups; the format allows about 4,700.** The lookup
 count is 16-bit, but the LookupList reaches each lookup's header through a
@@ -161,18 +164,187 @@ What it shows:
 Limits:
 
 - **The family is parallel**: no pass reads another's result, so order
-  doesn't matter and a split is a partition. Cascades, where a pass reads
-  what earlier passes found (the emphasis rounds, the block prefix before
-  bare URLs), are the next family. Their search space is serial
-  decompositions: Hartmanis and Stearns's partitions with the substitution
-  property, and Krohn and Rhodes's theorem in general. There an output
-  that a later pass reads persists, instead of going back to the pool.
+  doesn't matter and a split is a partition. In cascades a pass reads what
+  earlier passes found (the emphasis rounds, the block prefix before bare
+  URLs). [The next section](#cascades-and-what-else-fits) searches those.
 - **The search is exhaustive.** Partitions grow as the Bell numbers: 4,140
   for 8 recognizers, 4.2 million for 12. Past that it needs a heuristic,
   such as greedy merging under the largest pass.
 - **Glyphs are modeled, time is only measured.** The built fonts add 11 to
   139 glyphs more than the model counts: the marks themselves, the answer
   glyphs, and the trigger's variants for the answers found so far.
+
+## Cascades, and what else fits
+
+`split.py`'s passes don't read each other. In a cascade they do: a pass
+reads what earlier passes wrote at each character. `cascade.py` takes two
+steps that change the budgets above. Then it builds two things those
+budgets had ruled out.
+
+### A cascade found by search
+
+A partition of a machine's states has the *substitution property*
+(Hartmanis and Stearns, 1966) when the transitions respect its blocks:
+states in one block go to one block on every character. Such a partition
+runs the machine as two passes:
+
+- The **front** runs the machine on blocks, and at each character writes
+  the block of its right neighbor.
+- The **back** reads that and follows the state within its block, so it
+  needs only as many states as the largest block has.
+
+Every such partition is a union of closures of pairs of states.
+`cascade.py serial` computes the closure of every pair in the one-pass
+link-tail machine and builds the cheapest cascade, the one with the fewest
+states in front and back together. There are 423 partitions, found in about
+a minute on eight cores.
+
+*Measured* (`cascade.py serial`; checked, counted and timed as in the
+previous section):
+
+| Link tails | Passes | States | Glyphs | GSUB | ns/char, HarfBuzz | Core Text |
+|---|---|---|---|---|---|---|
+| One pass, minimized | 1 | 364 | 873 | 19 KB | 5,877 | 7,607 |
+| Best split of 2 | 2 | 236 | 379 | 13 KB | 4,819 | 7,857 |
+| By hand | 8 | 172 | 121 | 9 KB | 3,660 | 6,731 |
+| Cascade found by search | 2 | 35 + 24 | 519 | 12 KB | 1,642 | 2,942 |
+
+What it shows:
+
+- **The search needs only the machine.** It was given the minimal one-pass
+  machine, not the eight recognizers it was built from. It found two
+  passes of 59 states in all: a third of the hand split's states, and 2.2
+  times as fast in HarfBuzz (2.3 in Core Text). No split into independent
+  passes comes close: the best one of two passes has 236 states.
+- **A cascade pays glyphs for its tape.** The front hands its 35 blocks to
+  the back at every character, so the cascade needs four times the hand
+  split's glyphs. An independent pass gives its glyphs back to the pool,
+  but a cascade's tape has to last until the pass that reads it. What
+  crosses between passes sets the glyphs; the states within them set the
+  time.
+
+### States on their own glyphs
+
+A pass keeps its state in a variant of each character, so a pass of *s*
+states over *a* characters needs up to *s*·*a* glyphs. A multiple
+substitution can instead insert an empty glyph after each character, a
+*slot*, and the pass writes its state there. A pass of *s* states then
+needs *s* glyphs, shared by every character, plus one for each class of
+characters it can't tell apart. Passes skip the characters themselves
+(mark filtering) and see only the slots. `cascade.py slots` builds
+`split.py`'s splits both ways, each pass with its own slot.
+
+*Measured* (`cascade.py slots html`; checked in HarfBuzz and Core Text):
+
+| Raw HTML | Passes | States | Glyphs | GSUB | ns/char, HarfBuzz | Core Text |
+|---|---|---|---|---|---|---|
+| One pass, on variants | 1 | 14,993 | 305,568 (counted) | doesn't fit | | |
+| One pass, on slots | 1 | 14,993 | | doesn't fit | | |
+| Best of 2, on variants | 2 | 520 | 6,347 | 143 KB | 4,319 | 4,789 |
+| Best of 2, on slots | 2 | 520 | 605 | 34 KB | 6,634 | 13,437 |
+| By hand, on variants | 8 | 155 | 2,484 | 41 KB | 3,608 | 4,929 |
+| By hand, on slots | 8 | 155 | 233 | 10 KB | 6,848 | 25,232 |
+
+On the link tails' nine characters, slots pay off only for the single
+pass: 873 glyphs become 406, and it gets faster in HarfBuzz (5,529 ns per
+character on variants, 3,741 on slots). The hand split's 121 glyphs
+become 244.
+
+What it shows:
+
+- **Glyphs stop being scarce.** On slots, raw HTML's passes need a tenth of
+  the glyphs and a quarter of the bytes. The variant model's cost is a
+  product of states and characters; slots make it a sum.
+- **Time pays for it.** Every slot lengthens the run, and every pass has
+  its own. Eight passes on slots make nine glyphs of each character, and
+  shaping takes twice as long in HarfBuzz and five times as long in Core
+  Text. A cascade can share one slot instead: each pass reads the slot the
+  previous one wrote (the ruler and the IBAN check below).
+- **A new ceiling: subtables.** A right-to-left pass is a reverse chaining
+  lookup with one subtable per state. A lookup reaches its subtables
+  through 16-bit offsets, at 10 bytes each (an Extension subtable and its
+  offset), so it can hold at most 6,552. *Measured*: a pass of 6,550
+  states builds and shapes right in HarfBuzz and Core Text, and one of
+  6,560 doesn't build. So raw HTML's single pass no longer runs out of
+  glyphs, but it still doesn't fit. Left-to-right passes keep their states
+  in a class definition and don't hit this limit.
+- **WebKit widens slots after spaces.** It gives every glyph of a space
+  character the width of a space, so a slot after a space shows as a
+  second space. Instead, a space has to become its own slot, and turn back
+  into a space at the end, as the ruler does. The split fonts above put
+  slots after spaces, and were checked in HarfBuzz and Core Text only.
+
+### What else fits: a ruler and a check digit
+
+**A ruler.** `cascade.py ruler 80` puts a bar under every character past
+column 80. That takes a pass that sees every character. On variants it
+would cost its states times the font's characters: 81 × 1,363 = 110,403
+glyphs for JetBrains Mono, more than a font can have. On slots, one pass
+of 81 states does it. A cascade counts units mod 10 on the slot, and then
+counts the carries: 19 states.
+
+*Measured* (`cascade.py ruler`; every character of the base font, checked
+in HarfBuzz and Core Text):
+
+| Bar past column | Counters | Passes | States | Glyphs | GSUB | ns/char, HarfBuzz | Core Text |
+|---|---|---|---|---|---|---|---|
+| 80 | one, to 80 | 1 | 81 | 249 | 16 KB | 2,378 | 4,231 |
+| 80 | mod 10, then to 8 | 2 | 19 | 66 | 13 KB | 1,401 | 2,918 |
+| 80 | mod 2 four times, then to 5 | 5 | 14 | 36 | 12 KB | 1,504 | 3,393 |
+| 280 | one, to 280 | 1 | 281 | 849 | 27 KB | 8,031 | 9,872 |
+| 280 | mod 10, then to 28 | 2 | 39 | 126 | 15 KB | 1,753 | 3,273 |
+| 280 | mod 4, mod 7, then to 10 | 3 | 22 | 78 | 13 KB | 1,621 | 3,180 |
+
+A single counter gets slower as it counts further, because HarfBuzz tries
+one rule per state in turn. The cascades stay near 1,600 ns per
+character, and which radices they use matters less than splitting at all.
+
+Chromium and WebKit draw the bars from column 81 in a `div` and in an
+editable `textarea`. In a line that mixes Latin and Cyrillic, Chrome
+starts a new run at the change of script, so the count starts over and
+no bars appear. WebKit counts straight across. The same font would mark
+PEP 8's 79 columns, a commit subject's 50, or an SMS's 160, in any text
+field, with no script.
+
+**A check digit.** An IBAN is valid when its BBAN followed by its first
+four characters, with each letter read as two digits (A = 10, …, Z = 35),
+leaves 1 mod 97. `cascade.py iban` underlines every character of an IBAN
+whose check digits are wrong. It takes three passes that change direction
+twice:
+
+1. Left to right, the BBAN's remainder, by Horner's rule (102 states).
+2. Right to left, that remainder carried to the front, where the first
+   four characters are folded in (198 states).
+3. Left to right, the verdict carried back over the whole number (2
+   states).
+
+It was checked on 2,000 IBANs. A third had one character changed and a
+fifth had two neighbors swapped; some were in lowercase, and half were
+printed in groups of four.
+
+*Measured* (`cascade.py iban`; checked in HarfBuzz and Core Text, and
+drawn in `input` fields in Chromium and WebKit):
+
+| IBAN check | Passes | States | Glyphs | GSUB | ns/char, HarfBuzz | Core Text |
+|---|---|---|---|---|---|---|
+| On variants of 62 characters | 3 | 303 | 18,643 | 2,530 KB | 5,944 | 8,660 |
+| On one slot | 3 | 303 | 406 | 121 KB | 3,037 | 7,203 |
+
+Krohn and Rhodes's theorem says which parts of such a machine can be split
+up. Every machine is a cascade of two kinds of parts:
+
+- **Resets** remember a value: set it, then keep it.
+- **Simple groups** count modulo a prime.
+
+Resets split freely. The 97 values that pass 2 carries could be 7 passes
+of one bit each (not built here). Groups don't. Appending a digit maps a
+remainder *r* to 10*r* + *d* mod 97, so the check's machine contains the
+cyclic group of order 97. That group is simple, so the theorem puts it,
+whole, in one part of any cascade of left-to-right passes. That part has at
+least 97 states, however the work is cut, and pass 1's 102 states are
+close to the bound. Luhn's check and ISBN-13's work mod 10, the product of
+the groups of order 2 and 5, so their remainders split into passes of 2
+and 5 states.
 
 ## Counting: a font can't count, but it can count to 4,000
 
@@ -380,9 +552,17 @@ beat one large one.
   sums of advances, beyond what glyph states can count.
 - **Engine conformance**: compiled fonts with reference models as a
   standing test suite for HarfBuzz, Core Text and DirectWrite.
-- **Splits found by search, in the real fonts.** Apply `split.py`'s search
-  to Fontlex Markdown's own raw-HTML passes, which also handle non-ASCII
-  text and whole-line HTML blocks. Then extend the search to cascades.
+- **Fontlex Markdown on slots.** It uses 97% of the glyph ids, nearly all
+  of them for states in variants of characters. On slots most of them
+  would be free, at a cost in time that the passes would need measuring
+  for, and with spaces kept to one glyph for WebKit.
+- **Cascade search at scale.** Pair closures are quadratic in the states:
+  364 states take a minute, and raw HTML's single pass of 14,993 would take
+  1,700 times as many. Larger machines need closures computed from
+  structure (the product they came from) or a heuristic. The back pass
+  could be decomposed again.
+- **A ruler in the code fonts**: Fontlex Python marking characters past
+  PEP 8's column 79, at about 20 states and 70 glyphs.
 
 ## Reproducing
 
@@ -392,6 +572,11 @@ python theory/depth.py --rounds 5119 6000 --shaper harfbuzz --shaper coretext   
 python theory/hbcache.py --page /tmp/hbcache.html                              # open in a browser
 python theory/split.py tails --build --shaper harfbuzz --shaper coretext
 python theory/split.py html --build --shaper harfbuzz --shaper coretext         # about two minutes
+python theory/cascade.py --shaper harfbuzz --shaper coretext serial             # a minute or two
+python theory/cascade.py --shaper harfbuzz --shaper coretext slots html
+python theory/cascade.py --shaper harfbuzz --shaper coretext ruler 280 - 10 4x7 2x2x2x5
+python theory/cascade.py --shaper harfbuzz --shaper coretext iban
 ```
 
-`./check.sh theory` runs them at small sizes (`split.py` on the link tails).
+`./check.sh theory` runs them at small sizes (`split.py` on the link tails,
+`cascade.py` on the link tails, a ruler at column 80 and the IBAN check).
