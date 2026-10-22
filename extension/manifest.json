@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Fontlex Reading Hints",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Read any web page in a hint font: English or French pronunciation, German noun genders or syllables.",
   "permissions": ["storage", "activeTab"],
   "action": {
