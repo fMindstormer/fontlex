@@ -3,7 +3,7 @@
 Fontlex compiles lexers, a learner's grammar and GitHub Flavored Markdown into
 OpenType fonts. This note works out what that kind of compilation can reach
 in principle, what actually limits it, and what follows from fonts being
-programs. The claims marked *measured* come from the two scripts here and the
+programs. The claims marked *measured* come from the three scripts here and the
 fonts in this repository; the theory is classical automata theory applied to
 OpenType's lookups.
 
@@ -84,6 +84,95 @@ nesting at 64, and a rule whose input is longer than 64 glyphs never applies. Co
 limits. *Measured*: its line API applies no GSUB at all to a line longer
 than 10,240 characters, even for a font with two lookups. Safari isn't
 affected: WebKit renders emphasis whose markers are 12,000 characters apart.
+
+## Splitting a computation into passes
+
+The budgets say what to trade, not where to cut. `split.py` finds the
+cheapest cut exactly for one restricted family: lexers that ask *which of k
+constructs starts here*. That is k recognizers read right to left, whose
+answers combine at a trigger character. Fontlex Markdown asks two such
+questions, and the script poses both over printable ASCII:
+
+- **Link tails**: does a destination of one of 8 forms follow this `]`?
+  (`markdown/tails.py`, 9 characters told apart)
+- **Raw HTML**: which of 8 kinds of raw HTML or autolink starts at this `<`?
+  (`markdown/htmlauto.py`, 95 characters)
+
+A split puts each recognizer in one pass, and a pass runs its group's
+product, minimized against the group's answer. The passes don't read each
+other, and their states are temporary glyphs that the next pass reuses
+(`markdown/passes.py`'s pool). So a split's glyph cost is, for each
+character, the largest count any one of its passes needs, summed over the
+characters. Three ways to split:
+
+1. **Ordinary minimization**: one pass, the minimal machine for the whole
+   question.
+2. **By hand**: one pass per recognizer, as Fontlex Markdown does.
+3. **Search**: for each number of passes, the cheapest of all 4,140
+   partitions of the 8 recognizers (fewest glyphs, then fewest rules).
+
+*Measured* (`split.py --build`). Every font that fits gives the automata's
+answer on 2,000 random lines, in HarfBuzz and in Core Text. Glyphs are those
+the built font adds. Times are HarfBuzz nanoseconds per character on lines
+of about 2,000 characters, the fastest of nine interleaved runs. The machine
+was loaded while they ran, so compare them only with each other.
+
+| Link tails | Passes | States | Glyphs | GSUB | ns/char |
+|---|---|---|---|---|---|
+| One pass, minimized | 1 | 364 | 873 | 19 KB | 5,448 |
+| Best of 2 | 2 | 236 | 379 | 13 KB | 4,495 |
+| Best of 4 | 4 | 176 | 177 | 10 KB | 3,656 |
+| Best of 5 | 5 | 167 | 141 | 9 KB | 3,377 |
+| By hand | 8 | 172 | 121 | 9 KB | 3,479 |
+
+| Raw HTML | Passes | States | Glyphs | GSUB | ns/char |
+|---|---|---|---|---|---|
+| One pass, minimized | 1 | 14,993 | 305,568 (counted) | doesn't fit | |
+| Best of 2 | 2 | 520 | 6,347 | 143 KB | 3,884 |
+| Best of 3 | 3 | 273 | 2,703 | 74 KB | 3,998 |
+| Best of 4 | 4 | 178 | 2,489 | 49 KB | 3,408 |
+| Best of 5 | 5 | 163 | 2,484 | 45 KB | 3,313 |
+| By hand | 8 | 155 | 2,484 | 41 KB | 3,250 |
+
+What it shows:
+
+- **Minimizing isn't splitting.** The minimal one-pass machine for raw HTML
+  has 14,993 states and would need 305,568 glyphs, nearly five times the
+  glyph space. Minimization merges states that answer alike, but it can't
+  undo a product. The link tails' single pass fits (364 states, the count in
+  [markdown/README.md](../markdown/README.md)), but it costs 7 times the
+  glyphs of eight passes.
+- **The pool makes merging free up to the largest pass.** A split pays, per
+  character, for its largest pass, so small recognizers can share a pass at
+  no cost while their product stays smaller. Raw HTML needs the same 2,484
+  glyphs in 5 passes as in 8. The URI autolink (65 states) and the open tag
+  (52) set the cost, and the six small kinds fit in three passes beside
+  them. Four passes cost 5
+  glyphs more. The hand-made split missed this, and the search found it.
+- **Time and file size follow states more than passes.** A right-to-left
+  pass is a reverse chaining lookup with one subtable per state, and
+  HarfBuzz tries the subtables in turn. The link tails' single pass of 364
+  states is 1.6 times slower than eight passes of 172 states in all. Raw
+  HTML's splits of 155 to 178 states cost about the same whatever their
+  number of passes, and 520 states in two passes cost 20% more, and 3.5
+  times the GSUB bytes. In this family, the split with the fewest glyphs is
+  also about the fastest and the smallest.
+
+Limits:
+
+- **The family is parallel**: no pass reads another's result, so order
+  doesn't matter and a split is a partition. Cascades, where a pass reads
+  what earlier passes found (the emphasis rounds, the block prefix before
+  bare URLs), are the next family. Their search space is serial
+  decompositions: Hartmanis and Stearns's partitions with the substitution
+  property, and Krohn and Rhodes's theorem in general. There an output
+  that a later pass reads persists, instead of going back to the pool.
+- **The search is exhaustive.** Partitions grow as the Bell numbers: 4,140
+  for 8 recognizers, 4.2 million for 12. Past that it needs a heuristic,
+  such as greedy merging under the largest pass.
+- **Glyphs are modeled, time is only measured.** The built fonts add 11 to
+  139 glyphs more than the model counts: the marks themselves, the answer
+  glyphs, and the trigger's variants for the answers found so far.
 
 ## Counting: a font can't count, but it can count to 4,000
 
@@ -268,6 +357,10 @@ roughly 15 times a plain font. The depth font at depth 1,000 takes 12 ms in
 HarfBuzz and 40 ms in Core Text. That is fine for a line, but it grows with
 paragraph length, because the run is the paragraph. Font programs belong in
 text that breaks into short runs: lines of code, list items, form fields.
+Within a pass the work also grows with its states, at least in HarfBuzz's
+right-to-left passes ([Splitting a computation into
+passes](#splitting-a-computation-into-passes)). So many small passes can
+beat one large one.
 
 ## Where to push next
 
@@ -287,6 +380,9 @@ text that breaks into short runs: lines of code, list items, form fields.
   sums of advances, beyond what glyph states can count.
 - **Engine conformance**: compiled fonts with reference models as a
   standing test suite for HarfBuzz, Core Text and DirectWrite.
+- **Splits found by search, in the real fonts.** Apply `split.py`'s search
+  to Fontlex Markdown's own raw-HTML passes, which also handle non-ASCII
+  text and whole-line HTML blocks. Then extend the search to cascades.
 
 ## Reproducing
 
@@ -294,6 +390,8 @@ text that breaks into short runs: lines of code, list items, form fields.
 python theory/depth.py --distinct --rounds 10 100 1000 2000 4000 4678 --shaper harfbuzz --shaper coretext
 python theory/depth.py --rounds 5119 6000 --shaper harfbuzz --shaper coretext   # identical rounds, shared
 python theory/hbcache.py --page /tmp/hbcache.html                              # open in a browser
+python theory/split.py tails --build --shaper harfbuzz --shaper coretext
+python theory/split.py html --build --shaper harfbuzz --shaper coretext         # about two minutes
 ```
 
-`./check.sh theory` runs both at small sizes.
+`./check.sh theory` runs them at small sizes (`split.py` on the link tails).

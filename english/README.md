@@ -18,13 +18,17 @@ Other words are drawn plain.
 ## Results
 
 *Measured* with `verify.py`, which compares each letter's glyph with the
-lexicon's hint for it:
+lexicon's hint for it. This measures the compiler, not the hints: the font
+draws exactly what the lexicon says, and the lexicon is only as right as
+CMUdict and the aligner. Whether the hints are right is a separate question.
+Only spot checks have answered it so far; a review by fluent speakers is
+the next step (*Check the alignments* below).
 
-| Text | Checked | Right, HarfBuzz | Right, Core Text |
+| Text | Checked | As the lexicon says, HarfBuzz | Core Text |
 |---|---|---|---|
 | Every listed word alone, capitalized, in capitals, in punctuation and in a sentence; with a curly apostrophe; inside longer words and made-up words (must stay plain); every noun/verb pair after each cue word, after another word and after two spaces, and before each reading marker (also after a cue for the other reading); a marker after other words | 170,817 | 170,817 | 170,817 |
 | Width with a marker: each pair as wide as after a cue for the same reading, every 50th other word as wide as without one | 1,446 | 1,446 | 1,446 |
-| Lines of this project's English READMEs (`README.md`, `markdown/`, `theory/`) | 808 | 808 | 808 |
+| Lines of this project's English READMEs (`README.md`, `markdown/`, `theory/`) | 901 | 901 | 901 |
 
 The glyph count doesn't depend on the word list (3,412 glyphs, mostly the
 letters' first-letter variants); the rules do. Before the two-letter keys and

@@ -21,9 +21,12 @@ of running text by wordfreq's counts (proper nouns are mostly missing), and
 ## Results
 
 *Measured* with `verify.py`, which compares each letter's glyph with the
-lexicon's hint for it, and each space's and hyphen's tie:
+lexicon's hint for it, and each space's and hyphen's tie. This measures the
+compiler, not the hints: the font draws exactly what the lexicon says, and
+the lexicon is only as right as Lexique, the aligner and the liaison rules.
+Whether the hints are right is a question for fluent speakers ([Review](#review)).
 
-| Text | Checked | Right, HarfBuzz | Right, Core Text |
+| Text | Checked | As the lexicon says, HarfBuzz | Core Text |
 |---|---|---|---|
 | Every listed word alone, capitalized, in capitals, in punctuation, in a sentence and after *l'*; every compound alone, capitalized, in a sentence, with a curly apostrophe and with a letter added (must fall back to its parts); every verb/noun pair after each cue word, after another word and after two spaces, and before each reading marker (also after a cue for the other reading); a marker after other words; every liaison trigger before vowels, h muet, h aspiré, *onze*, *oui*, *yeux* and consonants, after a hyphen and an apostrophe, and with two spaces; numbers ending a longer one (*vingt-trois ans*); 400 words ending in s, x, t, d or z before each inverted clitic; listed words inside longer words and made-up words (must stay plain) | 202,190 | 202,190 | 202,190 |
 | Width with a marker: each pair as wide as after a cue for the same reading, every 50th other word as wide as without one | 1,262 | 1,262 | 1,262 |

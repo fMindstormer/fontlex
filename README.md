@@ -32,8 +32,8 @@ the liaison ties are drawn by the font.
 | [Markdown](https://fmindstormer.github.io/fontlex/markdown.html) ([README](markdown/README.md)) | renders GitHub Flavored Markdown line by line: CommonMark's inline rules, strikethrough, autolinks, block markup; markup hidden; mono and proportional | within its bounds, every one-line spec example, 20,000 random lines and 10,723 lines of real documents exactly as GitHub renders them |
 | [German genders](https://fmindstormer.github.io/fontlex/german.html) ([README](german/README.md)) | colors nouns by gender, from lists learned from a treebank and Wiktionary | on held-out newspaper text, 97% of nouns colored, 99.5% of them right |
 | [German syllables](https://fmindstormer.github.io/fontlex/german-syllables.html) ([README](german/syllables/README.md)) | colors syllables in turn, as German schools teach reading | 97.5% of held-out first-reader words split exactly right |
-| [English pronunciation](https://fmindstormer.github.io/fontlex/english.html) ([README](english/README.md)) | marks stressed and reduced vowels and silent letters of 30,000 words; noun/verb pairs read the word before (*the record*, *to record*) or an invisible [reading marker](markers/README.md); a stylistic set turns each kind of hint off | 170,817 of 170,817 cases right in HarfBuzz and Core Text |
-| [French pronunciation](https://fmindstormer.github.io/fontlex/french.html) ([README](french/README.md)) | marks silent letters, nasal vowels, droppable schwas and obligatory liaison (*les‿amis*, but not *les héros*) for 30,000 words; reading markers as in English; a stylistic set turns each kind of hint off | 202,190 of 202,190 cases right in HarfBuzz and Core Text |
+| [English pronunciation](https://fmindstormer.github.io/fontlex/english.html) ([README](english/README.md)) | marks stressed and reduced vowels and silent letters of 30,000 words; noun/verb pairs read the word before (*the record*, *to record*) or an invisible [reading marker](markers/README.md); a stylistic set turns each kind of hint off | 170,817 of 170,817 cases as the lexicon says, in HarfBuzz and Core Text; the lexicon awaits review by fluent speakers |
+| [French pronunciation](https://fmindstormer.github.io/fontlex/french.html) ([README](french/README.md)) | marks silent letters, nasal vowels, droppable schwas and obligatory liaison (*les‿amis*, but not *les héros*) for 30,000 words; reading markers as in English; a stylistic set turns each kind of hint off | 202,190 of 202,190 cases as the lexicon says, in HarfBuzz and Core Text; the lexicon awaits review by fluent speakers |
 | [Browser extension](extension/README.md) | draws any web page in a learner font, matched to the page's language | 21 checks in Chromium, including a page with a strict CSP and hiding each kind of hint |
 
 ## What's interesting here
@@ -43,11 +43,18 @@ the liaison ties are drawn by the font.
   can compute (exactly the rational functions of a run) and measures the
   real budgets: glyph ids, the lookup list's 16-bit offsets, engine work.
   Fonts can't count, yet `theory/depth.py` matches brackets 4,000 deep.
+  `theory/split.py` tries every way of splitting a lexer into passes. For
+  raw HTML, ordinary state minimization needs 305,568 glyphs, and 5 passes
+  need 2,484, the same as the 8 done by hand.
 - **Checked, not eyeballed.** Each font is compared glyph by glyph with a
   reference model in HarfBuzz (Chrome, Firefox, Android) and Core Text
   (Safari, macOS), and the demo pages are rendered in WebKit. CI rebuilds every
   font and page and fails unless the result matches the repository byte for
-  byte.
+  byte. That checks the compiler, not the model: a font that does exactly
+  what its lexicon says is only as right as the lexicon. The German fonts
+  are scored on held-out text and the reading markers on treebanks. The
+  English and French hints come from CMUdict and Lexique through an aligner,
+  and no fluent speaker has reviewed them yet; their review sheets are ready.
 - **It found an engine bug.** Compiled fonts reach glyph-id ranges that
   hand-drawn fonts don't. HarfBuzz 12.3.1 and later never match glyph ids
   32,512 to 32,767 in format 2 context rules. It was bisected to one commit

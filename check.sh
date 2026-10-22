@@ -142,6 +142,8 @@ fi
 if wants theory; then
     echo "== theory: bracket matching as deep as the rounds ($shapers)"
     "$PY" theory/depth.py --distinct --rounds 10 300 $shapers
+    echo "== theory: splitting the link-tail recognizers into passes, every split built and checked ($shapers)"
+    "$PY" theory/split.py tails --build --lines 300 $shapers
     echo "== theory: HarfBuzz's coverage cache (ids 32512-32767 read aaa in HarfBuzz 12.3.1 to 14.6.0)"
     "$PY" theory/hbcache.py
 fi
