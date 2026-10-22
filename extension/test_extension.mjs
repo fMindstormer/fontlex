@@ -87,7 +87,17 @@ async function firefox() {
   await browser.installExtension(ext);
   const setChecked = (page, sel, on) => page.$eval(sel, (el, on) => { if (el.checked !== on) el.click(); }, on);
   const wrap = (page) => ({
-    goto: (url) => page.goto(url),
+    // A moz-extension:// page loads in the extension's process, and the
+    // load event may not come back over BiDi: wait for its DOM instead.
+    goto: async (url) => {
+      if (!url.startsWith("moz-extension:")) return page.goto(url);
+      try {
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 10000 });
+      } catch (e) {
+        console.log(`(${url}: ${e.message}; the tab is at ${page.url()})`);
+      }
+      await page.waitForSelector("#palette", { timeout: 10000 });
+    },
     evaluate: (fn, arg) => page.evaluate(fn, arg),
     shot: async (sel) => Buffer.from(await (await page.$(sel)).screenshot()),
     front: () => page.bringToFront(),
