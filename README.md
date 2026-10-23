@@ -19,10 +19,12 @@ JavaScript: the font's substitution rules do it.
 <td><a href="https://fmindstormer.github.io/fontlex/french.html"><img src="docs/images/french.png" alt="French text with silent letters faded, nasal vowels in violet and liaisons in green with a tie"></a></td></tr>
 <tr><td><a href="https://fmindstormer.github.io/fontlex/german.html"><img src="docs/images/german.png" alt="German text with nouns colored by gender: der blue, die red, das green"></a></td>
 <td><a href="https://fmindstormer.github.io/fontlex/german-syllables.html"><img src="docs/images/german-syllables.png" alt="German text with each word's syllables in turn blue and red"></a></td></tr>
+<tr><td><a href="https://fmindstormer.github.io/fontlex/math.html"><img src="docs/images/math.png" alt="LaTeX in a plain text box, typeset by the Fontlex Math font: fractions, roots, superscripts and subscripts"></a></td>
+<td></td></tr>
 </table>
 
-Every image is a plain text box; the colors, the hidden Markdown markup and
-the liaison ties are drawn by the font.
+Every image is a plain text box; the colors, the hidden Markdown markup,
+the liaison ties and the fractions are drawn by the font.
 
 ## The fonts
 
@@ -30,6 +32,7 @@ the liaison ties are drawn by the font.
 |---|---|---|
 | [Python](https://fmindstormer.github.io/fontlex/python.html), [JavaScript](https://fmindstormer.github.io/fontlex/javascript.html) | runs a lexer compiled from a YAML spec ([below](#the-spec)) and colors each token; Python also puts a bar under every character past PEP 8's 79 columns | every glyph's state matches a reference lexer: 20,000 random strings, every transition, every spec example; the ruler's bars on 2,007 lines; HarfBuzz and Core Text |
 | [Markdown](https://fmindstormer.github.io/fontlex/markdown.html) ([README](markdown/README.md)) | renders GitHub Flavored Markdown line by line: CommonMark's inline rules, strikethrough, autolinks, block markup; markup hidden; mono and proportional | within its bounds, every one-line spec example, 20,000 random lines and 10,723 lines of real documents exactly as GitHub renders them |
+| [Math](https://fmindstormer.github.io/fontlex/math.html) ([README](math/README.md)) | typesets a small subset of LaTeX as you type: fractions, square roots, superscripts and subscripts, Greek letters and symbols, nested 3 deep | 20,000 random lines laid out to the font unit as a separate layout model says, in HarfBuzz and Core Text; Chrome and WebKit checked by screenshot |
 | [German genders](https://fmindstormer.github.io/fontlex/german.html) ([README](german/README.md)) | colors nouns by gender, from lists learned from a treebank and Wiktionary | on held-out newspaper text, 97% of nouns colored, 99.5% of them right |
 | [German syllables](https://fmindstormer.github.io/fontlex/german-syllables.html) ([README](german/syllables/README.md)) | colors syllables in turn, as German schools teach reading | 97.5% of held-out first-reader words split exactly right |
 | [English pronunciation](https://fmindstormer.github.io/fontlex/english.html) ([README](english/README.md)) | marks stressed and reduced vowels and silent letters of 30,000 words; noun/verb pairs read the word before (*the record*, *to record*) or an invisible [reading marker](markers/README.md); a stylistic set turns each kind of hint off | 170,817 of 170,817 cases as the lexicon says, in HarfBuzz and Core Text; the lexicon awaits review by fluent speakers |
@@ -67,6 +70,11 @@ the liaison ties are drawn by the font.
   ([harfbuzz/harfbuzz#6418](https://github.com/harfbuzz/harfbuzz/issues/6418)),
   and the fix was merged the same day
   ([#6419](https://github.com/harfbuzz/harfbuzz/pull/6419)).
+- **Layout, too.** The math font sets fractions and roots with nothing but
+  substitutions and mark attachment: inside a fraction every glyph is a
+  mark chained to the one before, and 238 passes work out where. Fitting it
+  in OpenType's lookup list took digit-by-digit arithmetic and nested
+  lookups shared across passes ([math/README.md](math/README.md)).
 - **Data, then compilation.** The learner fonts come from real data: hard-EM
   alignment of spellings with CMUdict and Lexique pronunciations, gender
   lists learned from a treebank, TeX hyphenation patterns. The pronunciation
@@ -95,9 +103,9 @@ Then use the font in CSS:
 textarea { font-family: "Fontlex Python", monospace; font-palette: light; }
 ```
 
-`./check.sh` builds all eight fonts and the demo pages and runs every check
+`./check.sh` builds all nine fonts and the demo pages and runs every check
 the machine supports; `./check.sh markdown` (or `unit`, `python`,
-`javascript`, `german`, `syllables`, `english`, `french`, `extension`, `theory`) runs some of it.
+`javascript`, `german`, `syllables`, `math`, `english`, `french`, `extension`, `theory`) runs some of it.
 On macOS, `pip install -r requirements-macos.txt` adds the Core Text
 (Safari, native apps) and WebKit checks. The German treebank scores need
 data that isn't in the repository (`german/fetch_ud.sh german/data`);
@@ -111,6 +119,7 @@ page byte for byte, so `git status` afterwards shows nothing.
 | `fontlex.py`, `test_fontlex.py`, `specs/`, `demo/` | the lexer compiler, its tests, example specs, demo pages |
 | `german/` | German noun gender (lists learned from a treebank and Wiktionary) and `german/syllables/` |
 | `markdown/` | the GitHub Flavored Markdown font: model, compiler, verification, demo |
+| `math/` | the math font: layout model, passes with a simulator, compiler, verification, demo |
 | `english/` | the English pronunciation-hint font: aligner, lexicon, compiler, verification, demo, review sheet |
 | `french/` | the French pronunciation-hint font, with liaison: aligner, lexicon, compiler, verification, demo |
 | `markers/` | invisible reading markers for noun/verb pairs, and a spaCy script that adds them |

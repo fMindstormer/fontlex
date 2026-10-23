@@ -1,14 +1,14 @@
 #!/bin/sh
 # Build everything and run every check this machine can run.
 #   ./check.sh                    # every section
-#   ./check.sh markdown german    # some: unit python javascript german syllables markdown english french extension theory
+#   ./check.sh markdown german    # some: unit python javascript german syllables markdown math english french extension theory
 #   PYTHON=... to pick the interpreter, N=... random cases
 set -e
 cd "$(dirname "$0")"
 PY=${PYTHON:-python3}
 N=${N:-20000}
 BASE=fonts/JetBrainsMono-Regular.ttf
-SECTIONS="unit python javascript german syllables markdown english french extension theory"
+SECTIONS="unit python javascript german syllables markdown math english french extension theory"
 want=${*:-$SECTIONS}
 for s in $want; do
     case " $SECTIONS " in *" $s "*) ;; *) echo "unknown section: $s (sections: $SECTIONS)" >&2; exit 2 ;; esac
@@ -100,6 +100,17 @@ if wants markdown; then
         echo "== markdown: demo page in WebKit"
         "$PY" markdown/check_webkit.py markdown/demo.html
     fi
+fi
+
+if wants math; then
+    echo "== math: the passes, run in Python, against the layout model"
+    "$PY" math/verify.py --simulate --n "$N"
+    echo "== math: compile (some minutes)"
+    "$PY" math/mathfont.py build/Fontlex-Math.ttf > /dev/null
+    echo "== math: test build/Fontlex-Math.ttf ($shapers)"
+    "$PY" math/verify.py build/Fontlex-Math.ttf $shapers --n "$N"
+    echo "== math: demo page"
+    "$PY" math/build_page.py --font build/Fontlex-Math.ttf --out math/demo.html --n 2000 > /dev/null
 fi
 
 if wants english; then
