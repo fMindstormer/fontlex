@@ -7,6 +7,11 @@ characters stay exactly as typed, so copying them gives back the LaTeX, and
 with the font's `calt` feature off you see them all. `math/demo.html` is a
 page with the font in a text box.
 
+A second font, Fontlex Relaxed Math, reads math the way people type it in
+plain text, `(a+b)/(c+d)` or `x^2`, and leaves ordinary text alone: see
+[the relaxed notation](#the-relaxed-notation) below, and
+`math/relaxed.html`.
+
 - `\frac{a}{b}`, with the numerator and denominator centered over a bar.
 - `\sqrt{x}`, with a sign as tall as its contents need (one height for
   text, one over superscripts, one over fractions) and an overbar.
@@ -124,8 +129,9 @@ which keeps their rules few.
     python math/verify.py build/Fontlex-Math.ttf --shaper harfbuzz --shaper coretext --n 20000
     python math/build_page.py --font build/Fontlex-Math.ttf --out math/demo.html
 
-`./check.sh math` runs these. The build sets `PYTHONHASHSEED=0` for itself,
-so the same sources give the same font.
+`./check.sh math` runs these, and the same for the relaxed notation (each
+with `--relaxed`). The build sets `PYTHONHASHSEED=0` for itself, so the same
+sources give the same font.
 
 ## Known limits
 
@@ -143,3 +149,104 @@ so the same sources give the same font.
   a canvas a construct can't span a space. Text boxes and other page text
   are shaped whole.
 - Firefox and Windows (DirectWrite) are not checked yet.
+
+## The relaxed notation
+
+Fontlex Relaxed Math typesets what plain-text math looks like:
+
+- fractions: `1/2`, `x/2`, `2a/3`, `(a+b)/(c+d)`, `f(x)/2`, `sin(x)/x`,
+  `1/(1+1/x)`;
+- scripts: `x^2`, `x^(n+1)`, `x^-1`, `x_1`, `H_2O`, and stacked, `x_i^2`;
+- roots: `sqrt(x^2+1)`;
+- `<=` `>=` `!=` `->` `=>` `+-` as ≤ ≥ ≠ → ⇒ ±.
+
+Parentheses around all of a fraction's part, a script's argument or a
+root's contents go; with a script after them they stay, as in
+`(a+b)^2/c`. Limits, sizes and layout are Fontlex Math's.
+
+What matters as much is what it leaves alone. A font like this runs on
+every line of every text box it is used in, and slashes, carets and
+underscores are common in prose and code. The rules, in `relaxed.py`:
+
+- A fraction's part is a number (`12`, `3.5`), a number and one letter
+  (`2a`), one letter, a group in parentheses, a call (`f(x)`, `sin(x)`) or
+  a root, each with its scripts. A longer word is never one: `and/or`,
+  `km/h`, `page/2` stay text.
+- Two lone letters make a fraction only next to an operator with an
+  operand past it (`a+b/c`, `x = a/b`), so `w/o`, `n/a`, `I/O-conversion`
+  and `C/C++` stay text.
+- A fraction's neighbors are spaces, operators, punctuation or nothing:
+  slashes in a row (`a/b/c`, `10/23/2026`, `//`) make no fraction. Nor does
+  any slash in a run of characters without a space where some slash touches
+  a longer word (`tr/a-z/A-Z/`, `s/x/y/g`).
+- No script touches another underscore, and a number takes no subscript:
+  `T_U_INT`, `1_000_000`, `1.09_01` stay text.
+- A number has at most one point, so an IP address is no fraction.
+
+`prose.py` reads text the way the font would and lists what it would
+typeset. Over this project's READMEs and every macOS man page (461,327
+lines, rendered with `mandoc`), 311 lines get a construct. About half are
+real math (`2^63 - 1`, `1/9 the page length`, `-1/2`); the rest are mostly
+numbers over numbers (`7/8 bit`, `27/811 test scripts`, a date like
+`6/14`), which can't be told from `1/2`, and some code (`^G` for a control
+character, `A-Z_a-z` in a regular expression).
+
+### How it works
+
+`front.py` has 122 passes that read a line as `relaxed.py` does and leave
+it as the tokens of the LaTeX that lays out the same: `(a+b)/(c+d)` becomes
+`\frac{a+b}{c+d}`, with the parentheses as the braces. What the line
+doesn't have, the `\frac` and the braces around `1` and `2` in `1/2`, is
+inserted, by a multiple substitution, as tokens whose glyphs draw nothing
+and count no characters. The slash stays between the fraction's parts, as a
+token that hides. Then program.py's passes (`program(relaxed=True)`) lay
+the line out as they do LaTeX.
+
+The front end works a parenthesis level at a time, outermost first, as
+the passes after it work a brace level at a time:
+
+- paren depth, which parentheses match, and words with their kinds;
+- the poisoned runs;
+- then, per level: each script's argument (right to left), the scripts
+  (left to right), where elements end, each slash's left and right side,
+  the verdict, and the parts' ends.
+
+Two things kept it within the font's limits. Values that no token can hold
+any more give their glyphs to new ones (`Font.recycle`). Each pass reads a
+small view of a token on a scratch track, and a level's results go to a
+track of their own, not into S, where every combination of them would have
+been a value. A brace opened past `BRACE_LIMIT`, which deep relaxed formulas
+reach without as many parentheses, is text with its closer, instead of
+ending the line's structure as in LaTeX: nothing that deep is laid out
+anyway.
+
+| Lines | Count | HarfBuzz 14.6.0 | Core Text (macOS 27) |
+|---|---:|---:|---:|
+| Edge cases (`samples.RELAXED_EDGES`: incomplete input, prose) | 51 | 100% | 100% |
+| Random formulas and words, some mistyped | 20,000 | 100% | 100% |
+
+The passes, run in Python, match `relaxed.py` on 100,000 more random lines.
+By screenshot, as for Fontlex Math:
+
+- **Chrome 155:** 348 of 349 lines the same. The exception is a line that
+  mixes Greek and Latin letters inside a construct (see below).
+- **WebKit:** the same on 322 of the 323 lines narrow enough to snapshot,
+  and 1 pixel apart on the other.
+
+The font has 55,176 glyphs, 2,044 substitution lookups (1,596 of them
+nested, in 3,149 subtables) and 301 positioning lookups. It is 10.1 MB as
+TrueType and 1.3 MB as WOFF2. Shaping takes 0.34 ms per character in
+HarfBuzz.
+
+### Its limits
+
+- Fontlex Math's limits, and its caret and selection behavior.
+- A space inside a construct leaves it as its characters: `(a + b)/2`
+  stays text, `(a+b)/2` doesn't.
+- `a/b` on its own stays text (as `w/o` does); `(a)/(b)` or `x = a/b`
+  doesn't.
+- Chrome shapes runs of Greek and Latin letters apart, and a construct
+  can't span two runs, so `e^(iπ)` stays text there. HarfBuzz and WebKit
+  lay it out.
+- A part is a whole word, so `2/3x` is 2 over 3x, and `x^2y` is x² y.
+- Firefox and Windows are not checked yet.

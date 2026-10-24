@@ -111,6 +111,14 @@ if wants math; then
     "$PY" math/verify.py build/Fontlex-Math.ttf $shapers --n "$N"
     echo "== math: demo page"
     "$PY" math/build_page.py --font build/Fontlex-Math.ttf --out math/demo.html --n 2000 > /dev/null
+    echo "== math, relaxed notation: the passes, run in Python, against relaxed.py"
+    "$PY" math/verify.py --simulate --relaxed --n "$N"
+    echo "== math, relaxed notation: compile (some minutes)"
+    "$PY" math/mathfont.py build/Fontlex-RelaxedMath.ttf --relaxed > /dev/null
+    echo "== math, relaxed notation: test build/Fontlex-RelaxedMath.ttf ($shapers)"
+    "$PY" math/verify.py build/Fontlex-RelaxedMath.ttf --relaxed $shapers --n "$N"
+    echo "== math, relaxed notation: demo page"
+    "$PY" math/build_page.py --relaxed --font build/Fontlex-RelaxedMath.ttf --out math/relaxed.html --n 2000 > /dev/null
 fi
 
 if wants english; then

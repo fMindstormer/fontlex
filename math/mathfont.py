@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Fontlex Math: compile program.py's passes into a font.
 
-    python math/mathfont.py OUT.ttf [--base fonts/JetBrainsMono-Regular.ttf]
+    python math/mathfont.py OUT.ttf [--base fonts/JetBrainsMono-Regular.ttf] [--relaxed]
+
+--relaxed builds the relaxed notation's font (relaxed.py): front.py's
+passes, then program.py's.
 
 Every pass becomes GSUB lookups (transducers through markdown/passes.py's
 Pipeline; Derive, Context and Map as reverse chaining and single
@@ -34,8 +37,10 @@ import fontbuild as fb
 import passes as mp
 
 import assemble as A
+import front
 import layout as L
 import program as P
+import relaxed as R
 
 BASE = os.path.join(HERE, "..", "fonts", "JetBrainsMono-Regular.ttf")
 FINAL = {"glyph", "radical", "space", "hid", "root", "qbase", "fendbase", "adv", "dx", "dy", "dxy",
@@ -76,6 +81,10 @@ class Font:
         self.pool_of = {}        # glyph -> {pool index: output}
         self.rules = 0
         self.mult = []
+        self.inserts = {}        # virtual tokens before a character -> its glyph's number
+        self.recycling = False   # reuse the glyphs of values no token holds any more
+        self.free = []
+        self.freed = 0
 
     # glyphs ------------------------------------------------------------------
 
@@ -89,12 +98,34 @@ class Font:
             return self.final_glyph(v)
         key = (family, v)
         name = self.names.get(key)
+        if name is None and self.free:
+            name = self.free.pop()
+            self.names[key] = name
+            self.value_of[name] = key
         if name is None:
-            name = f"_{family}{len(self.names)}"
+            name = f"_{family}{len(self.names) + self.freed}"
             self.b.empty(name, 0, gdef_class=3)
             self.names[key] = name
             self.value_of[name] = key
         return name
+
+    def recycle(self, J, SP):
+        """Free the glyphs of track values the domain no longer has: no
+        token can hold them, and the lookups that made or read them have
+        run, so a later value may take their names."""
+        live = {("sp", v) for v in SP}
+        for s, sets in J.items():
+            live.add(("S", s))
+            for tr in OTHERS:
+                if tr != "G":
+                    live |= {(tr, v) for v in sets[tr]}
+        for key in [k for k in self.names if k[0] in ("S", "A", "B", "C", "sp") and k not in live]:
+            if key[0] in self.finished:
+                continue
+            name = self.names.pop(key)
+            del self.value_of[name]
+            self.free.append(name)
+            self.freed += 1
 
     def temp_glyph(self, i):
         """A transducer's i-th output, which the strip after it turns back
@@ -104,11 +135,22 @@ class Font:
         return self.temp[i]
 
     def char_glyph(self, v):
-        _, ch, tag = v
+        """A character's glyph; ("g", "", "V") is a virtual token's
+        (front.py), and a fourth part, the virtual tokens to put before
+        it, makes a glyph of its own until they are."""
+        ch, tag = v[1], v[2]
+        if tag == "V":
+            name = "_virtual"
+            if name not in self.b.ids:
+                self.b.empty(name, 0, gdef_class=1)
+            self.value_of[name] = ("G", v)
+            return name
         base = self.cmap[ord(ch)]
-        if tag is None:
+        if tag is None and len(v) == 3:
             return base
-        name = f"{base}.{tag}"
+        name = f"{base}.{tag}" if tag is not None else base
+        if len(v) > 3:
+            name += f".i{self.inserts.setdefault(v[3], len(self.inserts))}"
         if name not in self.b.ids:
             self.b.composite(name, [(base, 0, 0)], self.b.advance(base))
         self.value_of[name] = ("G", v)
@@ -370,14 +412,18 @@ def compile_program(font, prog, J, SP, verbose=False):
             J, SP = compile_derive(font, p, J, SP, final)
         elif isinstance(p, P.Context):
             J, SP = compile_context(font, p, J, SP)
+        elif isinstance(p, P.Insert):
+            J, SP = compile_insert(font, p, J, SP)
         else:
             assert prog[i + 1].fn is P.unwrap, "a transducer is followed by strip"
             J, SP = compile_transducer(font, p, J, SP)
             i += 1
         if final:
-            font.finished.add(getattr(p, "target", None) or p.track)
+            font.finished.add(getattr(p, "target", None) or getattr(p, "track", None))
+        if font.recycling:
+            font.recycle(J, SP)
         if verbose:
-            print(f"{i:4} {type(p).__name__:10} {getattr(p, 'target', None) or p.track}  groups {len(J):6} "
+            print(f"{i:4} {type(p).__name__:10} {getattr(p, 'target', None) or getattr(p, 'track', '-')}  groups {len(J):6} "
                   f"values {size(J):7}  SP {len(SP):3}  glyphs {len(font.b.order):6}  "
                   f"{font.size_of(n0):8} rules  {time.time() - t0:5.1f}s", flush=True)
         i += 1
@@ -518,9 +564,9 @@ def compile_derive(font, p, J, SP, final=False):
         if mapping:
             space_rule = ([], [], mapping)
             sees |= set(mapping)
-    # A character's own glyph is a base, so a pass that changes it can't
-    # skip bases (no other base comes between a token's glyphs).
-    flag = 0 if p.target == "G" else SKELETON
+    # A character's own glyph is a base, so a pass that changes or reads it
+    # can't skip bases (no other base comes between a token's glyphs).
+    flag = 0 if p.target == "G" or "G" in p.sources else SKELETON
     split(font, back_cd, ahead_cd, rules, space_rule, flag, sees)
     return out, newSP
 
@@ -747,6 +793,45 @@ def compile_transducer(font, p, J, SP):
     return map_values(J, p.track, {v: o for (f, v), o in outs.items() if f != "sp"}), newSP
 
 
+def compile_insert(font, p, J, SP):
+    """Virtual tokens: a Derive gives each character's glyph (for those
+    before it) and its C track (for those after) a glyph of its own, which
+    a multiple substitution then replaces with the token's glyph or track
+    and the virtual tokens' five glyphs each."""
+    def safe2(fn):
+        def k(s, b):
+            try:
+                return tuple(fn(s, b))
+            except (TypeError, IndexError, KeyError, P.Impossible):
+                return ()
+        return k
+    before, after = safe2(p.before), safe2(p.after)
+    J0 = J
+    J, SP = compile_derive(font, P.Derive("G", ["S", "B"], lambda g, s, b: g + (before(s, b),) if before(s, b) else g),
+                           J, SP)
+    J, SP = compile_derive(font, P.Derive("C", ["S", "B"], lambda c, s, b: ("ins", after(s, b)) if after(s, b) else c),
+                           J, SP)
+    vg = font.glyph("G", ("g", "", "V"))
+
+    def token(v):
+        return [vg, font.glyph("S", v)] + [font.glyph(tr, P.BLANK) for tr in "ABC"]
+    mapping = {}
+    for s, sets in J.items():
+        for g in sets["G"]:
+            if len(g) > 3:
+                mapping[font.glyph("G", g)] = [x for v in g[3] for x in token(v)] + [font.glyph("G", g[:3])]
+        for c in sets["C"]:
+            if c[0] == "ins":
+                mapping[font.glyph("C", c)] = [font.glyph("C", P.BLANK)] + [x for v in c[1] for x in token(v)]
+    font.pl.add(fb.lookup(2, [fb.multiple(mapping)]))
+    out = {s: {tr: set(x) for tr, x in sets.items()} for s, sets in J0.items()}
+    for s, sets in J0.items():
+        for b in sets["B"]:
+            for v in before(s, b) + after(s, b):
+                merge_into(out, v, {"G": {("g", "", "V")}, "A": {P.BLANK}, "B": {P.BLANK}, "C": {P.BLANK}})
+    return out, SP
+
+
 # the first lookups: commands, then the tracks ----------------------------------
 
 def commands(font):
@@ -797,6 +882,54 @@ def initial(font):
         add(("g", c, "Ls"), ("Ls",))
     for name, ch in L.SYMBOLS.items():
         add(("g", ch, f"Y{1 + len(name)}"), ("Y", 1 + len(name)))
+    mapping = {}
+    for s, sets in J.items():
+        for gv in sets["G"]:
+            g = font.glyph("G", gv)
+            mapping[g] = [g, font.glyph("S", s)] + [font.glyph(tr, blank) for tr in "ABC"]
+    SP = {(" ",)}
+    mapping[cmap[0x20]] = [font.glyph("sp", (" ",))]
+    font.pl.add(fb.lookup(2, [fb.multiple(mapping)]))
+    return J, SP
+
+
+def relaxed_commands(font):
+    """The relaxed notation's (relaxed.lex): a two-character symbol's first
+    character becomes the symbol and the second hides; "sqrt(" after no
+    letter, digit, point or "_" gets a root's glyphs, as \\sqrt has."""
+    cmap = font.cmap
+    hid = font.glyph("G", ("hid",))
+    rules = []
+    for two, sym in R.SYMBOLS.items():
+        a, b = cmap[ord(two[0])], cmap[ord(two[1])]
+        head = font.char_glyph(("g", sym, "Y2"))
+        rules.append(([], [{a}, {b}], [], [(0, font.pl.nested({a: head})), (1, font.pl.nested({b: hid}))]))
+    font.pl.add(fb.lookup(6, [font.pl.chain_rule(*r) for r in rules]))
+    word = {cmap[ord(c)] for c in font.chars if c.isalnum() or c in "._"}
+    seq = [{cmap[ord(c)]} for c in "sqrt"]
+    paren = {cmap[ord("(")]}
+    head = font.pl.nested({cmap[ord("s")]: font.char_glyph(("g", "s", "R"))})
+    letters = font.pl.nested({cmap[ord(c)]: font.char_glyph(("g", c, "Ls")) for c in "qrt"})
+    rules = [([word], seq, [paren], []),
+             ([], seq, [paren], [(0, head)] + [(k, letters) for k in range(1, 4)])]
+    font.pl.add(fb.lookup(6, [font.pl.chain_rule(*r) for r in rules]))
+
+
+def relaxed_initial(font):
+    """As initial(), with each character's class (front.char_class) for S."""
+    J = {}
+    cmap = font.cmap
+    blank = P.BLANK
+
+    def add(g, s):
+        merge_into(J, s, {"G": {g}, "A": {blank}, "B": {blank}, "C": {blank}})
+    for ch in font.chars:
+        add(("g", ch, None), front.char_class(ch))
+    add(("g", "s", "R"), ("R",))
+    for c in "qrt":
+        add(("g", c, "Ls"), ("Ls", c))
+    for sym in R.SYMBOLS.values():
+        add(("g", sym, "Y2"), ("Y",))
     mapping = {}
     for s, sets in J.items():
         for gv in sets["G"]:
@@ -976,14 +1109,21 @@ def features_and_scripts(table, tag, indices):
 
 # assembling ---------------------------------------------------------------------
 
-def build(base=BASE, verbose=False):
-    return build_font(Font(base), verbose)
+def build(base=BASE, verbose=False, relaxed=False):
+    return build_font(Font(base), verbose, relaxed)
 
 
-def build_font(font, verbose=False):
-    commands(font)
-    J, SP = initial(font)
-    prog = P.program()
+def build_font(font, verbose=False, relaxed=False):
+    """relaxed: the relaxed notation's font (relaxed.py, front.py)."""
+    if relaxed:
+        font.recycling = True
+        relaxed_commands(font)
+        J, SP = relaxed_initial(font)
+        prog = front.front() + P.program(relaxed=True)
+    else:
+        commands(font)
+        J, SP = initial(font)
+        prog = P.program()
     J, SP = compile_program(font, prog, J, SP, verbose)
     if verbose:
         for m in font.mult:
@@ -995,10 +1135,10 @@ def build_font(font, verbose=False):
               f"({len(font.pool)} pooled), {subtables} subtables, {font.rules} format 2 rules")
     gsub = fb.build_gsub(font.pl.lookups, font.pl.top, feature="calt", scripts=("DFLT", "grek", "latn"))
     gp, gp_sets = gpos(font)
-    return finish(font, gsub, gp, gp_sets)
+    return finish(font, gsub, gp, gp_sets, "Fontlex Relaxed Math" if relaxed else "Fontlex Math")
 
 
-def finish(font, gsub, gp, gp_sets):
+def finish(font, gsub, gp, gp_sets, family="Fontlex Math"):
     b = font.b
     f = b.font
     b._clear_bad_window(gsub)
@@ -1036,7 +1176,7 @@ def finish(font, gsub, gp, gp_sets):
     post.formatType = 2.0
     post.extraNames, post.mapping = [], {}
     import fontlex
-    fontlex.set_family_name(f, "Fontlex Math")
+    fontlex.set_family_name(f, family)
     return f
 
 
@@ -1087,12 +1227,13 @@ def main():
     ap.add_argument("--base", default=BASE)
     ap.add_argument("--sidecar", action="store_true", help="also write OUT.json, for --gpos-only")
     ap.add_argument("--gpos-only", action="store_true", help="rebuild only OUT's GPOS (from OUT.json)")
+    ap.add_argument("--relaxed", action="store_true", help="the relaxed notation's font (relaxed.py)")
     args = ap.parse_args()
     if args.gpos_only:
         f = rebuild_gpos(args.out)
     else:
         font = Font(args.base)
-        f = build_font(font, verbose=True)
+        f = build_font(font, verbose=True, relaxed=args.relaxed)
         if args.sidecar:
             json.dump({"gsub_sets": font.pl.first_set + len(font.pl.mark_sets),
                        "finals": sorted([name, d] for name, d in font.anchor.items())},

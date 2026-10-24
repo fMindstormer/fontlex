@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """Shape lines with the font and compare what it draws with layout.py.
 
-    python math/verify.py FONT.ttf [--shaper harfbuzz] [--shaper coretext] [--n N] [LINE ...]
-    python math/verify.py --simulate [--n N]
+    python math/verify.py FONT.ttf [--shaper harfbuzz] [--shaper coretext] [--n N] [--relaxed] [LINE ...]
+    python math/verify.py --simulate [--n N] [--relaxed]
 
 What a shaped line draws is read back from the glyphs: a character's glyph
 (by name: its base glyph, scaled by style), a radical (by name), and rules
 (the outline's box). Lines are samples.EDGES and N random ones unless
 given; --simulate checks the passes in Python, before any font is built.
+With --relaxed, the relaxed notation (relaxed.py: samples.RELAXED_EDGES
+and random lines of it), against relaxed.layout.
 """
 
 import argparse
@@ -75,11 +77,19 @@ def main():
     ap.add_argument("--n", type=int, default=0, help="random lines, besides samples.EDGES")
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--show", type=int, default=5, help="differences to print in full")
+    ap.add_argument("--relaxed", action="store_true", help="the relaxed notation's font and lines")
     args = ap.parse_args()
-    lines = args.lines or (samples.EDGES + samples.lines(args.n, args.seed))
-    if args.simulate:
+    if args.relaxed:
+        import front
+        import relaxed
+        lines = args.lines or (samples.RELAXED_EDGES + samples.relaxed_lines(args.n, args.seed))
+        model, check = relaxed.layout, front.check
+    else:
         import assemble
-        bad = [line for line in lines if not assemble.check(line)[0]]
+        lines = args.lines or (samples.EDGES + samples.lines(args.n, args.seed))
+        model, check = L.layout, assemble.check
+    if args.simulate:
+        bad = [line for line in lines if not check(line)[0]]
         for line in bad[:args.show]:
             print("DIFF", repr(line))
         print(f"simulated: {len(lines)} lines, {len(bad)} differ")
@@ -90,7 +100,7 @@ def main():
     shapers = {n: kinds[n](r.data) for n in (args.shaper or ["harfbuzz"])}
     bad = 0
     for line in lines:
-        want = L.layout(line)
+        want = model(line)
         for n, sh in shapers.items():
             got = r.draw(sh.shape(line))
             if got == want:

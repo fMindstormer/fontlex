@@ -74,6 +74,18 @@ class RTL(LTR):
     pass
 
 
+class Insert:
+    """Virtual tokens: before(s, b) and after(s, b), for a token's S and B,
+    are the S values of the tokens to put before and after it. A virtual
+    token's glyph is ("g", "", "V"), and its other tracks start blank."""
+    def __init__(self, before, after):
+        self.before, self.after = before, after
+
+
+def virtual(s):
+    return {"text": "", "char": "", "S": s, "G": ("g", "", "V"), "A": BLANK, "B": BLANK, "C": BLANK}
+
+
 class Impossible(Exception):
     """What a step raises for an input that can't come in the state it is
     in (the font compiles steps over more states and inputs than lines
@@ -144,6 +156,29 @@ def depth_step(state, v):
     return (k, depth), state
 
 
+def relaxed_depth_step(depth, v):
+    """For the relaxed notation's tokens (front.py), whose braces all
+    match: a brace opened past BRACE_LIMIT, and its closer, are text, and
+    what is inside them is as deep as BRACE_LIMIT (no construct there is
+    laid out, so nothing else changes)."""
+    k = v[0]
+    shown = min(depth, BRACE_LIMIT)
+    if k == "O":
+        if depth >= MAX_BRACES:
+            raise Impossible
+        return (("b", BRACE_LIMIT) if depth >= BRACE_LIMIT else ("O", depth + 1)), depth + 1
+    if k == "C":
+        if depth == 0:
+            raise Impossible
+        return (("b", BRACE_LIMIT) if depth > BRACE_LIMIT else ("C", depth)), depth - 1
+    if k == "Y":
+        return ("Y", v[1], shown), depth
+    return (k, shown), depth
+
+
+MAX_BRACES = 16
+
+
 def demote(v, depth):
     """Past too many open braces nothing more is structure: text that can't
     be a script's argument ("b"), like a closing brace with nothing open."""
@@ -163,6 +198,11 @@ def is_open(v):
 
 def kind_of_open(prev, v):
     return ("O", v[1], OPENS.get(prev[0], "G") if prev else "G")
+
+
+def relaxed_kind_of_open(prev, v):
+    """A fraction's numerator opens right after its \\frac, which is virtual."""
+    return ("O", v[1], dict(OPENS, F="N").get(prev[0], "G") if prev else "G")
 
 
 def level_braces(level):
@@ -220,7 +260,7 @@ def check_b_input(s):
         return ("C", s[1])
     if k in ("F", "R", "P", "B"):
         return ("start", s[1])
-    if k in ("Lf", "Ls"):
+    if k in ("Lf", "Ls", "Z"):
         return ("cont",)
     if k in ("c", "b"):
         return ("t", s[1], 1)
@@ -229,10 +269,24 @@ def check_b_input(s):
     return ("sp", s[1])
 
 
+def relaxed_check_b_input(s, virtual):
+    """A virtual token counts no character."""
+    if not virtual:
+        return check_b_input(s)
+    k = s[0]
+    if k == "F":
+        return ("vstart", s[1])
+    if k == "C":
+        return ("vC", s[1])
+    return ("v",)
+
+
 def check_b_step(count, v):
     """Characters since a construct outside all others began."""
     k = v[0]
-    if k == "start":
+    if k == "vstart":
+        count = 0 if v[1] == 0 else count
+    elif k == "start":
         count = 1 if v[1] == 0 else count + 1
     elif k == "cont" or k == "C":
         count += 1
@@ -243,7 +297,7 @@ def check_b_step(count, v):
     elif k == "sp":
         count = 0 if v[1] == 0 else count + 1
     count = min(count, L.MAX_CHARS + 1)
-    if k == "C":
+    if k in ("C", "vC"):
         return ("C", v[1] == 1 and count > L.MAX_CHARS), count
     return (v if k == "sp" else ("x",)), count
 
@@ -268,7 +322,7 @@ def valid_input(level):
         d = depth_of(s)
         if k == " ":
             return ("sp", d)
-        if d >= level or k in ("Lf", "Ls"):
+        if d >= level or k in ("Lf", "Ls", "Z"):
             return ("in",)
         if d < level - 1:
             return ("x",)
@@ -395,6 +449,8 @@ def role_input(level):
             return (k[0],) + s[2:]
         if k in ("Lf", "Ls"):
             return ("L",)
+        if k == "Z":
+            return ("Z",)
         if k in ("c", "Y"):
             return ("t",)
         return ("out",)
@@ -425,6 +481,12 @@ def role_step(state, v):
         return ("out",), (frame, None, None, None)
     if k == "L":
         if root is not None and root[0] in ("F", "R"):
+            return ("role", "hide"), state
+        return ("out",), (frame, None, None, None)
+    if k == "Z":                     # a fraction's slash, between its parts (front.py)
+        if frame is not None and frame[0] == "bad":
+            return ("inv",), state
+        if frame == ("D?",):
             return ("role", "hide"), state
         return ("out",), (frame, None, None, None)
     if k in ("P", "B"):
@@ -608,7 +670,7 @@ def contribution(s, b):
     if s[0] == "T":
         _, kind, st, k, o, y = s[:6]
         arg = s[6] if len(s) > 6 else None
-        if kind == " ":
+        if kind in (" ", "v"):
             return None
         if arg is not None and arg[1] != "alone" and b[0] in ("e1", "e2"):
             special = b[2] if b[0] == "e1" else max(0, -b[2])
@@ -1052,20 +1114,38 @@ def every(_):
     return True
 
 
-def program():
-    P = [LTR("S", depth_step, (0, False), spaces=True), strip("S", spaces=True),
-         Context("S", kind_of_open, targets=is_open, spaces=True)]
+def is_virtual(g):
+    return len(g) > 2 and g[2] == "V"
+
+
+def mark_virtual(s, virtual):
+    """A virtual token that isn't a construct's draws nothing."""
+    return ("T", "v", 0, 0, 0, 0) if virtual and s[0] == "T" else s
+
+
+def program(relaxed=False):
+    """The passes; relaxed: for front.py's tokens (a fraction's slash Z
+    between its parts, virtual tokens, every brace matched)."""
+    if relaxed:
+        P = [LTR("S", relaxed_depth_step, 0, spaces=True), strip("S", spaces=True),
+             Context("S", relaxed_kind_of_open, targets=is_open, spaces=True)]
+    else:
+        P = [LTR("S", depth_step, (0, False), spaces=True), strip("S", spaces=True),
+             Context("S", kind_of_open, targets=is_open, spaces=True)]
     for level in range(1, BRACE_LIMIT + 1):
         P.append(Context("S", closer_kind, targets=lambda v, l=level: v[0] == "C" and v[1] == l and len(v) == 2,
                          ctx_view=level_braces(level)))
-    P.append(Context("S", denominator, targets=lambda v: v[0] == "O" and len(v) == 3 and v[2] == "G", spaces=True))
+    P.append(Context("S", denominator, targets=lambda v: v[0] == "O" and len(v) == 3 and v[2] == "G", spaces=True,
+                     **({"ctx_view": lambda v: v[0] != "Z"} if relaxed else {})))
     for level in range(1, BRACE_LIMIT + 1):
         P.append(Context("S", denominator_closer,
                          targets=lambda v, l=level: v[0] == "C" and v[1] == l and v[2] == "G",
                          ctx_view=level_braces(level)))
     P += [Derive("A", ["S"], lambda a, s: check_a_input(s), spaces=True),
           LTR("A", check_a_step, (frozenset(), 0, 0), spaces=True), strip("A", spaces=True),
-          Derive("B", ["S"], lambda b, s: check_b_input(s), spaces=True),
+          (Derive("B", ["S", "G"], lambda b, s, g: relaxed_check_b_input(s, g), spaces=True,
+                  keys=[None, is_virtual]) if relaxed else
+           Derive("B", ["S"], lambda b, s: check_b_input(s), spaces=True)),
           LTR("B", check_b_step, 0, spaces=True), strip("B", spaces=True),
           Derive("S", ["A", "B"], merge_checks), Map("S", restore_space, spaces=True),
           Map("A", lambda v: BLANK), Map("B", lambda v: BLANK)]
@@ -1086,6 +1166,8 @@ def program():
           Derive("C", ["B"], lambda c, b: fold(b, c, 3)),
           Derive("S", ["C"], fold_finish),
           Map("S", lambda v: ("T", " ", 0, 0, 0, 0) if v[0] == " " else v, spaces=True)]
+    if relaxed:
+        P.append(Derive("S", ["G"], mark_virtual, keys=[is_virtual]))
     P += [Map(tr, lambda v: BLANK) for tr in "ABC"]
     for level in range(L.MAX_DEPTH, 0, -1):
         for kind in ("frac", "sqrt", "pair"):
@@ -1170,6 +1252,15 @@ def run(P, toks):
                     t[p.target] = p.fn(t[p.target], *[p.key(i, t[s]) for i, s in enumerate(p.sources)])
                 elif p.spaces and "A" not in t:
                     t["S"] = p.fn(t["S"], *[p.key(i, t["S"]) for i, _ in enumerate(p.sources)])
+        elif isinstance(p, Insert):
+            out = []
+            for t in toks:
+                if "A" in t:
+                    out += [virtual(s) for s in p.before(t["S"], t["B"])] + [t] + \
+                        [virtual(s) for s in p.after(t["S"], t["B"])]
+                else:
+                    out.append(t)
+            toks[:] = out
         elif isinstance(p, Context):
             seen = None
             orig = []

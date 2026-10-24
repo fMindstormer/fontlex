@@ -18,6 +18,7 @@ jobs:
           cp demo/fontlex-demo-javascript.html site/javascript.html
           cp markdown/demo.html site/markdown.html
           cp math/demo.html site/math.html
+          cp math/relaxed.html site/relaxed-math.html
           cp german/demo.html site/german.html
           cp german/syllables/demo.html site/german-syllables.html
           cp english/demo.html site/english.html

@@ -71,6 +71,8 @@ def final(t):
         if kind == " ":
             out["G"] = ("space",)
             return out
+        if kind == "v":              # a virtual token (front.py) outside any construct
+            return out
         out["G"] = ("glyph", t["char"], st, "m" if k else "b")
         extra = 2 * max(0, b[2]) if arg is not None and arg[1] == "second" and b[0] == "e2" else 0
         if k:
@@ -166,6 +168,8 @@ def slot_key(slot, s):
         kind, st, k, o, y = s[1:6]
         arg = s[6] if len(s) > 6 else None
         k = min(k, 1)
+        if kind == "v":
+            return s
         if slot == "G":
             return ("T", kind, st, k, 0, 0)
         if slot == "S":
