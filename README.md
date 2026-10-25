@@ -1,11 +1,13 @@
 # Fontlex
 
-**Compilers that target fonts.** Fontlex turns a lexer, a Markdown grammar
-or a pronunciation dictionary into an OpenType font, and the text shaper
-that every browser and operating system already has runs it. Type into a
-plain `<textarea>` and the font highlights Python, renders Markdown as you
-type, or shows a learner how French words are said. No editor plugin, no
-JavaScript: the font's substitution rules do it.
+**Compilers that target fonts.** Type `(a+b)/(c+d)` into a plain text box
+and a fraction appears. Type `**bold**` and the asterisks disappear as the
+word turns bold. Type Python and it is highlighted, with a bar under every
+character past column 79. There is no JavaScript and no editor plugin: the
+font does it. Fontlex compiles lexers, GitHub Flavored Markdown, a math
+layout model and pronunciation dictionaries into OpenType fonts, and the
+text shaper that every browser and operating system already has runs them,
+on every keystroke.
 
 [![Checks](https://github.com/fMindstormer/fontlex/actions/workflows/checks.yml/badge.svg)](https://github.com/fMindstormer/fontlex/actions/workflows/checks.yml)
 [![License: MIT](https://img.shields.io/badge/code-MIT-blue.svg)](LICENSE)
@@ -26,11 +28,286 @@ JavaScript: the font's substitution rules do it.
 Every image is a plain text box; the colors, the hidden Markdown markup,
 the liaison ties and the fractions are drawn by the font.
 
+## A font is a program
+
+A text box doesn't draw characters. It hands each run of them to a
+*shaping engine* along with the font: HarfBuzz in Chrome, Firefox and
+Android, Core Text in Safari and on the Mac. The engine maps the characters
+to glyphs and then runs the font's lookup tables, which say how to swap
+glyphs and where to put them. The tables exist so that Arabic letters can
+join, Devanagari can form conjuncts and *f* and *i* can form a ligature.
+They are also a small programming language, executed on every keystroke in
+every text box, with no script and no permission asked.
+
+The characters never change. Copy a typeset fraction and you get
+`(a+b)/(c+d)` back; search, screen readers, `diff` and language models all
+see the source. Only the drawing is computed. So Markdown stays Markdown, a
+German noun keeps its letters, and a formula stays the formula you typed.
+
+## The machine
+
+What can that language compute? It is a strange computer, and most of the
+engineering here is learning to live inside it.
+
+The engine turns a run of text into a row of glyph ids and applies the
+font's substitution lookups (GSUB) in order. Each lookup is one pass over
+the row:
+
+- A **contextual lookup** goes left to right. At each glyph a rule may read
+  the glyphs behind it, the glyph itself and the glyphs ahead, and replace
+  it. The glyphs behind have already been rewritten by this pass, so a
+  rule can read the state the pass left on its neighbor. That is a
+  finite-state machine.
+- A **reverse chaining lookup** goes right to left, the mirror image: it is
+  how a glyph learns about something that comes later.
+- A **mark filtering set** lets a lookup see only chosen glyphs. With only
+  `*` visible, an opening `*` and the next `*` are neighbors, however much
+  text lies between them.
+- A **multiple substitution** turns one glyph into several. Fontlex uses it
+  to slip empty, invisible glyphs between characters to hold state.
+- After substitution, **positioning** (GPOS) moves glyphs and hangs marks
+  on base glyphs or on other marks, and **color glyphs** (COLR) paint
+  outlines from a palette.
+
+Between passes, the only memory is which glyph sits at each position. A
+pass that needs to remember something writes it into the glyph: the `h` in
+a string is a different glyph from the `h` in a name. They look alike, but
+the next rule can tell them apart.
+
+```
+characters   p  r  i  n  t  (  "  h  i  "  )
+state        N  N  N  N  N  O  S  S  S  S  O     N name, O operator, S string
+```
+
+Each glyph above is its character's variant for that state, colored as
+that kind of token.
+
+Put together, that is a precise class of computation. **A font computes
+exactly the rational functions of a run**, the transformations that a
+finite-state transducer can do. Every pass is one, compositions of them
+stay one, and by Elgot and Mezei's theorem (1965) any of them can be done
+by a right-to-left pass followed by a left-to-right one. A font can't count,
+decide whether brackets balance, reverse a word or see the next line. Any
+lexer, any bounded grammar and any finite-state transliteration, given
+enough glyphs, fits in a font with one change of direction.
+
+"Given enough glyphs" is where it gets hard. The format's real budgets are
+much tighter than the theory:
+
+| Budget | Limit | What it costs |
+|---|---|---|
+| Glyph ids | 65,535 per font | every state a pass remembers costs a copy of each character it can be on |
+| The lookup list | about 4,700 lookups, about 6,550 subtables per lookup | 16-bit offsets: OpenType says 65,535 lookups, the bytes allow far fewer |
+| Engine work | HarfBuzz: about 4,096 operations per character, nesting 64 deep | every pass visits the whole run |
+| Where a run ends | decided by the browser | Chrome starts over at every tab and change of script; Core Text's line API applies no GSUB past 10,240 characters |
+
+Glyphs are the scarce resource and passes the cheap one, so a font
+compiler's main job is to trade states for passes: to cut one big machine
+into a chain of small ones. [theory/README.md](theory/README.md) works this
+out in full, with measurements: how a search finds such cuts, why a check
+digit mod 97 can't be cut, and how a font matches brackets 4,000 deep
+although it can't count.
+
+## Building syntax out of it
+
+### Lexing: state in the shape of a letter
+
+The simplest compiler, `fontlex.py`, takes a lexer written as a YAML spec
+and makes one variant of each character for each state it can be in. One
+contextual lookup then runs the lexer's transition table: "after a glyph
+in state *s*, a character of class *c* becomes its variant for state *t*".
+Each variant is painted in its token's color. That is Fontlex Python and
+JavaScript. The JavaScript lexer tells a regex from a division by
+remembering whether a value came last, across spaces and comments.
+([specs/README.md](specs/README.md) is the reference.)
+
+Python's ruler shows the trade in miniature. A bar under every character
+past column 79 needs a counter on every character. On variants of
+JetBrains Mono's 1,363 characters, its 81 states would take 110,403
+glyphs, more than a font can have. Instead, an empty glyph after each
+character holds the count, units mod 10 and then tens: 19 states, 199
+glyphs.
+
+### Markdown: one change of direction
+
+Markdown is harder, because whether `*` opens emphasis depends on what
+comes after it, and whether a backtick opens code depends on what came
+before. Fontlex Markdown runs CommonMark's inline rules as right-to-left
+passes followed by left-to-right ones: one change of direction, and
+[markdown/README.md](markdown/README.md) shows that it can't be done in
+one direction. GitHub's extensions add six more changes, to save glyphs.
+
+Emphasis is matched in *rounds*. Each round sees only the unmatched
+delimiters, through a mark filtering set, and pairs every opener with the
+closer right after it. Matched pairs leave the view, so the next round
+matches the next level out. One pass that kept a stack of three openers
+would need about 14,000 states, on copies of every character; six rounds
+need a few states each. Link destinations, which one pass would read with
+364 states, are eight passes of 6 to 35. The whole font is 151 lookups (1,945
+counting nested ones) and uses 63,367 of OpenType's 65,535 glyph ids.
+Within its bounds it renders every one-line CommonMark spec example, and
+10,723 lines of real documents, exactly as GitHub does.
+
+### Math: layout from substitutions
+
+Fontlex Math typesets `\frac{a}{b}`, `\sqrt{x}`, `x^{n+1}` and `x_1^2`
+with nothing but substitution and mark attachment, with no math engine
+behind it. Every character is followed by four empty marks, *tracks*, each
+a separate scratch memory that a pass reads and writes. 238 passes, written
+as Python functions with a simulator, work out:
+
+- what each brace opens;
+- which constructs are complete, a level at a time from the inside;
+- each character's size and height;
+- how wide every numerator and denominator is.
+
+Adding whole widths in one pass would take rules for every width, so they
+are added in two base-16 digits: one pass for the low digits, leaving each
+glyph its carry, one for the high digits. Inside a fraction nothing
+advances: every glyph is a mark chained to the one before it, and invisible
+*movers* carry the chain up to the numerator, back over the bar and down to
+the denominator.
+
+The first compiler needed 178,000 lookup subtables, where the format
+allows a few thousand lookups. Class-based rules, one pool of nested
+lookups shared by every pass, and a two-step substitution for glyphs with
+too many possible successors brought it to 1,097 lookups
+([math/README.md](math/README.md)).
+
+### Relaxed math: a compiler front end, inside a font
+
+Fontlex Relaxed Math reads math the way people type it in a chat or a
+commit message: `(a+b)/(c+d)`, `x^2`, `sqrt(b^2-4ac)`. It doesn't lay out
+anything itself. 122 passes in front parse the plain text and rewrite it,
+inside the font, as the LaTeX that Fontlex Math already knows how to lay
+out: `(a+b)/(c+d)` becomes `\frac{a+b}{c+d}`, with the parentheses as the
+braces. What the line doesn't have, the `\frac` and the braces around `1`
+and `2` in `1/2`, is inserted as glyphs that draw nothing. It is a compiler
+front end and back end, both running in the text engine.
+
+The hard part is restraint. A font like this runs on every line of every
+text box it's used in, and prose is full of slashes: `and/or`, `w/o`,
+`km/h`, `10/23/2026`, `s/x/y/g`. The rules for what counts as math were
+checked against 461,327 lines of macOS man pages and READMEs, of which
+311 get a construct, about half of them real math. The first build of this font
+needed 113,000 glyphs, because every combination of the passes' results
+became a glyph of its own. Moving results onto scratch tracks and giving
+dead values' glyphs back brought it to 55,176.
+
+### Learner fonts: data, then compilation
+
+The learner fonts compile data instead of grammars. English and French
+pronunciation hints come from aligning spellings with CMUdict and Lexique
+pronunciations by hard EM: which letters are silent, which vowel takes the
+stress, where French liaison is obligatory (*les‿amis*, but not *les
+héros*). German nouns are colored by gender from lists learned from a
+treebank, and German syllables by TeX's hyphenation patterns. The
+pronunciation lexicons compile to class-based context rules, so their glyph
+count doesn't grow with the word list, and the German gender font matches
+32,000 whole words and endings.
+
+Where a font can't decide (is *record* a noun or a verb?), a tagger that
+reads the whole sentence puts an invisible variation selector after the
+word, and the font draws that reading ([markers/](markers/README.md)).
+Other fonts show nothing.
+
+## How we know it works
+
+A font that looks right on a demo page proves little: the interesting
+failures are on the line nobody tried. So every font is compiled from, and
+checked against, a reference model written separately in Python: the
+lexer's DFA, ports of commonmark.js and cmark-gfm, a layout model for the
+math fonts. Each check shapes thousands of lines (20,000 random ones, every
+spec example, every DFA transition, real documents) in both HarfBuzz and
+Core Text, and compares every glyph, or for the math fonts every glyph's
+position to the font unit. The math fonts are also screenshotted in Chrome
+and WebKit, and compared pixel by pixel with their outlines drawn where
+HarfBuzz places them. CI rebuilds every font and page and fails unless the
+result matches the repository byte for byte.
+
+That checks the compiler, not the data. A font that does exactly what its
+lexicon says is only as right as the lexicon. The German fonts are scored
+on held-out text, and the reading markers on treebanks. The English and
+French hints have not been reviewed by fluent speakers yet; their review
+sheets are ready.
+
+**It found an engine bug.** Compiled fonts reach places hand-drawn fonts
+don't. The proportional Markdown font failed only in HarfBuzz, on lines
+like `<a>x`. HarfBuzz 12.3.1 and later never matched glyph ids 32,512 to
+32,767 in format 2 context rules, because of a flaw in a new coverage
+cache. It was bisected to one commit and reported
+([harfbuzz/harfbuzz#6418](https://github.com/harfbuzz/harfbuzz/issues/6418)),
+and the fix was merged the same day
+([#6419](https://github.com/harfbuzz/harfbuzz/pull/6419)) and released in
+HarfBuzz 15.0.0. Until browsers ship it, Fontlex's builds pad such glyphs
+out of the window.
+
+## Prior art, and where this stands
+
+Fonts have been made to do surprising things for a while.
+[Sans Bullshit Sans](https://pixelambacht.nl/2015/sans-bullshit-sans/)
+(2015) replaces buzzwords with a ligature,
+[AtF Spark](https://github.com/aftertheflood/spark) (2017) draws sparklines
+from numbers, [Numderline](https://github.com/trishume/numderline) groups
+digits, and [Fontemon](https://www.coderelay.io/fontemon.html) (2021) is a
+whole game. Code fonts like [Fira Code](https://github.com/tonsky/FiraCode)
+use contextual alternates for ligatures. Fontlex comes out of the same
+tradition and uses the same tables.
+
+**On what fonts can compute.** Matthew Skala
+([2010](https://ansuz.sooke.bc.ca/entry/131)) pointed out that GSUB only
+moves forward and compared it to a finite-state transducer. The Litherum
+blog's [Addition Font](https://litherum.blogspot.com/2019/03/addition-font.html)
+(2019) added numbers in GSUB and argued that recursive lookups make GSUB,
+as HarfBuzz and Core Text run it, Turing complete; the font ran on a
+HarfBuzz built with its recursion limits raised. Stock engines bound
+recursion, which brings real fonts back to the finite-state world.
+[llama.ttf](https://github.com/fuglede/llama.ttf) (2024) runs a language model in a font through HarfBuzz's experimental
+WebAssembly shaper, which leaves OpenType's tables behind and isn't enabled
+in browsers. Fontlex stays inside the tables every engine runs.
+[theory/README.md](theory/README.md) gives the exact class under engines'
+limits, rational functions with one change of direction enough, and
+measures the budgets that decide what fits. Apple's
+[morx](https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6morx.html)
+tables and SIL's [Graphite](https://graphite.sil.org/) put finite-state
+machines in fonts by design. They run in fewer places than GSUB, and
+Fontlex drops a base font's `morx`, which Core Text would run instead of
+its GSUB.
+
+**On highlighting.** Heikki Lotvonen's [font with built-in syntax
+highlighting](https://blog.glyphdrawing.club/font-with-built-in-syntax-highlighting/)
+(2024) colors HTML, CSS and JavaScript with contextual alternates and
+COLR, from hand-written patterns: keywords, names up to 25 characters
+long, and comments carried forward glyph by glyph. K. V. Rajeesh and C. V.
+Radhakrishnan's [font with TeX syntax highlighting](https://tug.org/TUGboat/tb46-2/tb143rajeesh-colorfont-syntax.pdf)
+(TUGboat 46:2, 2025) brings the idea to TeX and LaTeX. Fontlex compiles a
+whole lexer from a spec instead, and checks every glyph against it.
+
+**On math.** TeX and browsers' MathML lay out math with a layout
+engine. An OpenType
+[MATH](https://learn.microsoft.com/en-us/typography/opentype/spec/math)
+table gives that engine the font's measurements, and the engine does the
+layout. Many text fonts have a `frac` feature, which sets digits around a
+slash as a small fraction, where the text turns the feature on. The
+relaxed notation follows plain-text math that people already write, as
+[AsciiMath](https://asciimath.org/) and Murray Sargent's
+[UnicodeMath](https://www.unicode.org/notes/tn28/) define it; those are
+parsed by a script or by Office's equation editor. Here the font parses it
+and lays it out.
+
+**What's new.** As far as we've found, no earlier font renders Markdown,
+or lays out fractions and roots on its own. What makes these fonts
+possible is treating the font as a compilation target: an optimizing
+compiler that spends passes to save glyphs, matches nested structure in
+rounds, does arithmetic on layout, and keeps within the lookup list, with
+an independent reference model to check every glyph in two engines. If you
+know of earlier work we've missed, please open an issue.
+
 ## The fonts
 
 | Font | What the shaper does | Measured |
 |---|---|---|
-| [Python](https://fmindstormer.github.io/fontlex/python.html), [JavaScript](https://fmindstormer.github.io/fontlex/javascript.html) | runs a lexer compiled from a YAML spec ([below](#the-spec)) and colors each token; Python also puts a bar under every character past PEP 8's 79 columns | every glyph's state matches a reference lexer: 20,000 random strings, every transition, every spec example; the ruler's bars on 2,007 lines; HarfBuzz and Core Text |
+| [Python](https://fmindstormer.github.io/fontlex/python.html), [JavaScript](https://fmindstormer.github.io/fontlex/javascript.html) ([README](specs/README.md)) | runs a lexer compiled from a YAML spec and colors each token; Python also puts a bar under every character past PEP 8's 79 columns | every glyph's state matches a reference lexer: 20,000 random strings, every transition, every spec example; the ruler's bars on 2,007 lines; HarfBuzz and Core Text |
 | [Markdown](https://fmindstormer.github.io/fontlex/markdown.html) ([README](markdown/README.md)) | renders GitHub Flavored Markdown line by line: CommonMark's inline rules, strikethrough, autolinks, block markup; markup hidden; mono and proportional | within its bounds, every one-line spec example, 20,000 random lines and 10,723 lines of real documents exactly as GitHub renders them |
 | [Math](https://fmindstormer.github.io/fontlex/math.html) ([README](math/README.md)) | typesets a small subset of LaTeX as you type: fractions, square roots, superscripts and subscripts, Greek letters and symbols, nested 3 deep | 20,000 random lines laid out to the font unit as a separate layout model says, in HarfBuzz and Core Text; Chrome and WebKit checked by screenshot |
 | [Relaxed math](https://fmindstormer.github.io/fontlex/relaxed-math.html) ([README](math/README.md#the-relaxed-notation)) | typesets math as people type it in plain text, `(a+b)/(c+d)`, `x^2`, `sqrt(x)`, and leaves prose alone: `and/or`, `w/o`, dates and paths stay text | the same, against a model of the notation; of 461,327 lines of man pages and READMEs, 311 get a construct, about half of them real math |
@@ -39,57 +316,6 @@ the liaison ties and the fractions are drawn by the font.
 | [English pronunciation](https://fmindstormer.github.io/fontlex/english.html) ([README](english/README.md)) | marks stressed and reduced vowels and silent letters of 30,000 words; noun/verb pairs read the word before (*the record*, *to record*) or an invisible [reading marker](markers/README.md); a stylistic set turns each kind of hint off | 170,817 of 170,817 cases as the lexicon says, in HarfBuzz and Core Text; the lexicon awaits review by fluent speakers |
 | [French pronunciation](https://fmindstormer.github.io/fontlex/french.html) ([README](french/README.md)) | marks silent letters, nasal vowels, droppable schwas and obligatory liaison (*les‿amis*, but not *les héros*) for 30,000 words; reading markers as in English; a stylistic set turns each kind of hint off | 202,190 of 202,190 cases as the lexicon says, in HarfBuzz and Core Text; the lexicon awaits review by fluent speakers |
 | [Browser extension](extension/README.md) | draws any web page in a learner font, matched to the page's language | 21 checks in Chromium and the same 21 in Firefox, including a page with a strict CSP and hiding each kind of hint |
-
-## What's interesting here
-
-- **Fonts are programs.** GSUB lookups compose into finite-state
-  transducers. [theory/README.md](theory/README.md) works out what a font
-  can compute (exactly the rational functions of a run) and measures the
-  real budgets: glyph ids, the lookup list's 16-bit offsets, engine work.
-  Fonts can't count, yet `theory/depth.py` matches brackets 4,000 deep.
-  `theory/split.py` tries every way of splitting a lexer into passes. For
-  raw HTML, ordinary state minimization needs 305,568 glyphs, and 5 passes
-  need 2,484, the same as the 8 done by hand. `theory/cascade.py` searches
-  cascades, where a pass reads an earlier one's output. From the link-tail
-  machine alone, it finds two passes that run 2.2 times as fast as the 8
-  done by hand. Putting a pass's state on a glyph of its own needs a tenth
-  of the glyphs. That fits a bar under every character past column 80, and
-  an IBAN check that underlines a wrong number.
-- **Checked, not eyeballed.** Each font is compared glyph by glyph with a
-  reference model in HarfBuzz (Chrome, Firefox, Android) and Core Text
-  (Safari, macOS), and the demo pages are rendered in WebKit. CI rebuilds every
-  font and page and fails unless the result matches the repository byte for
-  byte. That checks the compiler, not the model: a font that does exactly
-  what its lexicon says is only as right as the lexicon. The German fonts
-  are scored on held-out text and the reading markers on treebanks. The
-  English and French hints come from CMUdict and Lexique through an aligner,
-  and no fluent speaker has reviewed them yet; their review sheets are ready.
-- **It found an engine bug.** Compiled fonts reach glyph-id ranges that
-  hand-drawn fonts don't. HarfBuzz 12.3.1 and later never match glyph ids
-  32,512 to 32,767 in format 2 context rules. It was bisected to one commit
-  and reported upstream
-  ([harfbuzz/harfbuzz#6418](https://github.com/harfbuzz/harfbuzz/issues/6418)),
-  and the fix was merged the same day
-  ([#6419](https://github.com/harfbuzz/harfbuzz/pull/6419)).
-- **Layout, too.** The math font sets fractions and roots with nothing but
-  substitutions and mark attachment: inside a fraction every glyph is a
-  mark chained to the one before, and 238 passes work out where. Fitting it
-  in OpenType's lookup list took digit-by-digit arithmetic and nested
-  lookups shared across passes ([math/README.md](math/README.md)). A
-  second math font reads plain-text math, `(a+b)/(c+d)`: passes in front
-  rewrite it as the LaTeX the first font lays out, inserting the `\frac`
-  and braces the line doesn't have as glyphs that draw nothing.
-- **Data, then compilation.** The learner fonts come from real data: hard-EM
-  alignment of spellings with CMUdict and Lexique pronunciations, gender
-  lists learned from a treebank, TeX hyphenation patterns. The pronunciation
-  lexicons compile into class-based context rules, so their glyph count
-  doesn't grow with the word list.
-- **A font that can be told.** Where a font can't decide (is *record* a
-  noun or a verb?), a tagger that reads the whole sentence puts an invisible
-  variation selector after the word and the font draws that reading
-  ([markers/](markers/README.md)). Other fonts show nothing. On the EWT
-  treebank this settles 99.6% of English pair words, against 37.5% from the
-  word before.
 
 ## Quick start
 
@@ -120,7 +346,7 @@ page byte for byte, so `git status` afterwards shows nothing.
 
 | Path | What it is |
 |---|---|
-| `fontlex.py`, `test_fontlex.py`, `specs/`, `demo/` | the lexer compiler, its tests, example specs, demo pages |
+| `fontlex.py`, `test_fontlex.py`, `specs/`, `demo/` | the lexer compiler ([specs/README.md](specs/README.md)), its tests, example specs, demo pages |
 | `german/` | German noun gender (lists learned from a treebank and Wiktionary) and `german/syllables/` |
 | `markdown/` | the GitHub Flavored Markdown font: model, compiler, verification, demo |
 | `math/` | the math fonts, LaTeX and the relaxed notation: layout models, passes with a simulator, compiler, verification, demos |
@@ -130,237 +356,27 @@ page byte for byte, so `git status` afterwards shows nothing.
 | `extension/` | a browser extension that draws web pages in the learner fonts, with its Chromium and Firefox test |
 | `docs/images/` | the screenshots above, of the demo pages in WebKit |
 | `.github/workflows/` | CI (`./check.sh` on Ubuntu, byte-identical rebuild) and the GitHub Pages deploy |
-| `theory/` | what font compilation can reach, with two experiments |
+| `theory/` | what font compilation can reach, with the experiments behind it |
 | `fonts/` | base fonts (JetBrains Mono, Noto Sans subset) and their licenses |
 | `build/` | the compiled fonts, TTF and WOFF2 |
 | `tests/` | unit tests (`python -m unittest discover -s tests`) |
 
-### Compiler options
+## Open questions
 
-- `--unicodes U+0020-007E,U+00A0-024F,...` keeps only these characters of the
-  base font. Every state that any character can enter (strings, comments)
-  costs one variant glyph per character, so this is the main lever on glyph
-  count and size. Keeping Latin, Greek, Cyrillic, combining marks,
-  punctuation, arrows and math operators of JetBrains Mono (865 of its 1,363
-  characters):
-
-  | Font | Full base font | With `--unicodes` |
-  |---|---|---|
-  | Python | 6,406 glyphs, 125 KB WOFF2 | 4,067 glyphs, 70 KB |
-  | JavaScript | 13,094 glyphs, 144 KB | 8,265 glyphs, 88 KB |
-
-  Characters left out fall back to another font, which resets the lexer.
-- `--unify-scripts` merges the base font's per-script positioning into one
-  set used for all text. With some fonts, Core Text otherwise shapes each
-  script as its own run and the lexer resets there (see Known limits); the
-  compiler says so in `layout_notes`. The cost: every script gets every
-  script's positioning, so Latin anchors also apply in Cyrillic-led text.
-
-## The spec
-
-`specs/python.yaml`, `specs/javascript.yaml`, `specs/german.yaml` and
-`specs/german-syllables.yaml` are commented examples. A spec has:
-
-- `classes`: named character classes (`"a-zA-Z_"`). Every other character in
-  the base font falls into the implicit class `other`.
-- `states`: a DFA. Each state has an optional `token`, an `on` map from class
-  to next state, and either `default` (target for unlisted classes) or `like`
-  (behave as another state for unlisted classes). An optional `lookahead`
-  maps a next state to a state to draw this glyph in instead: in
-  `javascript.yaml`, a `/` is redrawn as a comment once the next character
-  shows it opened `//` or `/*`.
-- `words`: word lists recolored when a whole run of glyphs in `words.state`
-  spells one of them. Lists can be inline (`sets`) or in TSV files of
-  `word<TAB>set` lines (`files`); a word listed twice keeps its first set, so
-  an earlier file can override a later one. A set no theme colors (`none` in
-  the German spec) leaves its words uncolored.
-- `suffixes` (optional): endings that recolor a run of the same state that no
-  listed word matched; the longest listed ending of the run decides. Same
-  `sets` and `files` as `words`.
-- `themes`: token colors. Each theme becomes a CPAL palette; themes named
-  `light` and `dark` are tagged so CSS `font-palette: light|dark` picks them.
-- `syllables` (optional, instead of a lexer): words, made of the characters
-  of `letters` classes, split by TeX/Liang hyphenation patterns (`patterns`
-  files), with `min_left`/`min_right` (1 or 2) forbidding breaks next to a
-  word's edges, and colored with `colors` in turn, one per syllable.
-- `ruler` (optional): a column. A bar goes under every character from there
-  on, in the themes' `ruler` color. The Python spec's 79 is PEP 8's limit, so
-  the 80th character and the ones after it get a bar. Combining marks don't
-  count as columns.
-- `examples` (optional): lines with the token expected for each character,
-  written as a code string under a `legend`. The tests check the spec's lexer
-  against them, which catches spec bugs that font-versus-spec checks can't.
-
-The JavaScript spec shows what a DFA can do with context: it tells regex
-literals from division by remembering whether a value (name, number, string,
-closing bracket) came last, across spaces and comments, and handles `[...]`
-and escapes inside regexes.
-
-## How it compiles
-
-1. **Variant glyphs.** For each (state, character) pair the DFA can produce,
-   add `<glyph>.lx_<state>`, a composite of the original outline. The start
-   state uses the original glyphs.
-2. **Lexer lookup.** One chaining contextual GSUB lookup. Shapers let a rule's
-   backtrack context see glyphs already replaced earlier in the same pass, so
-   the previous glyph's variant carries the DFA state. Each table cell becomes
-   `sub @S_<state> @C_<class>' lookup TO_<next>;`. Cells that agree with the
-   start state's row are dropped, since the final no-context rules produce the
-   same result.
-3. **Lookahead.** If the spec uses `lookahead`, one more contextual lookup
-   redraws a glyph based on the state of the glyph after it. GSUB applies each
-   lookup to the whole run before the next, so this can't disturb the lexer.
-4. **Words and suffixes.** A lookup marks the first glyph of every run of the
-   word state with its own variant. Then each word and suffix becomes one rule
-   at the run's last glyph, longest first: a word's rule starts at the marked
-   first glyph, so it matches only a whole run, while a suffix's doesn't. A
-   reverse chaining lookup, which runs right to left, then spreads the set
-   from the last glyph over the run. These rules are plain glyph sequences,
-   so the compiler packs them into compact format 1 subtables itself (feaLib
-   would make one subtable per rule, and tens of thousands don't fit in a
-   lookup); the German font has 32,000 of them and compiles in 3 seconds.
-5. **Color.** COLR v0 paints each colored variant with the original outline in
-   a palette color. Uncolored glyphs follow the CSS text color.
-6. **Ruler** (optional). After everything else, a multiple substitution puts
-   an empty mark, a *slot*, after every glyph that isn't a mark. Two
-   left-to-right passes that see only the slots count columns on them: units
-   mod 10, then tens. Slots past the column become a bar under their
-   character. A space becomes its own slot instead, since WebKit gives every
-   glyph of a space character a space's width. This is a cascade from
-   [theory/README.md](theory/README.md#cascades-and-what-else-fits). One
-   counter to 79 would take 81 states, and on variants of every character it
-   would take more glyphs than a font can have. The two counters take 19
-   states and 199 glyphs.
-7. **Positioning and metrics.** The base font's GPOS, GDEF and legacy `kern`
-   table are kept, and every variant is added wherever its original glyph
-   appears, so kerning and mark anchors still apply to lexed glyphs. Other
-   per-glyph tables (`hdmx`, `LTSH`, `vmtx`, `VORG`, and `gvar`/`HVAR`/`VVAR`
-   in variable fonts) get entries for the variants too.
-
-For `syllables`, the font marks each word's first and last letter, gives
-every other letter a variant that also records the letter before it, runs
-the patterns as class-based rules filed under (this letter, the letter
-before) so each glyph tries only a few, highest level first, and then colors
-the letters, switching color at each break.
-
-The base font's substitution tables (GSUB, AAT `morx`) are replaced: their
-ligatures would hide glyphs from the lexer, and Core Text prefers `morx` over
-GSUB. Fontlex's GSUB lists only the `DFLT` and `latn` scripts, since the lexer
-is the same for every script and shapers fall back to `DFLT`.
-
-The compiler also writes `<name>.fea`, the generated feature file, if you
-want to read the rules, and `<name>.glyphmap.json`, each variant glyph's base
-glyph, state, and word set or syllable color.
-
-## Testing
-
-`test_fontlex.py` shapes text with HarfBuzz (Chrome, Firefox, Android) and,
-with `--shaper coretext`, Core Text (Safari, native Mac apps), and checks:
-
-- **States.** Each output glyph's state against `Model.lex`, a direct
-  simulation of the spec, over hand-written cases, the spec's examples,
-  20,000 random strings, and transition cases: for each state and class, the
-  shortest text reaching the state, a character of the class and a random
-  tail, so every transition is exercised (random text rarely reaches the end
-  of `/* */`).
-- **Positioning** (with `--base`). Every glyph must sit exactly where the base
-  font puts the same glyph, over the same strings plus random strings full of
-  combining marks, and for variable fonts also at each axis's minimum and
-  maximum. A font compiled with `--unicodes` is detected from its cmap; one
-  compiled with `--unify-scripts` needs the same flag here.
-- **Examples.** The spec's `examples` against the spec's own lexer.
-- **Color records.** Every glyph meant to be drawn in a token's color has a
-  COLR record (shaping alone can't show a missing color table).
-- **Ruler** (if the spec has one). Random lines up to twice the column long,
-  with spaces, no-break spaces and combining marks, must have a bar under
-  exactly the characters past the column. The other checks skip the ruler's
-  glyphs.
-
-Core Text needs two allowances, both reported with counts: it improvises
-positions for marks the base font has no anchor for, but not once a mark or
-its base glyph has been lexed; and around a mark the font lacks, it falls back
-to another font per character cluster, sometimes differently for the compiled
-and the base font.
-
-Results with JetBrains Mono, both shapers: everything passes for all four
-specs. Python: 7/7 examples, 33 hand cases, 20,000 random, 1,980 transition,
-41,980 positioning and 2,007 ruler cases. JavaScript: 14/14 examples, 40 hand cases,
-20,000 random, 7,840 transition and 47,840 positioning cases. German: 12/12
-examples, 38 hand cases, 20,000 random, 180 transition and 40,180
-positioning cases. German syllables: 6/6 examples, 32 hand cases, 20,000
-random, 40 transition and 40,040 positioning cases. Python and JavaScript
-also pass everything with Arial, Arial Black, Times New Roman Italic, STIX
-Two, SF Pro and Trattatello as base fonts in HarfBuzz; in Core Text, Arial
-and Times need `--unify-scripts`.
-
-How well the German lists match the language is a separate question, which
-`german/evaluate.py` answers against gender-annotated text (see
-[german/README.md](german/README.md)).
-
-`tests/test_spec.py` (`python -m unittest discover tests`) covers spec
-validation errors, the reference lexer, word and suffix lists, and the
-compiler's glyph-limit error.
-
-`demo/build_demo.py` runs the HarfBuzz checks on the font it embeds, puts the
-real pass count on the page, and exits with status 1 if any check fails.
-`demo/check_webkit.py` renders a demo page in WebKit, the engine Safari uses,
-in light and dark mode and with each option of the palette menu, and checks
-which theme's colors dominate the code box's pixels.
-
-## Known limits
-
-- State lives within one shaping run. Browsers start new runs at line breaks
-  and font fallback, so multi-line strings and comments reset. Chrome also
-  starts one at every tab: after a tab inside a string or comment, the rest
-  is lexed afresh there (Safari keeps the state across tabs).
-- Colors are decided left to right, with one glyph of lookahead for words and
-  for states that declare `lookahead`. Anything needing more context needs
-  more passes: `f"` string prefixes and `"""` as a unit in Python; in
-  JavaScript, a regex right after `return` or `typeof` is read as division,
-  since the lexer can't tell those words from other names.
-- A DFA can't track nesting, so JavaScript `${}` interpolation is colored as
-  part of the template string.
-- Contextual GPOS lookups in format 1 are only partly aliased (first glyphs
-  only); the compiler lists them under `layout_notes`.
-- A font holds at most 65,535 glyphs. Large base fonts or many-state specs
-  need `--unicodes`: Arial Unicode would need 167,372 glyphs, and fits in
-  6,559 when subset to the ranges above.
-- With some base fonts, including Arial and Times, Core Text splits text into
-  separate shaping runs at script changes, so without `--unify-scripts`
-  `# жук x` stops being a comment at `x` in Safari. By experiment on macOS 27
-  (Apple doesn't document it), it splits when the scripts in the text get
-  different GSUB/GPOS features, or when the font has an `arab` script entry
-  at all. JetBrains Mono, STIX Two, SF Pro and Trattatello don't trigger it.
-- In Core Text, a mark the base font has no anchor for is drawn unpositioned
-  when it or its base glyph has been lexed, where the base font alone would
-  get Core Text's improvised position. In Fontlex Python that's always the
-  case, since the ruler puts a slot after every base glyph. HarfBuzz never improvises when GPOS is
-  present, so there both fonts draw it unpositioned.
-- The ruler counts within one shaping run as well. Chrome starts a new run
-  at a tab or a change of script (a Cyrillic string, say), and the count
-  starts over there; WebKit counts across scripts. It counts characters, not
-  their widths, so it suits monospace fonts.
-- Not checked on Windows (DirectWrite), or in native apps other than through
-  Core Text directly.
-
-## Research questions this opens
-
-- Which languages can a font recognize with k chained-contextual lookups of
-  bounded context? (Relates to locally testable languages and sliding-window
-  automata.) How many lookup passes does a given lexer need? For CommonMark's
-  inline syntax the answer is one change of direction, right to left then
-  left to right, and that is the least possible; lookups that skip glyphs
-  (mark filtering sets) let nested pairs be matched left to right in rounds,
-  one per level of nesting. See
-  [markdown/README.md](markdown/README.md#how-many-alternating-passes-does-commonmark-need).
-  In general a font computes exactly the rational functions of a run, and
-  bounded non-regular ones by many small passes; see
-  [theory/README.md](theory/README.md).
-- Minimizing glyph count for a given DFA. Merging states that are
-  indistinguishable for both color and future transitions barely helps the
-  example specs: only the one-glyph `*_end` states of strings merge. Almost
-  all variants belong to states that any character can enter, and each such
-  state costs a full copy of the font's characters.
+- **How many passes does a given computation need?** For CommonMark's
+  inline syntax the answer is one change of direction, and that is the
+  least possible. In general, which languages can k contextual lookups of
+  bounded context recognize? This relates to locally testable languages
+  and sliding-window automata.
+- **Which cut is cheapest?** `theory/split.py` and `theory/cascade.py`
+  search the ways to cut a machine into passes for small machines. Larger
+  ones, like Markdown's raw HTML, need a heuristic.
+- **Fewer glyphs per state.** Almost all variants belong to states that any
+  character can enter, and each such state costs a full copy of the font's
+  characters. Keeping state on empty glyphs of its own makes the cost a sum
+  instead of a product, at a price in time; for Fontlex Markdown that price
+  is unmeasured.
+- **More engines.** Nothing here is checked on Windows (DirectWrite) yet.
 
 ## License
 

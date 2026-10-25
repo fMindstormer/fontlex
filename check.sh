@@ -91,7 +91,7 @@ if wants markdown; then
     for font in build/Fontlex-Markdown.ttf build/Fontlex-MarkdownSans.ttf; do
         echo "== markdown: test $font ($shapers)"
         "$PY" markdown/verify.py $font $shapers --n "$N" \
-            --corpus README.md german/README.md german/syllables/README.md markdown/README.md
+            --corpus README.md specs/README.md german/README.md german/syllables/README.md markdown/README.md
     done
     echo "== markdown: demo page"
     "$PY" markdown/build_page.py --font build/Fontlex-Markdown.ttf --sans build/Fontlex-MarkdownSans.ttf \
@@ -125,7 +125,7 @@ if wants english; then
     echo "== english: compile"
     "$PY" english/enfont.py --base fonts/NotoSans-Regular.ttf --bold fonts/NotoSans-Bold.ttf --out build > /dev/null
     echo "== english: test ($shapers)"
-    "$PY" english/verify.py build/Fontlex-English.ttf $shapers --corpus README.md markdown/README.md theory/README.md
+    "$PY" english/verify.py build/Fontlex-English.ttf $shapers --corpus README.md specs/README.md markdown/README.md theory/README.md
     echo "== english: demo page"
     "$PY" english/build_page.py --font build/Fontlex-English.ttf --out english/demo.html > /dev/null
     if [ $macos = yes ]; then

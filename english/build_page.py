@@ -93,7 +93,7 @@ def main():
     sets = [("Listed words, alone, capitalized, in capitals and in sentences; unlisted words",
              list(verify.cases(lex, random.Random(1)))),
             ("Lines of this project's English documentation",
-             [l for p in ("README.md", "markdown/README.md", "theory/README.md")
+             [l for p in ("README.md", "specs/README.md", "markdown/README.md", "theory/README.md")
               for l in (HERE.parent / p).read_text(encoding="utf-8").splitlines() if l.strip()]),
             ("This page's sample", SAMPLE.splitlines())]
     rows = []
