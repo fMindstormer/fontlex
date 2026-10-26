@@ -148,7 +148,12 @@ def compare(args):
           f"{len(known)} differ that mix Greek and Latin (a known limit in Chrome), {len(unknown)} other")
     for diff, line in sorted(bad, reverse=True)[:15]:
         print(f"   {diff:7} px  {line!r}")
-    shots = {m: Image.open(out / f"type.{args.browser}.{m}.png").convert("RGB") for m in ("typed", "fresh", "kerning")}
+    # the text box without its outer 16 px: the frame's rounded corners and the resize grip are
+    # repainted now and then (as on Windows when the demo flips font-kerning); the text starts inside
+    shots = {}
+    for m in ("typed", "fresh", "kerning"):
+        im = Image.open(out / f"type.{args.browser}.{m}.png").convert("RGB")
+        shots[m] = im.crop((16, 16, im.width - 16, im.height - 16))
 
     def differ(a, b):
         if shots[a].size != shots[b].size:

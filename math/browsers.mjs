@@ -18,11 +18,11 @@ const index = JSON.parse(readFileSync(join(out, "index.json"), "utf8"));
 async function launch() {
   if (kind === "firefox") {
     const browser = await require("puppeteer-core").launch({ browser: "firefox", executablePath: process.env.FIREFOX });
-    return { close: () => browser.close(),
+    return { close: () => browser.close(), version: () => browser.version(),
              async page(width, height) { const p = await browser.newPage(); await p.setViewport({ width, height }); return p; } };
   }
   const browser = await require("playwright-core").chromium.launch({ executablePath: process.env.CHROMIUM });
-  return { close: () => browser.close(), page: (width, height) => browser.newPage({ viewport: { width, height } }) };
+  return { close: () => browser.close(), version: () => browser.version(), page: (width, height) => browser.newPage({ viewport: { width, height } }) };
 }
 
 const settle = (p) => p.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
@@ -63,5 +63,5 @@ for (const mode of ["typed", "fresh", "kerning"]) {
   await (await p.$("#code")).screenshot({ path: join(out, `type.${kind}.${mode}.png`) });
   await p.close();
 }
+console.log(`${kind}: ${await browser.version()}: ${index.pages.length} pages and the typing check shot in ${out}`);
 await browser.close();
-console.log(`${kind}: ${index.pages.length} pages and the typing check shot in ${out}`);
