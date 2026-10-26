@@ -1,0 +1,48 @@
+name: Browsers
+# The math fonts in Chromium and Firefox, on Linux and Windows: each line drawn as text
+# in the font and as HarfBuzz's outlines, compared by screenshot (math/browsers.py).
+on:
+  push:
+    paths: [math/**, build/Fontlex-Math.*, build/Fontlex-RelaxedMath.*, .github/workflows/browsers.yml]
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  math:
+    strategy:
+      fail-fast: false
+      matrix: { os: [ubuntu-latest, windows-latest] }
+    runs-on: ${{ matrix.os }}
+    defaults: { run: { shell: bash } }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with: { python-version: "3.13" }
+      - uses: actions/setup-node@v7
+        with: { node-version: "24" }
+      - name: Install
+        run: |
+          pip install -r requirements.txt pillow==13.0.0
+          npm install --no-save playwright-core@1.54.2 puppeteer-core@25.15.0 @puppeteer/browsers@3.2.5
+          npx playwright-core install --with-deps chromium
+          echo "CHROMIUM=$(node -e 'console.log(require("playwright-core").chromium.executablePath())')" >> "$GITHUB_ENV"
+          echo "FIREFOX=$(npx @puppeteer/browsers install firefox@stable_158.0.1 --path "$RUNNER_TEMP/browsers" --format "{{path}}")" >> "$GITHUB_ENV"
+      - name: Fontlex Math and Fontlex Relaxed Math, in Chromium and Firefox
+        run: |
+          status=0
+          for font in latex relaxed; do
+            out="$RUNNER_TEMP/math/$font"
+            python math/browsers.py pages "$out" $([ $font = relaxed ] && echo --relaxed) --n 300
+            for browser in chromium firefox; do
+              echo "== $font, $browser"
+              node math/browsers.mjs "$out" $browser && python math/browsers.py compare "$out" $browser || status=1
+            done
+          done
+          exit $status
+      - name: Keep the lines that differ
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: math-${{ matrix.os }}
+          path: |
+            ${{ runner.temp }}/math/*/diffs/
+            ${{ runner.temp }}/math/*/type.*.png
