@@ -112,8 +112,8 @@ and/or, w/o, km/h, C/C++, 10/23/2026</textarea>
     construct stays as its characters.</li>
     <li><b>Spaces.</b> A space inside a construct leaves it as its characters: write <code>(a+b)/2</code>, not
     <code>(a + b)/2</code>. Spaces between formulas are fine.</li>
-    <li><b>Greek and Latin.</b> Chrome shapes runs of Greek and Latin letters apart, and a construct can't span
-    two runs, so there <code>e^(iπ)</code> stays as its characters. Safari lays it out.</li>
+    <li><b>Greek and Latin.</b> Chrome and Firefox shape runs of Greek and Latin letters apart, and a construct
+    can't span two runs, so there <code>e^(iπ)</code> stays as its characters. Safari lays it out.</li>
     <li><b>Ambiguous notation.</b> A part is a whole word, so <code>2/3x</code> is 2 over 3x, and
     <code>x^2y</code> is x² followed by y. A number over a number is always a fraction, so <code>7/8 bit</code>
     and a date like <code>6/14</code> are typeset too. On its own, <code>a/b</code> stays text, as
@@ -121,9 +121,9 @@ and/or, w/o, km/h, C/C++, 10/23/2026</textarea>
     <li><b>Lines and the caret.</b> Each line is read on its own. A construct that isn't complete yet stays as
     its characters until it is. Inside a fraction the caret stays at the fraction's start: its glyphs are drawn
     where they belong, but take no room of their own.</li>
-    <li><b>Where it's checked.</b> HarfBuzz (Chrome, and the shaper Firefox uses) and Core Text (Safari, macOS)
-    against a model of the notation, and Chrome and Safari's WebKit by screenshot. Firefox itself and Windows
-    aren't checked yet.</li>
+    <li><b>Where it's checked.</b> HarfBuzz (the shaper in Chrome and Firefox) and Core Text (Safari, macOS)
+    against a model of the notation. By screenshot, Chrome and Safari's WebKit on macOS, and Chromium and Firefox
+    on Linux and Windows. Native Windows apps, which shape with DirectWrite, aren't checked.</li>
   </ul>
 
   <h2>How it works</h2>

@@ -12,8 +12,9 @@ lines into the demo page key by key and sets the same lines at once.
 `compare` then finds, for each line, pixels that differ by more than 2 px (at
 100 px per em; the layout's smallest step is 3 px), and whether typing ended
 where setting the text did. It exits with status 1 on a difference, apart
-from lines that mix Greek and Latin letters: Chrome shapes those in separate
-runs, so a construct across them stays as its characters (a known limit).
+from lines that mix Greek and Latin letters: Chrome and Firefox shape those in
+separate runs, so a construct across them stays as its characters (a known
+limit).
 The fonts come from build/; the outlines need only HarfBuzz, so the check
 runs wherever a browser does.
 """
@@ -145,7 +146,7 @@ def compare(args):
     known = [b for b in bad if any("Ͱ" <= ch <= "Ͽ" for ch in b[1])]
     unknown = [b for b in bad if b not in known]
     print(f"{args.browser}: {total} lines, {total - len(bad)} the same as HarfBuzz's layout; "
-          f"{len(known)} differ that mix Greek and Latin (a known limit in Chrome), {len(unknown)} other")
+          f"{len(known)} differ that mix Greek and Latin (a known limit in Chrome and Firefox), {len(unknown)} other")
     for diff, line in sorted(bad, reverse=True)[:15]:
         print(f"   {diff:7} px  {line!r}")
     # the text box without its outer 16 px: the frame's rounded corners and the resize grip are

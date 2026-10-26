@@ -95,11 +95,12 @@ x_{n+1}=\frac{x_n}{2}+\frac{a}{2x_n}
     <tr><td>Edge cases (incomplete and broken input)</td><td class="n">44</td><td class="n">100.0%</td></tr>
     <tr><td>Random formulas, some mistyped</td><td class="n">2,000</td><td class="n">100.0%</td></tr>
   </table>
-  <p class="note">Checked by screenshot in Chrome 155 and Safari's WebKit (text against the outlines placed as
-  HarfBuzz places them), and by typing into the box key by key in Chrome, which ends as the same text set at
-  once does. A keystroke that completes a construct changes glyphs before the caret, and with a simpler test
-  font Chrome kept their old shaping, so this page still makes it lay the box out again on every input (by
-  switching <code>font-kerning</code>). Not yet checked in Firefox, or on Windows.</p>
+  <p class="note">Checked by screenshot (text against the outlines placed as HarfBuzz places them) in Chrome
+  and Safari's WebKit on macOS, and in Chromium and Firefox on Linux and Windows; and by typing into the box key
+  by key, which ends as the same text set at once does. A keystroke that completes a construct changes glyphs
+  before the caret, and with a simpler test font Chrome kept their old shaping, so this page still makes it lay
+  the box out again on every input (by switching <code>font-kerning</code>). Native Windows apps (DirectWrite)
+  aren't checked.</p>
   <p class="note">Base font: JetBrains Mono (SIL Open Font License).</p>
 </main>
 <script>

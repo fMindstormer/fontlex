@@ -231,8 +231,9 @@ math fonts. Each check shapes thousands of lines (20,000 random ones, every
 spec example, every DFA transition, real documents) in both HarfBuzz and
 Core Text, and compares every glyph, or for the math fonts every glyph's
 position to the font unit. The math fonts are also screenshotted in Chrome
-and WebKit, and compared pixel by pixel with their outlines drawn where
-HarfBuzz places them. CI rebuilds every font and page and fails unless the
+and WebKit on macOS, and in Chromium and Firefox on Linux and Windows, and
+compared pixel by pixel with their outlines drawn where HarfBuzz places
+them. CI rebuilds every font and page and fails unless the
 result matches the repository byte for byte.
 
 That checks the compiler, not the data. A font that does exactly what its
@@ -319,7 +320,7 @@ know of earlier work we've missed, please open an issue.
 |---|---|---|
 | [Python](https://fmindstormer.github.io/fontlex/python.html), [JavaScript](https://fmindstormer.github.io/fontlex/javascript.html) ([README](specs/README.md)) | runs a lexer compiled from a YAML spec and colors each token; Python also puts a bar under every character past PEP 8's 79 columns | every glyph's state matches a reference lexer: 20,000 random strings, every transition, every spec example; the ruler's bars on 2,007 lines; HarfBuzz and Core Text |
 | [Markdown](https://fmindstormer.github.io/fontlex/markdown.html) ([README](markdown/README.md)) | renders GitHub Flavored Markdown line by line: CommonMark's inline rules, strikethrough, autolinks, block markup; markup hidden; mono and proportional | within its bounds, every one-line spec example, 20,000 random lines and 10,723 lines of real documents exactly as GitHub renders them |
-| [Math](https://fmindstormer.github.io/fontlex/math.html) ([README](math/README.md)) | typesets a small subset of LaTeX as you type: fractions, square roots, superscripts and subscripts, Greek letters and symbols, nested 3 deep | 20,000 random lines laid out to the font unit as a separate layout model says, in HarfBuzz and Core Text; Chrome and WebKit checked by screenshot |
+| [Math](https://fmindstormer.github.io/fontlex/math.html) ([README](math/README.md)) | typesets a small subset of LaTeX as you type: fractions, square roots, superscripts and subscripts, Greek letters and symbols, nested 3 deep | 20,000 random lines laid out to the font unit as a separate layout model says, in HarfBuzz and Core Text; by screenshot in Chrome, Firefox and WebKit, on macOS, Linux and Windows |
 | [Relaxed math](https://fmindstormer.github.io/fontlex/relaxed-math.html) ([README](math/README.md#the-relaxed-notation)) | typesets math as people type it in plain text, `(a+b)/(c+d)`, `x^2`, `sqrt(x)`, and leaves prose alone: `and/or`, `w/o`, dates and paths stay text | the same, against a model of the notation; of 461,327 lines of man pages and READMEs, 311 get a construct, about half of them real math |
 | [German genders](https://fmindstormer.github.io/fontlex/german.html) ([README](german/README.md)) | colors nouns by gender, from lists learned from a treebank and Wiktionary | on held-out newspaper text, 97% of nouns colored, 99.5% of them right |
 | [German syllables](https://fmindstormer.github.io/fontlex/german-syllables.html) ([README](german/syllables/README.md)) | colors syllables in turn, as German schools teach reading | 97.5% of held-out first-reader words split exactly right |
@@ -365,7 +366,7 @@ page byte for byte, so `git status` afterwards shows nothing.
 | `markers/` | invisible reading markers for noun/verb pairs, and a spaCy script that adds them |
 | `extension/` | a browser extension that draws web pages in the learner fonts, with its Chromium and Firefox test |
 | `docs/images/` | the screenshots above, of the demo pages in WebKit |
-| `.github/workflows/` | CI (`./check.sh` on Ubuntu, byte-identical rebuild) and the GitHub Pages deploy |
+| `.github/workflows/` | CI (`./check.sh` on Ubuntu, byte-identical rebuild), the math fonts in Chromium and Firefox on Linux and Windows, and the GitHub Pages deploy |
 | `theory/` | what font compilation can reach, with the experiments behind it |
 | `fonts/` | base fonts (JetBrains Mono, Noto Sans subset) and their licenses |
 | `build/` | the compiled fonts, TTF and WOFF2 |
@@ -386,7 +387,8 @@ page byte for byte, so `git status` afterwards shows nothing.
   characters. Keeping state on empty glyphs of its own makes the cost a sum
   instead of a product, at a price in time; for Fontlex Markdown that price
   is unmeasured.
-- **More engines.** Nothing here is checked on Windows (DirectWrite) yet.
+- **More engines.** Native Windows apps shape text with DirectWrite, and
+  nothing here is checked there yet (browsers on Windows use HarfBuzz).
 
 ## License
 

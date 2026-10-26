@@ -54,9 +54,12 @@ with 2 px of tolerance at 100 px per em, where the layout's smallest step
 - **Chrome 155:** the same on all of them.
 - **WebKit (macOS 27):** the same on all 235 lines narrow enough to
   snapshot.
+- **Chromium 139 and Firefox 158, on Linux and on Windows:** the same on
+  all of them (`browsers.py`, run by CI's Browsers workflow).
 
-Typing a formula into a text box key by key in Chrome ends with the same
-pixels as setting the text at once. Firefox and Windows are not checked yet.
+Typing a formula into a text box key by key ends with the same pixels as
+setting the text at once, in all of these browsers but WebKit, which
+wasn't tried.
 
 The font has 47,653 glyphs, 1,097 substitution lookups (about 700 of them
 nested lookups shared by every pass, in 2,052 subtables) and 301 positioning
@@ -140,6 +143,13 @@ font only. `demo/record_relaxed.mjs` records the page being typed into, for
 the top-level README and the demos page (it needs playwright-core, a
 Chromium and ffmpeg).
 
+`browsers.py` checks either font in browsers by screenshot, and CI's
+Browsers workflow runs it in Chromium and Firefox on Linux and Windows:
+
+    python math/browsers.py pages /tmp/m --relaxed        # pages of lines, text and outlines
+    node math/browsers.mjs /tmp/m chromium                # or firefox: screenshots
+    python math/browsers.py compare /tmp/m chromium
+
 ## Known limits
 
 - The limits above. More depth, more fractions or longer constructs would
@@ -155,7 +165,8 @@ Chromium and ffmpeg).
 - Chrome shapes canvas text (`fillText`, `measureText`) word by word, so on
   a canvas a construct can't span a space. Text boxes and other page text
   are shaped whole.
-- Firefox and Windows (DirectWrite) are not checked yet.
+- Native Windows apps, which shape text with DirectWrite, are not checked.
+  Browsers on Windows shape with HarfBuzz, and are.
 
 ## The relaxed notation
 
@@ -239,6 +250,9 @@ By screenshot, as for Fontlex Math:
   mixes Greek and Latin letters inside a construct (see below).
 - **WebKit:** the same on 322 of the 323 lines narrow enough to snapshot,
   and 1 pixel apart on the other.
+- **Chromium 139 and Firefox 158, on Linux and on Windows:** 348 of 349,
+  with the same exception. Typing key by key ends as setting the text at
+  once does.
 
 The font has 55,176 glyphs, 2,044 substitution lookups (1,596 of them
 nested, in 3,149 subtables) and 301 positioning lookups. It is 10.1 MB as
@@ -252,8 +266,8 @@ HarfBuzz.
   stays text, `(a+b)/2` doesn't.
 - `a/b` on its own stays text (as `w/o` does); `(a)/(b)` or `x = a/b`
   doesn't.
-- Chrome shapes runs of Greek and Latin letters apart, and a construct
-  can't span two runs, so `e^(iπ)` stays text there. HarfBuzz and WebKit
-  lay it out.
+- Chrome and Firefox shape runs of Greek and Latin letters apart, and a
+  construct can't span two runs, so `e^(iπ)` stays text there. HarfBuzz on
+  its own and WebKit lay it out.
 - A part is a whole word, so `2/3x` is 2 over 3x, and `x^2y` is x² y.
-- Firefox and Windows are not checked yet.
+- Native Windows apps (DirectWrite) are not checked.

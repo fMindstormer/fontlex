@@ -72,9 +72,9 @@ Limits
   most 24 characters in a construct that isn't inside another.
 - A space inside a construct leaves it as its characters: (a+b)/2 is
   typeset, (a + b)/2 isn't.
-- Chrome shapes Greek and Latin letters as separate runs, so a construct
-  that mixes them, like e^(iπ), stays as its characters there. Safari
-  lays it out.
+- Chrome and Firefox shape Greek and Latin letters as separate runs, so a
+  construct that mixes them, like e^(iπ), stays as its characters there.
+  Safari lays it out.
 - A part is a whole word: 2/3x is 2 over 3x, and x^2y is x squared, then y.
   A number over a number is always a fraction, so 7/8 bit and a date like
   6/14 are typeset too.
@@ -87,8 +87,9 @@ Tested
 in HarfBuzz 14.6.0 (the shaper in Chrome, Edge and Firefox) and Core Text
 (Safari, macOS): all the same. In Chrome 155, 348 of 349 lines draw the
 same pixels as HarfBuzz's layout (the other mixes Greek and Latin); in
-Safari's WebKit, 322 of 323, and the last is 1 pixel apart. Firefox itself
-and Windows are not tested yet.
+Safari's WebKit, 322 of 323, and the last is 1 pixel apart; in Chromium 139
+and Firefox 158 on Linux and on Windows, 348 of 349, the same exception.
+Native Windows apps (DirectWrite) are not tested.
 
 Built from commit {commit}.
 

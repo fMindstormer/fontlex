@@ -96,11 +96,12 @@ textarea#code { min-height: 39rem; white-space: pre; overflow-x: auto; font-size
     <tr><th>Lines</th><th class="n">Count</th>{{HEADS}}</tr>
     {{ROWS}}
   </table>
-  <p class="note">Checked by screenshot in Chrome 155 and Safari's WebKit (text against the outlines placed as
-  HarfBuzz places them), and by typing into the box key by key in Chrome, which ends as the same text set at
-  once does. A keystroke that completes a construct changes glyphs before the caret, and with a simpler test
-  font Chrome kept their old shaping, so this page still makes it lay the box out again on every input (by
-  switching <code>font-kerning</code>). Not yet checked in Firefox, or on Windows.</p>
+  <p class="note">Checked by screenshot (text against the outlines placed as HarfBuzz places them) in Chrome
+  and Safari's WebKit on macOS, and in Chromium and Firefox on Linux and Windows; and by typing into the box key
+  by key, which ends as the same text set at once does. A keystroke that completes a construct changes glyphs
+  before the caret, and with a simpler test font Chrome kept their old shaping, so this page still makes it lay
+  the box out again on every input (by switching <code>font-kerning</code>). Native Windows apps (DirectWrite)
+  aren't checked.</p>
   <p class="note">Base font: JetBrains Mono (SIL Open Font License).</p>
 </main>
 <script>
@@ -208,8 +209,8 @@ textarea#code { min-height: 42rem; white-space: pre; overflow-x: auto; font-size
     construct stays as its characters.</li>
     <li><b>Spaces.</b> A space inside a construct leaves it as its characters: write <code>(a+b)/2</code>, not
     <code>(a + b)/2</code>. Spaces between formulas are fine.</li>
-    <li><b>Greek and Latin.</b> Chrome shapes runs of Greek and Latin letters apart, and a construct can't span
-    two runs, so there <code>e^(iπ)</code> stays as its characters. Safari lays it out.</li>
+    <li><b>Greek and Latin.</b> Chrome and Firefox shape runs of Greek and Latin letters apart, and a construct
+    can't span two runs, so there <code>e^(iπ)</code> stays as its characters. Safari lays it out.</li>
     <li><b>Ambiguous notation.</b> A part is a whole word, so <code>2/3x</code> is 2 over 3x, and
     <code>x^2y</code> is x² followed by y. A number over a number is always a fraction, so <code>7/8 bit</code>
     and a date like <code>6/14</code> are typeset too. On its own, <code>a/b</code> stays text, as
@@ -217,9 +218,9 @@ textarea#code { min-height: 42rem; white-space: pre; overflow-x: auto; font-size
     <li><b>Lines and the caret.</b> Each line is read on its own. A construct that isn't complete yet stays as
     its characters until it is. Inside a fraction the caret stays at the fraction's start: its glyphs are drawn
     where they belong, but take no room of their own.</li>
-    <li><b>Where it's checked.</b> HarfBuzz (Chrome, and the shaper Firefox uses) and Core Text (Safari, macOS)
-    against a model of the notation, and Chrome and Safari's WebKit by screenshot. Firefox itself and Windows
-    aren't checked yet.</li>
+    <li><b>Where it's checked.</b> HarfBuzz (the shaper in Chrome and Firefox) and Core Text (Safari, macOS)
+    against a model of the notation. By screenshot, Chrome and Safari's WebKit on macOS, and Chromium and Firefox
+    on Linux and Windows. Native Windows apps, which shape with DirectWrite, aren't checked.</li>
   </ul>
 
   <h2>How it works</h2>
