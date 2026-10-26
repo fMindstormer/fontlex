@@ -1,18 +1,28 @@
-# Fontlex
+# Fontlex — compilers that target fonts
 
-**Compilers that target fonts.** Type `(a+b)/(c+d)` into a plain text box
-and a fraction appears. Type `**bold**` and the asterisks disappear as the
-word turns bold. Type Python and it is highlighted, with a bar under every
-character past column 79. There is no JavaScript and no editor plugin: the
-font does it. Fontlex compiles lexers, GitHub Flavored Markdown, a math
-layout model and pronunciation dictionaries into OpenType fonts, and the
-text shaper that every browser and operating system already has runs them,
-on every keystroke.
+Type `(a+b)/(c+d)` into an ordinary text box and the font draws a fraction.
+Type `**bold**` and it renders as bold. No JavaScript processes the text:
+OpenType substitution and positioning rules do the work.
+
+The underlying text stays unchanged. Copy the fraction and you get
+`(a+b)/(c+d)` back.
+
+<a href="https://fmindstormer.github.io/fontlex/relaxed-math.html#try"><picture>
+<source media="(prefers-reduced-motion: reduce)" srcset="docs/images/relaxed-math-poster.png">
+<img src="docs/images/relaxed-math-demo.gif" width="468" alt="Typing (a+b)/(c+d), x^2 and sqrt(x^2+1) into a plain text box: each becomes a fraction, a superscript and a square root as it is completed. Turning the font's rules off shows the characters exactly as typed; turning them on typesets them again.">
+</picture></a>
+
+**[Try Relaxed Math](https://fmindstormer.github.io/fontlex/relaxed-math.html#try)** · [Explore all demos](https://fmindstormer.github.io/fontlex/) · [Download](https://github.com/fMindstormer/fontlex/releases/latest)
+
+**The research contribution:** compiling parsers and layout (a lexer,
+CommonMark, a math layout model) into font rules, within OpenType's glyph
+and lookup limits and what shaping engines will run, and checking every
+glyph against a reference model. The recording is the real
+[demo page](https://fmindstormer.github.io/fontlex/relaxed-math.html) in
+Chrome ([MP4](docs/images/relaxed-math-demo.mp4)).
 
 [![Checks](https://github.com/fMindstormer/fontlex/actions/workflows/checks.yml/badge.svg)](https://github.com/fMindstormer/fontlex/actions/workflows/checks.yml)
 [![License: MIT](https://img.shields.io/badge/code-MIT-blue.svg)](LICENSE)
-
-**[Try the live demos](https://fmindstormer.github.io/fontlex/)** · [Download the fonts and the browser extension](https://github.com/fMindstormer/fontlex/releases/latest)
 
 <table>
 <tr><td><a href="https://fmindstormer.github.io/fontlex/python.html"><img src="docs/images/python.png" alt="Python code in a plain text box, highlighted by the Fontlex Python font"></a></td>

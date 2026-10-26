@@ -3,66 +3,121 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fontlex demos</title>
-<meta name="description" content="Fonts that run a lexer, a Markdown renderer or a pronunciation dictionary inside the text shaper.">
+<meta name="description" content="Fonts that typeset math, render Markdown and highlight code inside the text shaper, in any plain text box.">
 <!-- The GitHub Pages landing page: .github/workflows/pages.yml copies it, docs/images/ (as images/)
      and the demos into one folder. -->
 <style>
 :root { --bg: #F4F5F7; --surface: #FFFFFF; --ink: #1B2130; --muted: #5B6476; --rule: #D8DCE3; --link: #0B63D6;
-        color-scheme: light; }
+        --button: #0B63D6; --button-ink: #FFFFFF; color-scheme: light; }
 @media (prefers-color-scheme: dark) { :root {
   --bg: #11141B; --surface: #181C25; --ink: #E4E7EE; --muted: #98A0B1; --rule: #2A303D; --link: #58A6FF;
-  color-scheme: dark; } }
+  --button: #58A6FF; --button-ink: #0B1220; color-scheme: dark; } }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
 main { max-width: 64rem; margin: 0 auto; padding: 2.5rem 1rem 4rem; }
 h1 { font-size: 2rem; margin: 0 0 .25rem; }
-.lede { color: var(--muted); margin: 0 0 1.75rem; max-width: 44rem; }
+h2 { font-size: 1.25rem; margin: 2.5rem 0 .4rem; }
+.lede { color: var(--muted); margin: 0 0 1.5rem; max-width: 44rem; }
+.section-note { color: var(--muted); margin: 0 0 1rem; max-width: 44rem; }
+code { font: .92em ui-monospace, monospace; }
+
+.featured { display: grid; gap: 1.25rem 2rem; align-items: center; background: var(--surface);
+            border: 1px solid var(--rule); border-radius: 12px; padding: 1.25rem; }
+@media (min-width: 52rem) { .featured { grid-template-columns: minmax(0, 468px) minmax(0, 1fr); } }
+.featured video { display: block; width: 100%; max-width: 468px; height: auto; aspect-ratio: 936 / 708;
+                  border-radius: 8px; background: #fff; }
+.featured h2 { margin: 0 0 .5rem; font-size: 1.5rem; }
+.featured p { margin: 0 0 .75rem; }
+.featured .limits { color: var(--muted); font-size: .92rem; }
+.button { display: inline-block; margin: .25rem 0 .9rem; padding: .7rem 1.2rem; border-radius: 8px;
+          background: var(--button); color: var(--button-ink); font-weight: 600; text-decoration: none; }
+.button:hover, .button:focus-visible { text-decoration: underline; }
+
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: 1rem;
         list-style: none; margin: 0; padding: 0; }
 .card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
 .card a { display: block; color: inherit; text-decoration: none; height: 100%; }
-.card a:hover h2, .card a:focus-visible h2 { color: var(--link); text-decoration: underline; }
+.card a:hover h3, .card a:focus-visible h3 { color: var(--link); text-decoration: underline; }
 .shot { display: block; width: 100%; height: 10.5rem; object-fit: none; object-position: left top;
         background: #fff; border-bottom: 1px solid var(--rule); }
 .text { padding: .75rem 1rem .9rem; }
-h2 { font-size: 1.05rem; margin: 0 0 .2rem; }
+h3 { font-size: 1.05rem; margin: 0 0 .2rem; }
 .text p { margin: 0; color: var(--muted); font-size: .92rem; }
+.text p.eval { margin-top: .45rem; color: var(--ink); }
 .note { color: var(--muted); font-size: .9rem; margin-top: 1.75rem; }
-.note a { color: var(--link); }
+.note a, .section-note a, .featured a:not(.button) { color: var(--link); }
 </style>
 <main>
   <h1>Fontlex</h1>
-  <p class="lede">Compilers that target fonts. Each demo is a plain text box in a compiled font: the colors, the
-  hidden Markdown markup, the liaison ties and the fractions are drawn by the font's rules, with no script doing the
-  highlighting. Type in any of them.</p>
+  <p class="lede">Compilers that target fonts. Each demo is a plain text box in a compiled font: the fractions,
+  the hidden Markdown markup and the colors are drawn by the font's rules. No script processes the text, and
+  the characters stay exactly as typed.</p>
+
+  <section class="featured" aria-labelledby="featured">
+    <video id="rec" muted loop playsinline preload="metadata" poster="images/relaxed-math-poster.png"
+      src="images/relaxed-math-demo.mp4" aria-label="Typing (a+b)/(c+d), x^2 and sqrt(x^2+1) into a plain text box:
+      each is typeset as it is completed. With the font's rules off, the characters are exactly as typed."></video>
+    <div>
+      <h2 id="featured">Relaxed Math</h2>
+      <p>Type <code>(a+b)/(c+d)</code> into a plain text box and the font draws a fraction. <code>x^2</code>
+      gets a superscript and <code>sqrt(x^2+1)</code> a root, while <code>and/or</code>, <code>w/o</code> and
+      dates stay text. Copy a fraction and you get <code>(a+b)/(c+d)</code> back.</p>
+      <a class="button" href="relaxed-math.html#try">Type your own formula</a>
+      <p class="limits">Fractions, square roots, superscripts and subscripts, nested 3 deep: not LaTeX, and not a
+      general math engine. Checked in Chrome and Safari; not yet in Firefox or on Windows.</p>
+    </div>
+  </section>
+
+  <h2>Demos</h2>
   <ul class="grid">
-    <li class="card"><a href="python.html"><img class="shot" src="images/python.png" alt="">
-      <div class="text"><h2>Python</h2><p>Syntax highlighting by a lexer that runs in the shaper.</p></div></a></li>
-    <li class="card"><a href="javascript.html"><img class="shot" src="images/javascript.png" alt="">
-      <div class="text"><h2>JavaScript</h2><p>The same compiler, from a JavaScript lexer spec.</p></div></a></li>
-    <li class="card"><a href="markdown.html"><img class="shot" src="images/markdown.png" alt="">
-      <div class="text"><h2>Markdown</h2><p>GitHub Flavored Markdown rendered line by line, markup hidden,
-      monospaced or proportional.</p></div></a></li>
-    <li class="card"><a href="math.html"><img class="shot" src="images/math.png" alt="">
-      <div class="text"><h2>Math</h2><p>A little LaTeX typeset as you type: fractions, roots, scripts and
-      symbols.</p></div></a></li>
     <li class="card"><a href="relaxed-math.html"><img class="shot" src="images/relaxed-math.png" alt="">
-      <div class="text"><h2>Relaxed math</h2><p>Math as people type it in plain text, (a+b)/(c+d) and x^2,
+      <div class="text"><h3>Relaxed Math</h3><p>Math as people type it in plain text, (a+b)/(c+d) and x^2,
       typeset; and/or and dates left alone.</p></div></a></li>
-    <li class="card"><a href="english.html"><img class="shot" src="images/english.png" alt="">
-      <div class="text"><h2>English pronunciation</h2><p>Stressed vowels, reduced vowels and silent letters of
-      30,000 words.</p></div></a></li>
-    <li class="card"><a href="french.html"><img class="shot" src="images/french.png" alt="">
-      <div class="text"><h2>French pronunciation</h2><p>Silent letters, nasal vowels and liaison for 30,000
-      words.</p></div></a></li>
-    <li class="card"><a href="german.html"><img class="shot" src="images/german.png" alt="">
-      <div class="text"><h2>German genders</h2><p>Nouns colored by gender: der blue, die red, das green.</p></div></a></li>
-    <li class="card"><a href="german-syllables.html"><img class="shot" src="images/german-syllables.png" alt="">
-      <div class="text"><h2>German syllables</h2><p>Each word's syllables in turn blue and red, as German schools
-      teach reading.</p></div></a></li>
+    <li class="card"><a href="markdown.html"><img class="shot" src="images/markdown.png" alt="">
+      <div class="text"><h3>Markdown</h3><p>GitHub Flavored Markdown rendered line by line, markup hidden,
+      monospaced or proportional.</p></div></a></li>
+    <li class="card"><a href="python.html"><img class="shot" src="images/python.png" alt="">
+      <div class="text"><h3>Python</h3><p>Syntax highlighting by a lexer that runs in the shaper, and a bar
+      past column 79.</p></div></a></li>
+    <li class="card"><a href="math.html"><img class="shot" src="images/math.png" alt="">
+      <div class="text"><h3>LaTeX Math</h3><p>A little LaTeX typeset as you type: fractions, roots, scripts and
+      symbols.</p></div></a></li>
+    <li class="card"><a href="javascript.html"><img class="shot" src="images/javascript.png" alt="">
+      <div class="text"><h3>JavaScript</h3><p>The same lexer compiler, from a JavaScript lexer spec.</p></div></a></li>
   </ul>
-  <p class="note">Color fonts render in current Chrome, Firefox and Safari. The learner fonts also come as a
-  <a href="https://github.com/fMindstormer/fontlex/blob/main/extension/README.md">browser extension</a> for any
-  web page. Source, tests and the fonts:
-  <a href="https://github.com/fMindstormer/fontlex">github.com/fMindstormer/fontlex</a>.</p>
+
+  <h2>Learner fonts</h2>
+  <p class="section-note">Fonts that mark how words are said or what gender a noun is. The fonts do exactly what
+  their word lists say, in HarfBuzz and Core Text; how right the lists are is measured separately, below. They
+  also come as a <a href="https://github.com/fMindstormer/fontlex/blob/main/extension/README.md">browser
+  extension</a> for any web page.</p>
+  <ul class="grid">
+    <li class="card"><a href="english.html"><img class="shot" src="images/english.png" alt="">
+      <div class="text"><h3>English pronunciation</h3><p>Stressed vowels, reduced vowels and silent letters of
+      30,000 words, from CMUdict.</p>
+      <p class="eval">Not yet reviewed by fluent speakers; the review sheet is ready.</p></div></a></li>
+    <li class="card"><a href="french.html"><img class="shot" src="images/french.png" alt="">
+      <div class="text"><h3>French pronunciation</h3><p>Silent letters, nasal vowels and liaison for 30,000
+      words, from Lexique.</p>
+      <p class="eval">Not yet reviewed by fluent speakers; the review sheet is ready.</p></div></a></li>
+    <li class="card"><a href="german.html"><img class="shot" src="images/german.png" alt="">
+      <div class="text"><h3>German genders</h3><p>Nouns colored by gender: der blue, die red, das green.</p>
+      <p class="eval">On held-out newspaper text, 97% of nouns colored, 99.5% of them right.</p></div></a></li>
+    <li class="card"><a href="german-syllables.html"><img class="shot" src="images/german-syllables.png" alt="">
+      <div class="text"><h3>German syllables</h3><p>Each word's syllables in turn blue and red, as German schools
+      teach reading.</p>
+      <p class="eval">97.5% of held-out first-reader words split exactly right.</p></div></a></li>
+  </ul>
+
+  <p class="note">Color fonts render in current Chrome, Firefox and Safari. Source, tests and the fonts:
+  <a href="https://github.com/fMindstormer/fontlex">github.com/fMindstormer/fontlex</a> ·
+  <a href="https://github.com/fMindstormer/fontlex/releases/latest">Download</a>.</p>
 </main>
+<script>
+// The recording plays on its own unless the reader asks for less motion; then it waits for its controls.
+(() => {
+  const rec = document.getElementById('rec');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) rec.controls = true;
+  else rec.play().catch(() => { rec.controls = true; });
+})();
+</script>

@@ -137,8 +137,18 @@ RELAXED_PAGE = """<!doctype html>
 <title>Fontlex Relaxed Math: plain-text math typeset by a font</title>
 <style>
 {{STYLE}}
-main { max-width: 56rem; }
+main { max-width: 66rem; }
 textarea#code { min-height: 42rem; white-space: pre; overflow-x: auto; font-size: 1.6rem; line-height: 2.7; }
+.try { display: grid; gap: 1rem 1.5rem; align-items: start; }
+@media (min-width: 62rem) { .try { grid-template-columns: minmax(0, 1fr) 15rem; } .tips { order: 2; } }
+.try .editor { min-width: 0; }
+.bar .switch { font-size: 1rem; color: var(--ink); gap: .5rem; }
+.bar .switch input { width: 1.1rem; height: 1.1rem; margin: 0; }
+.bar .switch b { font-weight: 600; }
+.tips { margin: 0; padding: 0; list-style: none; display: grid; gap: .5rem .75rem; }
+.tips li { margin: 0; padding: .7rem .9rem; background: var(--surface); border: 1px solid var(--rule);
+           border-radius: 10px; }
+.tips a { color: inherit; }
 </style>
 <main>
   <h1>Fontlex Relaxed Math</h1>
@@ -148,15 +158,20 @@ textarea#code { min-height: 42rem; white-space: pre; overflow-x: auto; font-size
   ordinary, so <code>and/or</code>, <code>w/o</code>, dates and paths are left alone. The characters stay exactly
   as typed. No script on this page lays anything out.</p>
 
-  <div class="editor" id="editor">
-    <div class="bar">
-      <label for="hl"><input type="checkbox" id="hl" checked> Render math</label>
+  <div class="try" id="try">
+    <ul class="tips">
+      <li>Try <code>(a+b)/(c+d)</code>, <code>x^2</code>, or <code>sqrt(x)</code>.</li>
+      <li>Copying preserves exactly what you typed.</li>
+      <li>Spaces inside formulas and mixed Greek/Latin text have limitations; <a href="#limits">see below</a>.</li>
+    </ul>
+    <div class="editor" id="editor">
+      <div class="bar">
+        <label for="hl" class="switch"><input type="checkbox" id="hl" checked> Font rules:
+        <b id="state">on, typeset by the font</b></label>
+      </div>
+      <textarea id="code" spellcheck="false" wrap="off" aria-label="Plain-text math, typeset by the font">{{SAMPLE}}</textarea>
     </div>
-    <textarea id="code" spellcheck="false" wrap="off" aria-label="Plain-text math, typeset by the font">{{SAMPLE}}</textarea>
   </div>
-  <p class="note">Each line is read on its own. A construct that isn't complete yet, or that breaks a rule
-  below, stays as its characters until it is. Inside a fraction the caret stays at the fraction's start: the
-  fraction's glyphs are drawn where they belong, but take no room of their own.</p>
 
   <h2>What it typesets</h2>
   <ul>
@@ -167,12 +182,10 @@ textarea#code { min-height: 42rem; white-space: pre; overflow-x: auto; font-size
     and both at once, stacked: <code>x_i^2</code>.</li>
     <li>Roots: <code>sqrt(x^2+1)</code>.</li>
     <li>Symbols: <code>&lt;=</code> <code>&gt;=</code> <code>!=</code> <code>-&gt;</code> <code>=&gt;</code>
-    <code>+-</code> become ≤ ≥ ≠ → ⇒ ±. Greek letters and other symbols can be typed as themselves, but
-    Chrome shapes Greek and Latin letters apart, so there a construct that mixes them (<code>e^(iπ)</code>) stays
-    as its characters.</li>
-    <li>Constructs inside constructs, {{DEPTH}} deep, with at most {{FRACTIONS}} fractions inside one another,
-    and at most {{CHARS}} characters in a construct that isn't inside another.</li>
+    <code>+-</code> become ≤ ≥ ≠ → ⇒ ±. Greek letters and other symbols can be typed as themselves.</li>
   </ul>
+  <p>That is all: this isn't LaTeX or a general math engine. For a little LaTeX, see
+  <a href="https://fmindstormer.github.io/fontlex/math.html">Fontlex Math</a>, a subset as well.</p>
 
   <h2>What stays text</h2>
   <ul>
@@ -186,8 +199,27 @@ textarea#code { min-height: 42rem; white-space: pre; overflow-x: auto; font-size
     slash in a run of characters where one touches a longer word (<code>tr/a-z/A-Z/</code>).</li>
     <li>No script touches another underscore, and a number has no subscript: <code>file_1_2</code>,
     <code>1_000</code> stay text.</li>
-    <li>A space inside a construct leaves it as its characters: write <code>(a+b)/2</code>, not
-    <code>(a + b)/2</code>.</li>
+  </ul>
+
+  <h2 id="limits">Limits and ambiguous notation</h2>
+  <ul>
+    <li><b>Nesting.</b> Constructs go inside constructs {{DEPTH}} deep, with at most {{FRACTIONS}} fractions
+    inside one another, and at most {{CHARS}} characters in a construct that isn't inside another. Past that, a
+    construct stays as its characters.</li>
+    <li><b>Spaces.</b> A space inside a construct leaves it as its characters: write <code>(a+b)/2</code>, not
+    <code>(a + b)/2</code>. Spaces between formulas are fine.</li>
+    <li><b>Greek and Latin.</b> Chrome shapes runs of Greek and Latin letters apart, and a construct can't span
+    two runs, so there <code>e^(iπ)</code> stays as its characters. Safari lays it out.</li>
+    <li><b>Ambiguous notation.</b> A part is a whole word, so <code>2/3x</code> is 2 over 3x, and
+    <code>x^2y</code> is x² followed by y. A number over a number is always a fraction, so <code>7/8 bit</code>
+    and a date like <code>6/14</code> are typeset too. On its own, <code>a/b</code> stays text, as
+    <code>w/o</code> does.</li>
+    <li><b>Lines and the caret.</b> Each line is read on its own. A construct that isn't complete yet stays as
+    its characters until it is. Inside a fraction the caret stays at the fraction's start: its glyphs are drawn
+    where they belong, but take no room of their own.</li>
+    <li><b>Where it's checked.</b> HarfBuzz (Chrome, and the shaper Firefox uses) and Core Text (Safari, macOS)
+    against a model of the notation, and Chrome and Safari's WebKit by screenshot. Firefox itself and Windows
+    aren't checked yet.</li>
   </ul>
 
   <h2>How it works</h2>
@@ -210,7 +242,11 @@ textarea#code { min-height: 42rem; white-space: pre; overflow-x: auto; font-size
 (() => {
   const editor = document.getElementById('editor'), hl = document.getElementById('hl'),
         code = document.getElementById('code');
-  hl.addEventListener('change', () => editor.classList.toggle('off', !hl.checked));
+  const state = document.getElementById('state');
+  hl.addEventListener('change', () => {
+    editor.classList.toggle('off', !hl.checked);
+    state.textContent = hl.checked ? 'on, typeset by the font' : 'off, the characters as typed';
+  });
   // Chrome keeps the shaping of text before an edit: switch a setting that
   // makes it shape the box again.
   let flip = false;
@@ -218,6 +254,12 @@ textarea#code { min-height: 42rem; white-space: pre; overflow-x: auto; font-size
     flip = !flip;
     code.style.fontKerning = flip ? 'normal' : 'auto';
   });
+  // The demos page's "Type your own formula" link lands here, ready to type.
+  // (After load: the jump to the anchor would take the focus back.)
+  if (location.hash === '#try') addEventListener('load', () => setTimeout(() => {
+    code.focus();
+    code.setSelectionRange(code.value.length, code.value.length);
+  }));
 })();
 </script>
 """

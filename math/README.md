@@ -133,6 +133,13 @@ which keeps their rules few.
 with `--relaxed`). The build sets `PYTHONHASHSEED=0` for itself, so the same
 sources give the same font.
 
+For a release, `python math/package_demo.py VERSION` packs the Relaxed Math
+demo (the page, the font, a stylesheet, licenses and a README) into
+`build/fontlex-relaxed-math-demo-VERSION.zip`, from the committed page and
+font only. `demo/record_relaxed.mjs` records the page being typed into, for
+the top-level README and the demos page (it needs playwright-core, a
+Chromium and ffmpeg).
+
 ## Known limits
 
 - The limits above. More depth, more fractions or longer constructs would

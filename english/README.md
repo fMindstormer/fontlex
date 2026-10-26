@@ -28,7 +28,7 @@ the next step (*Check the alignments* below).
 |---|---|---|---|
 | Every listed word alone, capitalized, in capitals, in punctuation and in a sentence; with a curly apostrophe; inside longer words and made-up words (must stay plain); every noun/verb pair after each cue word, after another word and after two spaces, and before each reading marker (also after a cue for the other reading); a marker after other words | 170,817 | 170,817 | 170,817 |
 | Width with a marker: each pair as wide as after a cue for the same reading, every 50th other word as wide as without one | 1,446 | 1,446 | 1,446 |
-| Lines of this project's English READMEs (`README.md`, `specs/`, `markdown/`, `theory/`) | 1,285 | 1,285 | 1,285 |
+| Lines of this project's English READMEs (`README.md`, `specs/`, `markdown/`, `theory/`) | 1,292 | 1,292 | 1,292 |
 
 The glyph count doesn't depend on the word list (3,412 glyphs, mostly the
 letters' first-letter variants); the rules do. Before the two-letter keys and
