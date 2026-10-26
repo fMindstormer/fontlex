@@ -43,11 +43,15 @@ PAGE = """<!doctype html>
 <style>
 {{STYLE}}
 main { max-width: 56rem; }
+.nav { margin: 0 0 .75rem; }
 textarea#code { min-height: 39rem; white-space: pre; overflow-x: auto; font-size: 1.6rem; line-height: 2.7; }
 .keys { display: flex; flex-wrap: wrap; gap: .35rem .9rem; padding: 0; list-style: none; font-size: .92rem; }
 .keys code { white-space: nowrap; }
 </style>
 <main>
+  <p class="note nav"><a href="https://github.com/fMindstormer/fontlex">Fontlex</a> ·
+  <a href="https://fmindstormer.github.io/fontlex/">All demos</a> ·
+  <a href="https://github.com/fMindstormer/fontlex/releases/latest">Download</a></p>
   <h1>Fontlex Math</h1>
   <p class="lede">The box below is a plain text box holding a little LaTeX. The font typesets it: fractions,
   roots, superscripts and subscripts, Greek letters and a few symbols, laid out by the text engine that lays out
@@ -96,6 +100,9 @@ textarea#code { min-height: 39rem; white-space: pre; overflow-x: auto; font-size
     <tr><th>Lines</th><th class="n">Count</th>{{HEADS}}</tr>
     {{ROWS}}
   </table>
+  <p class="note">This page checks a sample each time it is built. The full check, 20,000 random lines and the
+  edge cases in HarfBuzz and Core Text, matches the model on every line: see
+  <a href="https://github.com/fMindstormer/fontlex/blob/main/math/README.md">math/README.md</a>.</p>
   <p class="note">Checked by screenshot (text against the outlines placed as HarfBuzz places them) in Chrome
   and Safari's WebKit on macOS, and in Chromium and Firefox on Linux and Windows; and by typing into the box key
   by key, which ends as the same text set at once does. A keystroke that completes a construct changes glyphs
@@ -139,6 +146,7 @@ RELAXED_PAGE = """<!doctype html>
 <style>
 {{STYLE}}
 main { max-width: 66rem; }
+.nav { margin: 0 0 .75rem; }
 textarea#code { min-height: 42rem; white-space: pre; overflow-x: auto; font-size: 1.6rem; line-height: 2.7; }
 .try { display: grid; gap: 1rem 1.5rem; align-items: start; }
 @media (min-width: 62rem) { .try { grid-template-columns: minmax(0, 1fr) 15rem; } .tips { order: 2; } }
@@ -152,6 +160,9 @@ textarea#code { min-height: 42rem; white-space: pre; overflow-x: auto; font-size
 .tips a { color: inherit; }
 </style>
 <main>
+  <p class="note nav"><a href="https://github.com/fMindstormer/fontlex">Fontlex</a> ·
+  <a href="https://fmindstormer.github.io/fontlex/">All demos</a> ·
+  <a href="https://github.com/fMindstormer/fontlex/releases/latest">Download</a></p>
   <h1>Fontlex Relaxed Math</h1>
   <p class="lede">The box below is a plain text box holding math the way people type it in plain text:
   <code>(a+b)/(c+d)</code>, <code>x^2</code>, <code>sqrt(x)</code>. The font typesets it as you type: fractions,
@@ -237,6 +248,9 @@ textarea#code { min-height: 42rem; white-space: pre; overflow-x: auto; font-size
     <tr><th>Lines</th><th class="n">Count</th>{{HEADS}}</tr>
     {{ROWS}}
   </table>
+  <p class="note">This page checks a sample each time it is built. The full check, 20,000 random lines and the
+  edge cases in HarfBuzz and Core Text, matches the model on every line: see
+  <a href="https://github.com/fMindstormer/fontlex/blob/main/math/README.md">math/README.md</a>.</p>
   <p class="note">Base font: JetBrains Mono (SIL Open Font License).</p>
 </main>
 <script>

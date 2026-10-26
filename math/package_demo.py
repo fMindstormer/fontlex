@@ -44,9 +44,9 @@ characters stay exactly as typed.
 
 Try it
 ------
-Open index.html in Chrome, Edge or Safari, and type into the box. The page
-holds the font and its styles inside, so it needs no server and no build
-step. "Font rules" turns the font's rules off and on.
+Open index.html in Chrome, Edge, Firefox or Safari, and type into the box.
+The page holds the font and its styles inside, so it needs no server and no
+build step. "Font rules" turns the font's rules off and on.
 
 Use it on your own page
 -----------------------
