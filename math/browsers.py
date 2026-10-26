@@ -148,14 +148,25 @@ def compare(args):
           f"{len(known)} differ that mix Greek and Latin (a known limit in Chrome), {len(unknown)} other")
     for diff, line in sorted(bad, reverse=True)[:15]:
         print(f"   {diff:7} px  {line!r}")
-    typed, fresh = (Image.open(out / f"type.{args.browser}.{m}.png").convert("RGB") for m in ("typed", "fresh"))
-    same = typed.size == fresh.size and not ImageChops.difference(typed, fresh).getbbox()
+    shots = {m: Image.open(out / f"type.{args.browser}.{m}.png").convert("RGB") for m in ("typed", "fresh", "kerning")}
+
+    def differ(a, b):
+        if shots[a].size != shots[b].size:
+            return f"sizes {shots[a].size} and {shots[b].size}"
+        d = ImageChops.difference(shots[a], shots[b])
+        return d.getbbox() and f"{sum(d.convert('L').point(lambda v: 255 if v else 0).histogram()[255:])} px in {d.getbbox()}"
+
+    same = not differ("typed", "fresh")
     print(f"{args.browser}: typing key by key {'ends with the same pixels as' if same else 'DIFFERS from'} "
-          "setting the text at once")
+          f"setting the text at once {'' if same else '(' + differ('typed', 'fresh') + ')'}")
+    if not same:
+        print(f"   typed vs set at once with font-kerning: normal: {differ('typed', 'kerning') or 'the same'}; "
+              f"set at once, font-kerning normal vs auto: {differ('kerning', 'fresh') or 'the same'}")
     sys.exit(0 if same and not unknown else 1)
 
 
 def main():
+    sys.stdout.reconfigure(encoding="utf-8")    # lines with Greek letters, on Windows too
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("pages")

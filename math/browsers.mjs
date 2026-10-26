@@ -41,7 +41,7 @@ for (const pg of index.pages) {
   }
   await p.close();
 }
-for (const mode of ["typed", "fresh"]) {
+for (const mode of ["typed", "fresh", "kerning"]) {
   const p = await browser.page(1000, 1400);
   await p.goto(pathToFileURL(index.demo).href);
   await p.evaluate(() => document.fonts.ready);
@@ -53,7 +53,10 @@ for (const mode of ["typed", "fresh"]) {
       if (i < index.typed.length - 1) await p.keyboard.press("Enter");
     }
   } else {
-    await p.evaluate((text) => { document.getElementById("code").value = text; }, index.typed.join("\n"));
+    // set at once; "kerning" also leaves font-kerning where the demo's workaround leaves it after
+    // an odd number of keys (it flips the setting on every input to make Chrome shape the box again)
+    await p.evaluate(([text, kerning]) => { const c = document.getElementById("code"); c.value = text;
+      if (kerning) c.style.fontKerning = "normal"; }, [index.typed.join("\n"), mode === "kerning"]);
   }
   await new Promise((r) => setTimeout(r, 300));
   await settle(p);
