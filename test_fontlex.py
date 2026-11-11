@@ -20,6 +20,7 @@ lexed variant, so those marks are skipped and counted.
 
 import argparse
 import atexit
+import copy
 import io
 import os
 import queue
@@ -32,7 +33,8 @@ import unicodedata
 from pathlib import Path
 
 import uharfbuzz as hb
-from fontTools.ttLib import TTFont
+from fontTools.ttLib import TTFont, newTable
+from fontTools.ttLib.tables import otTables
 
 from fontlex import (DROPPED_TABLES, RULER_PREFIX, RULER_SUFFIX, START_SUFFIX, SUFFIX, SYLLABLE_INFIX,
                      WORD_SUFFIX, Model, _unify_gpos_scripts, load_spec, subset_font)
@@ -263,6 +265,22 @@ class DirectWrite:
 SHAPERS = {s.name: s for s in (HarfBuzz, CoreText, DirectWrite)}
 
 
+def _empty_gsub(like):
+    """A GSUB table with the scripts and features of `like`, and no lookups."""
+    table = newTable("GSUB")
+    table.table = otTables.GSUB()
+    table.table.Version = 0x00010000
+    table.table.ScriptList = copy.deepcopy(like.ScriptList)
+    table.table.FeatureList = copy.deepcopy(like.FeatureList)
+    for record in table.table.FeatureList.FeatureRecord:
+        record.Feature.LookupListIndex = []
+        record.Feature.LookupCount = 0
+    table.table.LookupList = otTables.LookupList()
+    table.table.LookupList.Lookup = []
+    table.table.LookupList.LookupCount = 0
+    return table
+
+
 def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, seed=1,
            log=print, unify_scripts=False) -> dict[str, tuple[int, int]]:
     """Run every check on a compiled font. Returns {label: (passed, total)}.
@@ -286,6 +304,11 @@ def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, se
             subset_font(ref, kept)
         if unify_scripts:
             _unify_gpos_scripts(ref)
+        if "GSUB" not in ref and "GSUB" in tt:
+            # Core Text shapes a font that has a GSUB table in script runs, and
+            # kerning doesn't cross from one run to the next (π,T): compare
+            # with the base font given an empty GSUB, which shapes alike.
+            ref["GSUB"] = _empty_gsub(tt["GSUB"].table)
         data = io.BytesIO()
         ref.save(data)
         ref_order = ref.getGlyphOrder()

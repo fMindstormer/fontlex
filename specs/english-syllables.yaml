@@ -1,0 +1,41 @@
+# Fontlex spec: English syllables in alternating colors, for learning to read.
+#
+# Each word's syllables alternate blue and red, as dictionaries split them:
+# a vowel that ends a syllable is long (ti-ger), a short one keeps the
+# consonant after it (cab-in), and a consonant before -le starts the last
+# syllable (ta-ble). The patterns are trained on the Moby Hyphenation List
+# (english/syllables/patgen.py); they also guess at words the list lacks.
+
+name: Fontlex English Syllables
+
+classes:
+  letter: "a-zA-Z"
+
+start: text
+
+states:
+  text: {default: text}
+
+syllables:
+  letters: [letter]
+  patterns: [../english/syllables/syllables.pat.txt]
+  colors: [syllable1, syllable2]
+
+themes:
+  light:
+    syllable1: "#1D4ED8"
+    syllable2: "#D62828"
+  dark:
+    syllable1: "#7AA7FF"
+    syllable2: "#FF7B7B"
+
+# Sentences with the color of each character (1 and 2 alternate by syllable,
+# '.' between words), checked by the tests. Checked by hand against a
+# dictionary's syllables.
+examples:
+  legend: {".": null, "1": syllable1, "2": syllable2}
+  cases:
+    - ['The little tiger and the rabbit went to the table.', '111.111222.11222.111.111.111222.1111.11.111.11222.']
+    - ['It is over: she started playing, and the years passed.', '11.11.1222..111.1111122.1111222..111.111.11111.111111.']
+    - ['Reading is wonderful: each syllable has a vowel.', '1111222.11.111222111..1111.11122111.111.1.11122.']
+    - ['Butterflies, bananas and chocolate on Wednesday.', '11122211111..1122111.111.111121111.11.111111222.']

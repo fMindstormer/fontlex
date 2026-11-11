@@ -11,3 +11,4 @@ build/*.zip
 build/extension-firefox/
 build/*.exe
 build/*.obj
+english/syllables/data/

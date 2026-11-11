@@ -1,14 +1,15 @@
 #!/bin/sh
 # Build everything and run every check this machine can run.
 #   ./check.sh                    # every section
-#   ./check.sh markdown german    # some: unit python javascript german syllables markdown math english french extension theory
+#   ./check.sh markdown german    # some: unit python javascript german syllables markdown math english
+#                                 #       english-syllables french extension theory
 #   PYTHON=... to pick the interpreter, N=... random cases
 set -e
 cd "$(dirname "$0")"
 PY=${PYTHON:-python3}
 N=${N:-20000}
 BASE=fonts/JetBrainsMono-Regular.ttf
-SECTIONS="unit python javascript german syllables markdown math english french extension theory"
+SECTIONS="unit python javascript german syllables markdown math english english-syllables french extension theory"
 want=${*:-$SECTIONS}
 for s in $want; do
     case " $SECTIONS " in *" $s "*) ;; *) echo "unknown section: $s (sections: $SECTIONS)" >&2; exit 2 ;; esac
@@ -132,6 +133,14 @@ if wants english; then
         echo "== english: demo hint switches in WebKit"
         "$PY" demo/check_switches.py english/demo.html
     fi
+fi
+
+if wants english-syllables; then
+    echo "== english syllables: compile"
+    "$PY" fontlex.py specs/english-syllables.yaml --base fonts/NotoSans-Regular.ttf --out build > /dev/null
+    echo "== english syllables: test ($shapers)"
+    "$PY" test_fontlex.py specs/english-syllables.yaml build/Fontlex-English-Syllables.ttf \
+        --base fonts/NotoSans-Regular.ttf $shapers --n "$N"
 fi
 
 if wants french; then
