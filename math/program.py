@@ -106,16 +106,24 @@ def restore_space(v):
 
 # tokens -------------------------------------------------------------------
 
+# A command's backslash (frac, sqrt, overline) and the kind of its letters.
+HEADS = {"frac": "F", "sqrt": "R", "overline": "H"}
+HEAD_KINDS = tuple(HEADS.values())
+LETTERS = {"F": "Lf", "R": "Ls", "H": "Lo"}
+LETTER_KINDS = tuple(LETTERS.values())
+TAGS = set(HEAD_KINDS) | set(LETTER_KINDS) | {"Y"}
+
+
 def tokens(line):
     """The font's tokens: dicts with "text" (their characters), "char"
     (what the token's glyph shows), and the tracks' first values."""
     out = []
     for kind, start, end, value in L.lex(line):
         if kind == "cmd":
-            first = "F" if value == "frac" else "R"
+            first = HEADS[value]
             out.append({"text": "\\", "char": "\\", "S": (first,)})
             for ch in line[start + 1:end]:
-                out.append({"text": ch, "char": ch, "S": ("Lf" if first == "F" else "Ls",)})
+                out.append({"text": ch, "char": ch, "S": (LETTERS[first],)})
             continue
         if kind == "sym":
             out.append({"text": line[start:end], "char": value, "S": ("Y", end - start)})
@@ -124,7 +132,7 @@ def tokens(line):
         out.append({"text": value, "char": value, "S": s})
     for t in out:
         if t["S"] != (" ",):
-            tag = {"F": "F", "R": "R", "Lf": "Lf", "Ls": "Ls", "Y": "Y"}.get(t["S"][0])
+            tag = t["S"][0] if t["S"][0] in TAGS else None
             t["G"] = ("g", t["char"], tag)
             for tr in TRACKS[1:]:
                 t[tr] = BLANK
@@ -189,7 +197,7 @@ def demote(v, depth):
 
 # 2. what each brace belongs to ----------------------------------------------
 
-OPENS = {"Lf": "N", "Ls": "Q", "P": "U", "B": "W"}
+OPENS = {"Lf": "N", "Ls": "Q", "Lo": "Qo", "P": "U", "B": "W"}   # Qo: an overline's, a root without a sign
 
 
 def is_open(v):
@@ -258,9 +266,9 @@ def check_b_input(s):
         return ("O", s[1], s[2] == "G")
     if k == "C":
         return ("C", s[1])
-    if k in ("F", "R", "P", "B"):
+    if k in HEAD_KINDS + ("P", "B"):
         return ("start", s[1])
-    if k in ("Lf", "Ls", "Z"):
+    if k in LETTER_KINDS + ("Z",):
         return ("cont",)
     if k in ("c", "b"):
         return ("t", s[1], 1)
@@ -322,11 +330,11 @@ def valid_input(level):
         d = depth_of(s)
         if k == " ":
             return ("sp", d)
-        if d >= level or k in ("Lf", "Ls", "Z"):
+        if d >= level or k in LETTER_KINDS + ("Z",):
             return ("in",)
         if d < level - 1:
             return ("x",)
-        if k in ("F", "R", "P", "B"):
+        if k in HEAD_KINDS + ("P", "B"):
             return (k,)
         if k in ("c", "Y"):
             return ("t",)
@@ -371,8 +379,8 @@ def valid_step(state, v):
             valid = pending is not None and pending[0] == "C" and pending[1]
         stacked = kind in ("U", "W") and valid and pending[2]
         return ("O", valid), (None, (kind, valid, stacked) if kind != "G" else None, "x")
-    if k in ("F", "R"):
-        want = "N" if k == "F" else "Q"
+    if k in HEAD_KINDS:
+        want = {"F": "N", "R": "Q", "H": "Qo"}[k]
         valid = root is not None and root[0] == want and root[1]
         return ("root", valid), (pending, None, "x")
     if k in ("P", "B"):
@@ -411,7 +419,7 @@ def finish_valid(s):
         return ("Ov", s[1], s[2], False)
     if k == "Ck":
         return ("Cv", s[1], s[2], False)
-    if k in ("F", "R"):
+    if k in HEAD_KINDS:
         return (k + "v", s[1], False)
     if k in ("P", "B"):
         return (k + "v", s[1], False, False, False)
@@ -443,11 +451,11 @@ def role_input(level):
             return ("in",)
         if d < level - 1:
             return ("out",)
-        if k in ("Fv", "Rv"):
+        if k in ("Fv", "Rv", "Hv"):
             return (k[0], s[2])
         if k in ("Pv", "Bv"):
             return (k[0],) + s[2:]
-        if k in ("Lf", "Ls"):
+        if k in LETTER_KINDS:
             return ("L",)
         if k == "Z":
             return ("Z",)
@@ -466,7 +474,7 @@ def role_step(state, v):
       a construct not laid out (end "D": a fraction's, which ends at the
       denominator's closer, or the numerator's when there is none), or
       ("D?",) between a fraction's two parts;
-    root: ("F",) or ("R",) while a laid out command's letters pass, or
+    root: ("F",), ("R",) or ("H",) while a laid out command's letters pass, or
       ("S", kind, pos) between a script's ^ or _ and its brace;
     pend: (kind, pos) for a script whose argument is the next token;
     last: "sup1" or "sub1" right after the first script of a stacked pair.
@@ -475,12 +483,12 @@ def role_step(state, v):
     frame, root, pend, last = state
     k = v[0]
     nlast = None
-    if k == "F" or k == "R":
+    if k in HEAD_KINDS:
         if v[1]:
-            return ("role", "froot" if k == "F" else "sroot"), (frame, (k,), None, None)
+            return ("role", {"F": "froot", "R": "sroot", "H": "oroot"}[k]), (frame, (k,), None, None)
         return ("out",), (frame, None, None, None)
     if k == "L":
-        if root is not None and root[0] in ("F", "R"):
+        if root is not None and root[0] in HEAD_KINDS:
             return ("role", "hide"), state
         return ("out",), (frame, None, None, None)
     if k == "Z":                     # a fraction's slash, between its parts (front.py)
@@ -522,7 +530,7 @@ def role_step(state, v):
             pos = root[2] if root is not None and root[0] == "S" else "alone"
             fk = kind + ("s" if pos != "alone" else "")
             return ("role", "gopen"), (("ok", fk, pos), None, None, None)
-        return ("role", {"N": "nopen", "Q": "qopen"}.get(kind, "bopen")), (("ok", kind), None, None, None)
+        return ("role", {"N": "nopen", "Q": "qopen", "Qo": "qopen"}.get(kind, "bopen")), (("ok", kind), None, None, None)
     if k == "C":
         kind, broken = v[1], v[2]
         if frame is not None and frame[0] == "bad":
@@ -535,7 +543,7 @@ def role_step(state, v):
             return ("role", "mid"), (("D?",), None, None, None)
         if fk == "D":
             return ("role", "fend"), (None, None, None, None)
-        if fk == "Q":
+        if fk in ("Q", "Qo"):
             return ("role", "qend"), (None, None, None, None)
         if fk[0] in "UW":
             pos = frame[2]
@@ -563,7 +571,7 @@ def role_view(v):
 # 6. what each token is ---------------------------------------------------------
 
 REDUCING = {"N", "D", "U", "Us", "W", "Ws"}
-OPAQUE = {"N", "D", "Q", "Us", "Ws"}
+OPAQUE = {"N", "D", "Q", "Qo", "Us", "Ws"}
 CHAIN = {"N", "D"}
 
 

@@ -835,23 +835,23 @@ def compile_insert(font, p, J, SP):
 # the first lookups: commands, then the tracks ----------------------------------
 
 def commands(font):
-    """\\frac and \\sqrt get their own backslash and letters; a symbol's
+    """\\frac, \\sqrt and \\overline get their own backslash and letters; a symbol's
     backslash becomes the symbol's own glyph (until the final passes) and
     its letters hide."""
     b, cmap = font.b, font.cmap
     letters = {cmap[ord(c)] for c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"}
     hid = font.glyph("G", ("hid",))
     to_hid = font.pl.nested({g: hid for g in letters})
-    lf = font.pl.nested({cmap[ord(c)]: font.char_glyph(("g", c, "Lf")) for c in "frac"})
-    ls = font.pl.nested({cmap[ord(c)]: font.char_glyph(("g", c, "Ls")) for c in "sqrt"})
+    letter_of = {head: font.pl.nested({cmap[ord(c)]: font.char_glyph(("g", c, P.LETTERS[head])) for c in name})
+                 for name, head in P.HEADS.items()}
     names = list(L.COMMANDS) + list(L.SYMBOLS)
     rules = []
     bs = cmap[ord("\\")]
     for name in sorted(names, key=lambda n: -len(n)):
         seq = [{bs}] + [{cmap[ord(c)]} for c in name]
         if name in L.COMMANDS:
-            tag, letter = ("F", lf) if name == "frac" else ("R", ls)
-            head = font.char_glyph(("g", "\\", tag))
+            tag = P.HEADS[name]
+            head, letter = font.char_glyph(("g", "\\", tag)), letter_of[tag]
         else:
             tag = f"Y{1 + len(name)}"
             head = font.char_glyph(("g", L.SYMBOLS[name], tag))
@@ -874,12 +874,10 @@ def initial(font):
     kinds = {"{": ("O",), "}": ("C",), "^": ("P",), "_": ("B",)}
     for ch in font.chars:
         add(("g", ch, None), kinds.get(ch, ("c",)))
-    add(("g", "\\", "F"), ("F",))
-    add(("g", "\\", "R"), ("R",))
-    for c in "frac":
-        add(("g", c, "Lf"), ("Lf",))
-    for c in "sqrt":
-        add(("g", c, "Ls"), ("Ls",))
+    for name, head in P.HEADS.items():
+        add(("g", "\\", head), (head,))
+        for c in name:
+            add(("g", c, P.LETTERS[head]), (P.LETTERS[head],))
     for name, ch in L.SYMBOLS.items():
         add(("g", ch, f"Y{1 + len(name)}"), ("Y", 1 + len(name)))
     mapping = {}

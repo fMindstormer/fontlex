@@ -32,6 +32,7 @@ x=\frac{-b\pm\sqrt{D}}{2a}
 \sqrt{x^2+y^2}
 x_{n+1}=\frac{x_n}{2}+\frac{a}{2x_n}
 \sum_{k=1}^n k=\frac{n(n+1)}{2}
+\overline{z+w}=\overline{z}+\overline{w}
 \frac{1}{1+\frac{1}{x}}
 \alpha_1^2+\beta_1^2 \theta\to\infty"""
 
@@ -69,7 +70,7 @@ textarea#code { min-height: 39rem; white-space: pre; overflow-x: auto; font-size
 
   <h2>What it typesets</h2>
   <ul>
-    <li><code>\\frac{a}{b}</code>, <code>\\sqrt{x}</code>, <code>x^2</code>, <code>x_1</code>,
+    <li><code>\\frac{a}{b}</code>, <code>\\sqrt{x}</code>, <code>\\overline{z}</code>, <code>x^2</code>, <code>x_1</code>,
     <code>x^{n+1}</code>, and both scripts at once, stacked (<code>x_1^2</code>, in either order).</li>
     <li>Braces as groups: <code>{a+b}^2</code>.</li>
     <li>Symbols: <ul class="keys">{{SYMBOLS}}</ul></li>

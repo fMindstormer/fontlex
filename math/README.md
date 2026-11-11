@@ -15,6 +15,8 @@ plain text, `(a+b)/(c+d)` or `x^2`, and leaves ordinary text alone: see
 - `\frac{a}{b}`, with the numerator and denominator centered over a bar.
 - `\sqrt{x}`, with a sign as tall as its contents need (one height for
   text, one over superscripts, one over fractions) and an overbar.
+- `\overline{z}`, a bar over its contents at the height a root's overbar
+  would have.
 - `x^2`, `x_1` and `x^{n+1}`, and both scripts at once, stacked over each
   other (`x_1^2` or `x^2_1`).
 - Braces as groups: `{a+b}^2`.
@@ -37,13 +39,13 @@ glyphs (characters by name and size, rules from their outlines) and
 compared with `layout.py`, a separate Python model of the layout, to the
 font unit.
 
-| Lines | Count | HarfBuzz 15.0.0 | Core Text (macOS 27) |
+| Lines | Count | HarfBuzz 14.6.0 | Core Text (macOS 27) |
 |---|---:|---:|---:|
-| Edge cases (`samples.EDGES`: incomplete and broken input) | 44 | 100% | 100% |
+| Edge cases (`samples.EDGES`: incomplete and broken input) | 58 | 100% | 100% |
 | Random formulas, some mistyped | 20,000 | 100% | 100% |
 
 The passes themselves, run in Python by `program.py`, match the model on
-40,000 more random lines.
+the same lines.
 
 In browsers I checked by screenshot. A page draws each line as text in the
 font and, in the same place, as the font's outlines placed where HarfBuzz
@@ -51,9 +53,9 @@ places them. Two screenshots, one with each, are compared pixel by pixel
 with 2 px of tolerance at 100 px per em, where the layout's smallest step
 (30 units) is 3 px. Results on 340 lines:
 
-- **Chrome 155:** the same on all of them.
+- **Chrome 155:** the same on all of them (before `\overline`).
 - **WebKit (macOS 27):** the same on all 235 lines narrow enough to
-  snapshot.
+  snapshot (before `\overline`).
 - **Chromium 139 and Firefox 158, on Linux and on Windows:** the same on
   all of them (`browsers.py`, run by CI's Browsers workflow).
 
@@ -61,9 +63,9 @@ Typing a formula into a text box key by key ends with the same pixels as
 setting the text at once, in all of these browsers but WebKit, which
 wasn't tried.
 
-The font has 47,653 glyphs, 1,097 substitution lookups (about 700 of them
-nested lookups shared by every pass, in 2,052 subtables) and 301 positioning
-lookups. It is 7.1 MB as TrueType and 0.79 MB as WOFF2. Shaping takes about 0.3 ms per
+The font has 47,996 glyphs, 1,188 substitution lookups (about 800 of them
+nested lookups shared by every pass, in 2,151 subtables) and 301 positioning
+lookups. It is 7.4 MB as TrueType and 0.80 MB as WOFF2. Shaping takes about 0.3 ms per
 character in HarfBuzz (12 ms for a 40-character line).
 
 ## How it works

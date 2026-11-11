@@ -5,7 +5,8 @@ A line is ordinary text in which a small subset of LaTeX is laid out:
 
     \\frac{N}{D}    a fraction            x^a  x^{..}   a superscript
     \\sqrt{X}       a square root         x_a  x_{..}   a subscript
-    {X}            a group                x_a^b  x^b_a  stacked scripts
+    \\overline{X}   a bar over X          x_a^b  x^b_a  stacked scripts
+    {X}            a group
     \\alpha ...     a symbol (SYMBOLS)
 
 A construct the font can't lay out shows as the source text, in the style
@@ -24,7 +25,8 @@ Every advance is a multiple of UNIT.
 layout(line) returns (ink, advance): ink is a sorted list of
   ("glyph", name, style, x, y)        a character's glyph (name in the base
                                       font) at `style`, its origin at (x, y)
-  ("rule", x0, x1, y0, y1)            a fraction bar or a root's overbar
+  ("rule", x0, x1, y0, y1)            a fraction bar, or a root's or
+                                      \\overline's overbar
   ("radical", style, kind, x, y)      a radical sign, `kind` its height
 and advance the line's width. Rules that touch or overlap at the same
 height are merged, since the font draws them in pieces.
@@ -64,7 +66,7 @@ SYMBOLS = {
     "to": "→", "rightarrow": "→", "leftarrow": "←", "leftrightarrow": "↔",
     "Rightarrow": "⇒", "iff": "⇔", "ldots": "…", "cdots": "⋯", "prime": "′",
 }
-COMMANDS = ("frac", "sqrt")
+COMMANDS = ("frac", "sqrt", "overline")
 
 
 def down(s):
@@ -159,7 +161,7 @@ def give_up(toks, line):
 # parsing -------------------------------------------------------------------
 
 class Node:
-    """A construct: kind "frac", "sqrt", "group", "sup" or "sub"; `parts`
+    """A construct: kind "frac", "sqrt", "overline", "group", "sup" or "sub"; `parts`
     are lists of items (a fraction has two, the others one); `start` and
     `end` its first and last token; `ok` whether it is laid out."""
 
@@ -215,7 +217,7 @@ def parse(toks):
             node.end = inner.end
             if not inner.complete:
                 return node
-            if node.kind == "sqrt":
+            if node.kind != "frac":
                 node.complete = True
                 return node
             if pos < len(toks) and toks[pos][0] == "{":
@@ -333,14 +335,16 @@ class Layout:
                 w += self.seq(it.parts[0], down(s), x + w, y + shift)
             elif it.kind == "group":
                 w += self.seq(it.parts[0], s, x + w, y)
-            elif it.kind == "sqrt":
+            elif it.kind in ("sqrt", "overline"):
                 kind = 2 if has(it.parts[0], lambda n: n.kind == "frac") else \
                     1 if has(it.parts[0], lambda n: n.kind == "sup") else 0
-                inner = self.seq(it.parts[0], s, x + w + WIDTH[s], y)
-                self.ink.append(("radical", s, kind, x + w, y))
+                sign = WIDTH[s] if it.kind == "sqrt" else 0     # an overline has no sign
+                inner = self.seq(it.parts[0], s, x + w + sign, y)
+                if sign:
+                    self.ink.append(("radical", s, kind, x + w, y))
                 top_ = y + root_top(s, kind)
-                self.ink.append(("rule", x + w + WIDTH[s], x + w + WIDTH[s] + inner, top_, top_ + RULE[s]))
-                w += WIDTH[s] + inner
+                self.ink.append(("rule", x + w + sign, x + w + sign + inner, top_, top_ + RULE[s]))
+                w += sign + inner
             elif it.kind == "frac":
                 t = down(s)
                 num, den = it.parts
