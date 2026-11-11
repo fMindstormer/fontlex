@@ -22,10 +22,12 @@ import argparse
 import atexit
 import io
 import os
+import queue
 import random
 import subprocess
 import sys
 import tempfile
+import threading
 import unicodedata
 from pathlib import Path
 
@@ -211,6 +213,7 @@ class DirectWrite:
     name = "directwrite"
     improvises_marks = False
     falls_back_clusters = False
+    TIMEOUT = 60             # seconds for one text
 
     def __init__(self, data: bytes, variations: dict[str, float] | None = None, features=()):
         if variations:
@@ -224,17 +227,26 @@ class DirectWrite:
             f.write(data)
         self.proc = subprocess.Popen([str(exe), self.path, *features], stdin=subprocess.PIPE,
                                      stdout=subprocess.PIPE, text=True, encoding="ascii")
+        # answers come through a thread, so a text DirectWrite takes too long on times out
+        self.answers = queue.Queue()
+        threading.Thread(target=lambda: [self.answers.put(line) for line in self.proc.stdout],
+                         daemon=True).start()
         atexit.register(self.close)
 
     def close(self):
-        self.proc.stdin.close()
+        self.proc.kill()
         self.proc.wait()
-        os.unlink(self.path)
+        if os.path.exists(self.path):
+            os.unlink(self.path)
 
     def shape(self, text):
         self.proc.stdin.write(text.encode().hex() + "\n")
         self.proc.stdin.flush()
-        out = self.proc.stdout.readline().split()
+        try:
+            out = self.answers.get(timeout=self.TIMEOUT).split()
+        except queue.Empty:
+            self.proc.kill()
+            raise TimeoutError(f"DirectWrite took over {self.TIMEOUT} s on {text!r}") from None
         if not out or out[0] == "ERR":
             raise RuntimeError(f"dwshape: {' '.join(out) or 'no answer'} for {text!r}")
         # DirectWrite reports UTF-16 offsets; map them to character indices.

@@ -50,7 +50,15 @@ def first_k(data, feats, k):
 
 
 def shaped(shaper_class, data, text):
-    glyphs, width = shaper_class(data).shape(text)
+    """The glyphs and width, or "timeout" where the shaper took too long."""
+    shaper = shaper_class(data)
+    try:
+        glyphs, width = shaper.shape(text)
+    except TimeoutError:
+        return "timeout"
+    finally:
+        if hasattr(shaper, "close"):
+            shaper.close()
     return [(g, round(x), round(y)) for g, _, x, y in glyphs], round(width)
 
 
@@ -68,6 +76,7 @@ def main():
     while hi - lo > 1:
         mid = (lo + hi) // 2
         lo, hi = (mid, hi) if same(mid) else (lo, mid)
+        print(f"  lookups < {mid}: {'same' if lo == mid else 'differ'}", flush=True)
     f = TTFont(path)
     lookup = f["GSUB"].table.LookupList.Lookup[lo]
     sub = lookup.SubTable[0]
@@ -79,8 +88,9 @@ def main():
     order = f.getGlyphOrder()
     for k in (lo, lo + 1):
         for cls in (T.HarfBuzz, T.SHAPERS[other]):
-            gl, w = shaped(cls, first_k(data, feats, k), text)
-            print(f"  lookups < {k}, {cls.name}: {' '.join(order[g] for g, _, _ in gl)}")
+            r = shaped(cls, first_k(data, feats, k), text)
+            names = r if r == "timeout" else " ".join(order[g] for g, _, _ in r[0])
+            print(f"  lookups < {k}, {cls.name}: {names}", flush=True)
 
 
 if __name__ == "__main__":
