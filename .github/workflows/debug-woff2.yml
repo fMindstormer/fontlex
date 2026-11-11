@@ -1,5 +1,5 @@
 name: Debug WOFF2
-on: workflow_dispatch
+on: { push: { branches: [math-round2], paths: [.github/workflows/debug-woff2.yml] } }
 permissions: { contents: read }
 jobs:
   woff2:
