@@ -32,6 +32,12 @@ jobs:
           python engines/compare.py build/Fontlex-Math.ttf directwrite "x^2" "\\frac{a}{b}"
       - name: Probes, one mechanism each
         run: python engines/probes.py directwrite
+      - name: The first lookup where DirectWrite parts from HarfBuzz
+        run: |
+          python engines/first_difference.py build/Fontlex-Math.ttf directwrite "x^2"
+          python engines/first_difference.py build/Fontlex-Math.ttf directwrite "\\frac{a}{b}"
+          python engines/first_difference.py build/Fontlex-RelaxedMath.ttf directwrite "(a+b)/(c+d)"
+          python engines/first_difference.py build/Fontlex-Markdown.ttf directwrite "**bold** and *it*"
       - name: Every font, in DirectWrite
         timeout-minutes: 30
         run: PYTHON=python N=300 engines/check_directwrite.sh
