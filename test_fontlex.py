@@ -19,10 +19,15 @@ lexed variant, so those marks are skipped and counted.
 """
 
 import argparse
+import atexit
 import io
+import os
 import random
+import subprocess
 import sys
+import tempfile
 import unicodedata
+from pathlib import Path
 
 import uharfbuzz as hb
 from fontTools.ttLib import TTFont
@@ -199,7 +204,51 @@ class CoreText:
         return glyphs, CT.CTLineGetTypographicBounds(line, None, None, None)[0]
 
 
-SHAPERS = {s.name: s for s in (HarfBuzz, CoreText)}
+class DirectWrite:
+    """DirectWrite, the shaper of Windows' own text APIs, through the helper
+    engines/dwshape.cpp (built to build/dwshape.exe, or set DWSHAPE). Like an
+    app, it shapes each script run on its own."""
+    name = "directwrite"
+    improvises_marks = False
+    falls_back_clusters = False
+
+    def __init__(self, data: bytes, variations: dict[str, float] | None = None, features=()):
+        if variations:
+            sys.exit("--shaper directwrite doesn't set font variations")
+        exe = Path(os.environ.get("DWSHAPE") or Path(__file__).parent / "build" / "dwshape.exe")
+        if not exe.exists():
+            sys.exit(f"--shaper directwrite needs Windows and {exe} (see engines/dwshape.cpp)")
+        # DirectWrite loads fonts from files.
+        fd, self.path = tempfile.mkstemp(suffix=".ttf")
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+        self.proc = subprocess.Popen([str(exe), self.path, *features], stdin=subprocess.PIPE,
+                                     stdout=subprocess.PIPE, text=True, encoding="ascii")
+        atexit.register(self.close)
+
+    def close(self):
+        self.proc.stdin.close()
+        self.proc.wait()
+        os.unlink(self.path)
+
+    def shape(self, text):
+        self.proc.stdin.write(text.encode().hex() + "\n")
+        self.proc.stdin.flush()
+        out = self.proc.stdout.readline().split()
+        if not out or out[0] == "ERR":
+            raise RuntimeError(f"dwshape: {' '.join(out) or 'no answer'} for {text!r}")
+        # DirectWrite reports UTF-16 offsets; map them to character indices.
+        char_at, u = {}, 0
+        for i, ch in enumerate(text):
+            char_at[u] = i
+            u += 2 if ord(ch) > 0xFFFF else 1
+        v = out[1:]
+        glyphs = [(int(v[k]), char_at[int(v[k + 1])], float(v[k + 2]), float(v[k + 3]))
+                  for k in range(0, len(v), 4)]
+        return glyphs, float(out[0])
+
+
+SHAPERS = {s.name: s for s in (HarfBuzz, CoreText, DirectWrite)}
 
 
 def verify(spec, font_data: bytes, base=None, shapers=("harfbuzz",), n=20000, seed=1,

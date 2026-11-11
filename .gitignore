@@ -9,3 +9,5 @@ french/data/
 build/extension/
 build/*.zip
 build/extension-firefox/
+build/*.exe
+build/*.obj

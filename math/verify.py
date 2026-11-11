@@ -71,7 +71,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("font", nargs="?")
     ap.add_argument("lines", nargs="*")
-    ap.add_argument("--shaper", action="append", choices=("harfbuzz", "coretext"))
+    ap.add_argument("--shaper", action="append", choices=("harfbuzz", "coretext", "directwrite"))
     ap.add_argument("--simulate", action="store_true",
                     help="check the passes in Python (program.py, assemble.py) instead of a font")
     ap.add_argument("--n", type=int, default=0, help="random lines, besides samples.EDGES")
@@ -96,8 +96,7 @@ def main():
         return 1 if bad else 0
     import test_fontlex as tf
     r = Reader(args.font)
-    kinds = {"harfbuzz": tf.HarfBuzz, "coretext": tf.CoreText}
-    shapers = {n: kinds[n](r.data) for n in (args.shaper or ["harfbuzz"])}
+    shapers = {n: tf.SHAPERS[n](r.data) for n in (args.shaper or ["harfbuzz"])}
     bad = 0
     for line in lines:
         want = model(line)

@@ -1,0 +1,28 @@
+name: DirectWrite
+# Every font shaped by DirectWrite, the shaper of Windows' own text APIs
+# (engines/dwshape.cpp), and checked as check.sh checks them in HarfBuzz.
+on:
+  push:
+    paths: [build/*.ttf, engines/**, test_fontlex.py, math/**, markdown/**, english/**, french/**,
+            specs/**, .github/workflows/directwrite.yml]
+  workflow_dispatch:
+permissions: { contents: read }
+jobs:
+  directwrite:
+    runs-on: windows-latest
+    defaults: { run: { shell: bash } }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with: { python-version: "3.13" }
+      - name: Install
+        run: pip install -r requirements.txt
+      - name: Build the DirectWrite helper
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          cmd /c "`"$vs\VC\Auxiliary\Build\vcvars64.bat`" && cl /nologo /O2 /EHsc /utf-8 /W4 engines\dwshape.cpp dwrite.lib /Fo:build\ /Fe:build\dwshape.exe"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          (Get-Item C:\Windows\System32\DWrite.dll).VersionInfo.ProductVersion
+      - name: Every font, in DirectWrite
+        run: PYTHON=python engines/check_directwrite.sh
