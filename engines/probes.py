@@ -54,6 +54,16 @@ PROBES = {
             reversesub gravecomb' acutecomb by acutecomb;
         } R;
         feature calt { lookup R; } calt;"""),
+    # the right b matches the first subtable, the others the second
+    "reverse chaining in two subtables, at three places": ("bbbc", """
+        lookup R { reversesub b' c by B; subtable; reversesub b' B by B; } R;
+        feature calt { lookup R; } calt;"""),
+    "the same, as an extension lookup": ("bbbc", """
+        lookup R useExtension { reversesub b' c by B; subtable; reversesub b' B by B; } R;
+        feature calt { lookup R; } calt;"""),
+    "reverse chaining, one subtable, as an extension lookup": ("bbbc", """
+        lookup R useExtension { reversesub b' [c B] by B; } R;
+        feature calt { lookup R; } calt;"""),
     "multiple substitution, then a context on its output": ("ab", """
         lookup M { sub a by a c; } M;
         lookup C { sub c' b by C; } C;
