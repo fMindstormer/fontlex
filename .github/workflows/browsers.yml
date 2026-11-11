@@ -10,7 +10,7 @@ jobs:
   math:
     strategy:
       fail-fast: false
-      matrix: { os: [ubuntu-latest, windows-latest] }
+      matrix: { os: [ubuntu-24.04, windows-latest] }   # Playwright 1.54 has no Chromium for Ubuntu 26.04
     runs-on: ${{ matrix.os }}
     defaults: { run: { shell: bash } }
     steps:

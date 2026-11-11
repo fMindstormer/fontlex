@@ -6,7 +6,7 @@ on:
 permissions: { contents: read }
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04      # Playwright 1.54 has no Chromium for Ubuntu 26.04 (ubuntu-latest since November 2026)
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
