@@ -21,7 +21,7 @@ jobs:
         shell: pwsh
         run: |
           $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
-          cmd /c "`"$vs\VC\Auxiliary\Build\vcvars64.bat`" && cl /nologo /O2 /EHsc /utf-8 /W4 engines\dwshape.cpp dwrite.lib /Fo:build\ /Fe:build\dwshape.exe"
+          cmd /c "`"$vs\VC\Auxiliary\Build\vcvars64.bat`" && cl /nologo /std:c++20 /O2 /EHsc /utf-8 /W4 engines\dwshape.cpp dwrite.lib /Fo:build\ /Fe:build\dwshape.exe"
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           (Get-Item C:\Windows\System32\DWrite.dll).VersionInfo.ProductVersion
       - name: Every font, in DirectWrite

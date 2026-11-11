@@ -11,7 +11,7 @@
 // GetGlyphPlacements). The default features (calt, mark and the rest) stay
 // on; FEATURE tags such as ss01 are turned on as well.
 //
-// Build (Visual Studio's x64 tools): cl /nologo /O2 /EHsc /utf-8 dwshape.cpp dwrite.lib
+// Build (Visual Studio's x64 tools): cl /nologo /std:c++20 /O2 /EHsc /utf-8 dwshape.cpp dwrite.lib
 
 #include <windows.h>
 #include <dwrite.h>
@@ -102,7 +102,7 @@ static std::wstring from_hex(const std::string &hex) {
         return L"";
     int n = MultiByteToWideChar(CP_UTF8, 0, bytes.data(), int(bytes.size()), nullptr, 0);
     std::wstring text(n, L'\0');
-    MultiByteToWideChar(CP_UTF8, 0, bytes.data(), int(bytes.size()), text.data(), n);
+    MultiByteToWideChar(CP_UTF8, 0, bytes.data(), int(bytes.size()), &text[0], n);
     return text;
 }
 
