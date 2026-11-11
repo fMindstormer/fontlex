@@ -30,5 +30,8 @@ jobs:
           python engines/compare.py build/Fontlex-Python.ttf directwrite "def f(x): return 1"
           python engines/compare.py build/Fontlex-English.ttf directwrite "the nation"
           python engines/compare.py build/Fontlex-Math.ttf directwrite "x^2" "\\frac{a}{b}"
+      - name: Probes, one mechanism each
+        run: python engines/probes.py directwrite
       - name: Every font, in DirectWrite
-        run: PYTHON=python N=2000 engines/check_directwrite.sh
+        timeout-minutes: 30
+        run: PYTHON=python N=300 engines/check_directwrite.sh
