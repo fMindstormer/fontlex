@@ -1,0 +1,23 @@
+name: Debug WOFF2
+on: workflow_dispatch
+permissions: { contents: read }
+jobs:
+  woff2:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with: { python-version: "3.13" }
+      - run: pip install -r requirements.txt
+      - run: |
+          python - <<'PY'
+          import brotli, fontTools, sys, hashlib
+          from fontTools.ttLib import TTFont
+          from fontTools.ttLib.woff2 import WOFF2Reader
+          print(sys.version, fontTools.version, getattr(brotli, "__version__", "?"))
+          f = TTFont("build/Fontlex-Math.ttf", recalcTimestamp=False); f.flavor = "woff2"; f.save("/tmp/m.woff2")
+          d = open("/tmp/m.woff2", "rb").read(); print(len(d), hashlib.sha256(d).hexdigest())
+          r = WOFF2Reader(open("/tmp/m.woff2", "rb"))
+          for tag, e in sorted(r.tables.items()):
+              print(tag, e.origLength, getattr(e, "transformLength", None))
+          PY
