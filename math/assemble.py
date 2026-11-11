@@ -52,8 +52,8 @@ def final(t):
     from the tracks still unfinished then: A and G may use any, C uses S, B
     and C, B uses S and B, and S only itself.
 
-    Glyphs: ("glyph", char, style, "b" or "m") a character (a base glyph
-    that advances, or a mark in a chain); ("radical", style, kind, b/m);
+    Glyphs: ("glyph", char, style, "b" or "m"[, accent]) a character (a
+    base glyph that advances, or a mark in a chain), with an accent over it; ("radical", style, kind, b/m);
     ("space",); ("hid",) nothing; movers ("dx", v), ("dy", w), ("dxy", v,
     w), links of a chain (v in 30s); ("dx@root", v), ("dx@fend", pad) and
     ("at@base",), marks on the glyph that starts or ends a fraction or ends
@@ -73,7 +73,7 @@ def final(t):
             return out
         if kind == "v":              # a virtual token (front.py) outside any construct
             return out
-        out["G"] = ("glyph", t["char"], st, "m" if k else "b")
+        out["G"] = ("glyph", t["char"], st, "m" if k else "b")     # its accent comes after (program.finals)
         extra = 2 * max(0, b[2]) if arg is not None and arg[1] == "second" and b[0] == "e2" else 0
         if k:
             out["S"] = ("dx", P.WIDTH[st] * 2)
@@ -171,7 +171,7 @@ def slot_key(slot, s):
         if kind == "v":
             return s
         if slot == "G":
-            return ("T", kind, st, k, 0, 0)
+            return ("T", kind[0], st, k, 0, 0)
         if slot == "S":
             return ("T", "c", st, k, 0, 0 if k else y)
         if slot == "A":
@@ -290,6 +290,8 @@ def place(toks):
                 if mode == "b":
                     pen += L.WIDTH[st]
                 ink.append(("glyph", g[1], st) + pos if kind == "glyph" else ("radical", st, g[2]) + pos)
+                if kind == "glyph" and len(g) > 4:
+                    ink.append(("accent", g[4], st) + pos)
             elif kind in ("root", "qbase", "fendbase", "adv", "hid"):
                 if kind != "hid":
                     base = (pen, y, g)
