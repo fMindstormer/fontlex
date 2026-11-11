@@ -111,7 +111,7 @@ x_{n+1}=\frac{x_n}{2}+\frac{a}{2x_n}
   by key, which ends as the same text set at once does. A keystroke that completes a construct changes glyphs
   before the caret, and with a simpler test font Chrome kept their old shaping, so this page still makes it lay
   the box out again on every input (by switching <code>font-kerning</code>). Native Windows apps (DirectWrite)
-  aren't checked.</p>
+  don't lay it out: DirectWrite ignores a kind of lookup the font relies on (<a href="https://github.com/fMindstormer/fontlex/blob/main/engines/README.md">details</a>).</p>
   <p class="note">Base font: JetBrains Mono (SIL Open Font License).</p>
 </main>
 <script>

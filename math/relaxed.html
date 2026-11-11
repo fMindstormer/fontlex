@@ -127,7 +127,8 @@ and/or, w/o, km/h, C/C++, 10/23/2026</textarea>
     where they belong, but take no room of their own.</li>
     <li><b>Where it's checked.</b> HarfBuzz (the shaper in Chrome and Firefox) and Core Text (Safari, macOS)
     against a model of the notation. By screenshot, Chrome and Safari's WebKit on macOS, and Chromium and Firefox
-    on Linux and Windows. Native Windows apps, which shape with DirectWrite, aren't checked.</li>
+    on Linux and Windows. Native Windows apps, which shape with DirectWrite,
+    don't lay it out: DirectWrite ignores a kind of lookup the font relies on (<a href="https://github.com/fMindstormer/fontlex/blob/main/engines/README.md">details</a>).</li>
   </ul>
 
   <h2>How it works</h2>

@@ -89,7 +89,8 @@ in HarfBuzz 14.6.0 (the shaper in Chrome, Edge and Firefox) and Core Text
 same pixels as HarfBuzz's layout (the other mixes Greek and Latin); in
 Safari's WebKit, 322 of 323, and the last is 1 pixel apart; in Chromium 139
 and Firefox 158 on Linux and on Windows, 348 of 349, the same exception.
-Native Windows apps (DirectWrite) are not tested.
+Native Windows apps (DirectWrite) don't lay it out: DirectWrite ignores a
+kind of lookup the font relies on (engines/README.md in the repository).
 
 Built from commit {commit}.
 

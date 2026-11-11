@@ -176,8 +176,11 @@ Browsers workflow runs it in Chromium and Firefox on Linux and Windows:
 - Chrome shapes canvas text (`fillText`, `measureText`) word by word, so on
   a canvas a construct can't span a space. Text boxes and other page text
   are shaped whole.
-- Native Windows apps, which shape text with DirectWrite, are not checked.
-  Browsers on Windows shape with HarfBuzz, and are.
+- Native Windows apps, which shape text with DirectWrite, don't typeset it:
+  DirectWrite ignores reverse chaining lookups inside extension lookups, and
+  the font's right-to-left passes are such lookups
+  ([engines/README.md](../engines/README.md)). Browsers on Windows shape
+  with HarfBuzz, and do.
 
 ## The relaxed notation
 
@@ -281,4 +284,4 @@ HarfBuzz.
   construct can't span two runs, so `e^(iπ)` stays text there. HarfBuzz on
   its own and WebKit lay it out.
 - A part is a whole word, so `2/3x` is 2 over 3x, and `x^2y` is x² y.
-- Native Windows apps (DirectWrite) are not checked.
+- Native Windows apps (DirectWrite) don't typeset it, for the same reason.

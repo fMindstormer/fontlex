@@ -112,7 +112,7 @@ textarea#code { min-height: 43.5rem; white-space: pre; overflow-x: auto; font-si
   by key, which ends as the same text set at once does. A keystroke that completes a construct changes glyphs
   before the caret, and with a simpler test font Chrome kept their old shaping, so this page still makes it lay
   the box out again on every input (by switching <code>font-kerning</code>). Native Windows apps (DirectWrite)
-  aren't checked.</p>
+  don't lay it out: DirectWrite ignores a kind of lookup the font relies on (<a href="https://github.com/fMindstormer/fontlex/blob/main/engines/README.md">details</a>).</p>
   <p class="note">Base font: JetBrains Mono (SIL Open Font License).</p>
 </main>
 <script>
@@ -235,7 +235,8 @@ textarea#code { min-height: 42rem; white-space: pre; overflow-x: auto; font-size
     where they belong, but take no room of their own.</li>
     <li><b>Where it's checked.</b> HarfBuzz (the shaper in Chrome and Firefox) and Core Text (Safari, macOS)
     against a model of the notation. By screenshot, Chrome and Safari's WebKit on macOS, and Chromium and Firefox
-    on Linux and Windows. Native Windows apps, which shape with DirectWrite, aren't checked.</li>
+    on Linux and Windows. Native Windows apps, which shape with DirectWrite,
+    don't lay it out: DirectWrite ignores a kind of lookup the font relies on (<a href="https://github.com/fMindstormer/fontlex/blob/main/engines/README.md">details</a>).</li>
   </ul>
 
   <h2>How it works</h2>
