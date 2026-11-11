@@ -37,6 +37,23 @@ PROBES = {
         feature calt { lookup MF; } calt;"""),
     "reverse chaining": ("abc", """
         feature calt { reversesub a b' by B; } calt;"""),
+    # each application reads what the one after it (to its right) wrote
+    "reverse chaining, applied at three places": ("bbbc", """
+        feature calt { reversesub b' [c B] by B; } calt;"""),
+    "reverse chaining over a mark filtering set, at three places": ("x\u0300q\u0300f\u0300h\u0301", """
+        table GDEF { GlyphClassDef [x q f h], , [gravecomb acutecomb], ; } GDEF;
+        lookup R {
+            lookupflag IgnoreBaseGlyphs UseMarkFilteringSet [gravecomb acutecomb];
+            reversesub gravecomb' acutecomb by acutecomb;
+        } R;
+        feature calt { lookup R; } calt;"""),
+    "reverse chaining skipping bases, no filtering set, at three places": ("x\u0300q\u0300f\u0300h\u0301", """
+        table GDEF { GlyphClassDef [x q f h], , [gravecomb acutecomb], ; } GDEF;
+        lookup R {
+            lookupflag IgnoreBaseGlyphs;
+            reversesub gravecomb' acutecomb by acutecomb;
+        } R;
+        feature calt { lookup R; } calt;"""),
     "multiple substitution, then a context on its output": ("ab", """
         lookup M { sub a by a c; } M;
         lookup C { sub c' b by C; } C;
