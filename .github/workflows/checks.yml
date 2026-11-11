@@ -23,4 +23,15 @@ jobs:
       - name: Build every font and page, and run every check HarfBuzz and Chromium can do
         run: ./check.sh
       - name: The rebuild matches the repository byte for byte
-        run: git status --short && git diff --stat --exit-code
+        # WOFF2 by what it holds: Brotli can compress the same font a few bytes
+        # differently on another machine (Fontlex Math's did, by 280 bytes)
+        run: |
+          for f in $(git diff --name-only -- '*.woff2'); do
+            git show "HEAD:$f" > "$RUNNER_TEMP/committed.woff2"
+            python -c 'import sys; from fontTools.ttLib import TTFont; from io import BytesIO
+          def ttf(p):
+              f = TTFont(p, recalcTimestamp=False); f.flavor = None; b = BytesIO(); f.save(b); return b.getvalue()
+          sys.exit(ttf(sys.argv[1]) != ttf(sys.argv[2]))' "$RUNNER_TEMP/committed.woff2" "$f" \
+              && echo "$f: compressed differently, the same font" && git checkout -- "$f"
+          done
+          git status --short && git diff --stat --exit-code
