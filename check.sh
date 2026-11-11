@@ -141,6 +141,12 @@ if wants english-syllables; then
     echo "== english syllables: test ($shapers)"
     "$PY" test_fontlex.py specs/english-syllables.yaml build/Fontlex-English-Syllables.ttf \
         --base fonts/NotoSans-Regular.ttf $shapers --n "$N"
+    echo "== english syllables: demo page"
+    "$PY" english/syllables/build_page.py --out english/syllables/demo.html > /dev/null
+    if [ $macos = yes ]; then
+        echo "== english syllables: demo palettes in WebKit"
+        "$PY" demo/check_webkit.py specs/english-syllables.yaml english/syllables/demo.html
+    fi
 fi
 
 if wants french; then

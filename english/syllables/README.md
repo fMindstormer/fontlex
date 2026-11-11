@@ -6,7 +6,9 @@ syllable font does for German (`german/syllables/`): *lit-tle ti-ger*,
 renders color fonts with OpenType features.
 
 The font is compiled from `specs/english-syllables.yaml`, on Noto Sans. This
-is a first version: no demo page yet, and no review by teachers.
+is a first version, not yet reviewed by teachers. `english/syllables/demo.html`
+is a page with the font in a text box
+([online](https://fmindstormer.github.io/fontlex/english-syllables.html)).
 
 ## Where the syllables come from
 
@@ -71,6 +73,7 @@ python english/syllables/patgen.py english/syllables/data/mhyph.txt \
 python fontlex.py specs/english-syllables.yaml --base fonts/NotoSans-Regular.ttf --out build
 python test_fontlex.py specs/english-syllables.yaml build/Fontlex-English-Syllables.ttf \
     --base fonts/NotoSans-Regular.ttf --shaper harfbuzz --shaper coretext
+python english/syllables/build_page.py --out english/syllables/demo.html
 ```
 
 ## Licenses

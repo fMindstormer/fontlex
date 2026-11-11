@@ -324,6 +324,7 @@ know of earlier work we've missed, please open an issue.
 | [Relaxed math](https://fmindstormer.github.io/fontlex/relaxed-math.html) ([README](math/README.md#the-relaxed-notation)) | typesets math as people type it in plain text, `(a+b)/(c+d)`, `x^2`, `sqrt(x)`, and leaves prose alone: `and/or`, `w/o`, dates and paths stay text | the same, against a model of the notation; of 461,327 lines of man pages and READMEs, 311 get a construct, about half of them real math |
 | [German genders](https://fmindstormer.github.io/fontlex/german.html) ([README](german/README.md)) | colors nouns by gender, from lists learned from a treebank and Wiktionary | on held-out newspaper text, 97% of nouns colored, 99.5% of them right |
 | [German syllables](https://fmindstormer.github.io/fontlex/german-syllables.html) ([README](german/syllables/README.md)) | colors syllables in turn, as German schools teach reading | 97.5% of held-out first-reader words split exactly right |
+| [English syllables](https://fmindstormer.github.io/fontlex/english-syllables.html) ([README](english/syllables/README.md)) | colors syllables in turn, as dictionaries split them, with patterns trained on the Moby Hyphenation List | 99.7% of frequent words and 83.9% of held-out words split as the list does; not yet reviewed by teachers |
 | [English pronunciation](https://fmindstormer.github.io/fontlex/english.html) ([README](english/README.md)) | marks stressed and reduced vowels and silent letters of 30,000 words; noun/verb pairs read the word before (*the record*, *to record*) or an invisible [reading marker](markers/README.md); a stylistic set turns each kind of hint off | 170,817 of 170,817 cases as the lexicon says, in HarfBuzz and Core Text; the lexicon awaits review by fluent speakers |
 | [French pronunciation](https://fmindstormer.github.io/fontlex/french.html) ([README](french/README.md)) | marks silent letters, nasal vowels, droppable schwas and obligatory liaison (*les‿amis*, but not *les héros*) for 30,000 words; reading markers as in English; a stylistic set turns each kind of hint off | 202,190 of 202,190 cases as the lexicon says, in HarfBuzz and Core Text; the lexicon awaits review by fluent speakers |
 | [Browser extension](extension/README.md) | draws any web page in a learner font, matched to the page's language | 21 checks in Chromium and the same 21 in Firefox, including a page with a strict CSP and hiding each kind of hint |
@@ -344,9 +345,9 @@ Then use the font in CSS:
 textarea { font-family: "Fontlex Python", monospace; font-palette: light; }
 ```
 
-`./check.sh` builds all ten fonts and the demo pages and runs every check
+`./check.sh` builds all eleven fonts and the demo pages and runs every check
 the machine supports; `./check.sh markdown` (or `unit`, `python`,
-`javascript`, `german`, `syllables`, `math`, `english`, `french`, `extension`, `theory`) runs some of it.
+`javascript`, `german`, `syllables`, `math`, `english`, `english-syllables`, `french`, `extension`, `theory`) runs some of it.
 On macOS, `pip install -r requirements-macos.txt` adds the Core Text
 (Safari, native apps) and WebKit checks. The German treebank scores need
 data that isn't in the repository (`german/fetch_ud.sh german/data`);
@@ -361,7 +362,7 @@ page byte for byte, so `git status` afterwards shows nothing.
 | `german/` | German noun gender (lists learned from a treebank and Wiktionary) and `german/syllables/` |
 | `markdown/` | the GitHub Flavored Markdown font: model, compiler, verification, demo |
 | `math/` | the math fonts, LaTeX and the relaxed notation: layout models, passes with a simulator, compiler, verification, demos |
-| `english/` | the English pronunciation-hint font: aligner, lexicon, compiler, verification, demo, review sheet |
+| `english/` | the English pronunciation-hint font: aligner, lexicon, compiler, verification, demo, review sheet; and `english/syllables/` |
 | `french/` | the French pronunciation-hint font, with liaison: aligner, lexicon, compiler, verification, demo |
 | `markers/` | invisible reading markers for noun/verb pairs, and a spaCy script that adds them |
 | `extension/` | a browser extension that draws web pages in the learner fonts, with its Chromium and Firefox test |
