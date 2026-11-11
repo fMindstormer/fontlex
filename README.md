@@ -387,8 +387,10 @@ page byte for byte, so `git status` afterwards shows nothing.
   characters. Keeping state on empty glyphs of its own makes the cost a sum
   instead of a product, at a price in time; for Fontlex Markdown that price
   is unmeasured.
-- **More engines.** Native Windows apps shape text with DirectWrite, and
-  nothing here is checked there yet (browsers on Windows use HarfBuzz).
+- **More engines.** Native Windows apps shape text with DirectWrite, which
+  ignores reverse chaining lookups once they are extension lookups, as large
+  fonts need: the math, Markdown and pronunciation fonts break there
+  ([engines/README.md](engines/README.md)). Browsers on Windows use HarfBuzz.
 
 ## License
 
