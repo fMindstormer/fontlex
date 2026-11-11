@@ -106,16 +106,26 @@ def restore_space(v):
 
 # tokens -------------------------------------------------------------------
 
+# A command's backslash and the kind of its letters: \frac, \sqrt, and H
+# for \overline and the accents, whose letters say which it is.
+HEADS = {"frac": "F", "sqrt": "R", "overline": "H", **{a: "H" for a in L.ACCENTS}}
+HEAD_KINDS = ("F", "R", "H")
+LETTERS = {"frac": "Lf", "sqrt": "Ls", "overline": "Lo", **{a: "L" + c for a, c in L.ACCENTS.items()}}
+LETTER_KINDS = tuple(LETTERS.values())
+ACCENT_FRAMES = {"A" + c for c in L.ACCENTS.values()}     # an accent's braces: a group, but for the accent
+TAGS = set(HEAD_KINDS) | set(LETTER_KINDS) | {"Y"}
+
+
 def tokens(line):
     """The font's tokens: dicts with "text" (their characters), "char"
     (what the token's glyph shows), and the tracks' first values."""
     out = []
     for kind, start, end, value in L.lex(line):
         if kind == "cmd":
-            first = "F" if value == "frac" else "R"
+            first = HEADS[value]
             out.append({"text": "\\", "char": "\\", "S": (first,)})
             for ch in line[start + 1:end]:
-                out.append({"text": ch, "char": ch, "S": ("Lf" if first == "F" else "Ls",)})
+                out.append({"text": ch, "char": ch, "S": (LETTERS[value],)})
             continue
         if kind == "sym":
             out.append({"text": line[start:end], "char": value, "S": ("Y", end - start)})
@@ -124,7 +134,7 @@ def tokens(line):
         out.append({"text": value, "char": value, "S": s})
     for t in out:
         if t["S"] != (" ",):
-            tag = {"F": "F", "R": "R", "Lf": "Lf", "Ls": "Ls", "Y": "Y"}.get(t["S"][0])
+            tag = t["S"][0] if t["S"][0] in TAGS else None
             t["G"] = ("g", t["char"], tag)
             for tr in TRACKS[1:]:
                 t[tr] = BLANK
@@ -189,7 +199,8 @@ def demote(v, depth):
 
 # 2. what each brace belongs to ----------------------------------------------
 
-OPENS = {"Lf": "N", "Ls": "Q", "P": "U", "B": "W"}
+# Qo: an overline's, a root without a sign; Ah, Ab...: an accent's
+OPENS = {"Lf": "N", "Ls": "Q", "Lo": "Qo", "P": "U", "B": "W", **{"L" + c: "A" + c for c in L.ACCENTS.values()}}
 
 
 def is_open(v):
@@ -258,9 +269,9 @@ def check_b_input(s):
         return ("O", s[1], s[2] == "G")
     if k == "C":
         return ("C", s[1])
-    if k in ("F", "R", "P", "B"):
+    if k in HEAD_KINDS + ("P", "B"):
         return ("start", s[1])
-    if k in ("Lf", "Ls", "Z"):
+    if k in LETTER_KINDS + ("Z",):
         return ("cont",)
     if k in ("c", "b"):
         return ("t", s[1], 1)
@@ -322,11 +333,11 @@ def valid_input(level):
         d = depth_of(s)
         if k == " ":
             return ("sp", d)
-        if d >= level or k in ("Lf", "Ls", "Z"):
+        if d >= level or k in LETTER_KINDS + ("Z",):
             return ("in",)
         if d < level - 1:
             return ("x",)
-        if k in ("F", "R", "P", "B"):
+        if k in HEAD_KINDS + ("P", "B"):
             return (k,)
         if k in ("c", "Y"):
             return ("t",)
@@ -371,9 +382,9 @@ def valid_step(state, v):
             valid = pending is not None and pending[0] == "C" and pending[1]
         stacked = kind in ("U", "W") and valid and pending[2]
         return ("O", valid), (None, (kind, valid, stacked) if kind != "G" else None, "x")
-    if k in ("F", "R"):
-        want = "N" if k == "F" else "Q"
-        valid = root is not None and root[0] == want and root[1]
+    if k in HEAD_KINDS:
+        want = {"F": ("N",), "R": ("Q",), "H": ("Qo",) + tuple(ACCENT_FRAMES)}[k]
+        valid = root is not None and root[0] in want and root[1]
         return ("root", valid), (pending, None, "x")
     if k in ("P", "B"):
         want = "U" if k == "P" else "W"
@@ -411,7 +422,7 @@ def finish_valid(s):
         return ("Ov", s[1], s[2], False)
     if k == "Ck":
         return ("Cv", s[1], s[2], False)
-    if k in ("F", "R"):
+    if k in HEAD_KINDS:
         return (k + "v", s[1], False)
     if k in ("P", "B"):
         return (k + "v", s[1], False, False, False)
@@ -443,11 +454,11 @@ def role_input(level):
             return ("in",)
         if d < level - 1:
             return ("out",)
-        if k in ("Fv", "Rv"):
+        if k in ("Fv", "Rv", "Hv"):
             return (k[0], s[2])
         if k in ("Pv", "Bv"):
             return (k[0],) + s[2:]
-        if k in ("Lf", "Ls"):
+        if k in LETTER_KINDS:
             return ("L",)
         if k == "Z":
             return ("Z",)
@@ -466,7 +477,7 @@ def role_step(state, v):
       a construct not laid out (end "D": a fraction's, which ends at the
       denominator's closer, or the numerator's when there is none), or
       ("D?",) between a fraction's two parts;
-    root: ("F",) or ("R",) while a laid out command's letters pass, or
+    root: ("F",), ("R",) or ("H",) while a laid out command's letters pass, or
       ("S", kind, pos) between a script's ^ or _ and its brace;
     pend: (kind, pos) for a script whose argument is the next token;
     last: "sup1" or "sub1" right after the first script of a stacked pair.
@@ -475,12 +486,12 @@ def role_step(state, v):
     frame, root, pend, last = state
     k = v[0]
     nlast = None
-    if k == "F" or k == "R":
+    if k in HEAD_KINDS:
         if v[1]:
-            return ("role", "froot" if k == "F" else "sroot"), (frame, (k,), None, None)
+            return ("role", {"F": "froot", "R": "sroot", "H": "oroot"}[k]), (frame, (k,), None, None)
         return ("out",), (frame, None, None, None)
     if k == "L":
-        if root is not None and root[0] in ("F", "R"):
+        if root is not None and root[0] in HEAD_KINDS:
             return ("role", "hide"), state
         return ("out",), (frame, None, None, None)
     if k == "Z":                     # a fraction's slash, between its parts (front.py)
@@ -522,7 +533,7 @@ def role_step(state, v):
             pos = root[2] if root is not None and root[0] == "S" else "alone"
             fk = kind + ("s" if pos != "alone" else "")
             return ("role", "gopen"), (("ok", fk, pos), None, None, None)
-        return ("role", {"N": "nopen", "Q": "qopen"}.get(kind, "bopen")), (("ok", kind), None, None, None)
+        return ("role", {"N": "nopen", "Q": "qopen", "Qo": "qopen"}.get(kind, "bopen")), (("ok", kind), None, None, None)
     if k == "C":
         kind, broken = v[1], v[2]
         if frame is not None and frame[0] == "bad":
@@ -535,7 +546,7 @@ def role_step(state, v):
             return ("role", "mid"), (("D?",), None, None, None)
         if fk == "D":
             return ("role", "fend"), (None, None, None, None)
-        if fk == "Q":
+        if fk in ("Q", "Qo"):
             return ("role", "qend"), (None, None, None, None)
         if fk[0] in "UW":
             pos = frame[2]
@@ -563,7 +574,7 @@ def role_view(v):
 # 6. what each token is ---------------------------------------------------------
 
 REDUCING = {"N", "D", "U", "Us", "W", "Ws"}
-OPAQUE = {"N", "D", "Q", "Us", "Ws"}
+OPAQUE = {"N", "D", "Q", "Qo", "Us", "Ws"}
 CHAIN = {"N", "D"}
 
 
@@ -591,33 +602,75 @@ def describe(path):
 
 def fold(prev, o, level):
     """One level pass's output, read after the ones above it: ("run", style,
-    chain depth, opaque, y) while the token is inside laid out frames, then
-    ("done", result) with what combine() would give, less the token's kind."""
+    chain depth, opaque, y[, accent]) while the token is inside laid out
+    frames, then ("done", result) with what combine() would give, less the
+    token's kind. The accent, the innermost accent frame's code, is there
+    for Fontlex Math (RUN_ACCENTS), not for the relaxed notation (RUN)."""
     if prev[0] == "done":
         return prev
-    _, st, k, op, y = prev
+    _, st, k, op, y, *acc = prev
     if o[0] in ("out", "inv"):
-        return ("done", ("T", st, k, op, y))
+        return ("done", ("T", st, k, op, y, *acc))
     if o[0] == "in":
-        return ("done", ("T", st, k, op, y)) if level > 3 else enter(prev, o[1], level)
+        return ("done", ("T", st, k, op, y, *acc)) if level > 3 else enter(prev, o[1], level)
     name, *details = o[1:]
     if name == "arg":
         skind, pos = details
-        _, st2, k2, op2, y2 = enter(prev, skind + ("s" if pos != "alone" else ""), level)
-        return ("done", ("Targ", st2, k2, op2, y2, (skind, pos, st, op)))
+        _, st2, k2, op2, y2, *acc = enter(prev, skind + ("s" if pos != "alone" else ""), level)
+        return ("done", ("Targ", st2, k2, op2, y2, (skind, pos, st, op), *acc))
     return ("done", ("R", name, level, st, k, op, y) + tuple(details))
 
 
 def enter(prev, frame, level):
-    _, st, k, op, y = prev
+    _, st, k, op, y, *acc = prev
     if frame in CHAIN:
         k, y = k + 1, None
     elif k == 0:
         y += shift_of(frame, st)
-    return ("run", min(2, st + (frame in REDUCING)), k, level if frame in OPAQUE else op, y)
+    if frame in ACCENT_FRAMES:
+        acc = [frame[1]]
+    return ("run", min(2, st + (frame in REDUCING)), k, level if frame in OPAQUE else op, y, *acc)
 
 
 RUN = ("run", 0, 0, 0, 0)
+RUN_ACCENTS = ("run", 0, 0, 0, 0, None)
+
+
+def fold_accent(c):
+    """The accent a character gets, from the fold's result."""
+    r = c[1] if c[0] == "done" else ("T",) + c[1:]
+    if r[0] == "T" and len(r) > 5:
+        return r[5]
+    if r[0] == "Targ" and len(r) > 6:
+        return r[6]
+    return None
+
+
+def put_accent(g, c):
+    """A character's glyph tagged with its accent ("A" and the code), which
+    only the final glyph reads: no pass between multiplies by it."""
+    acc = fold_accent(c)
+    return (g[0], g[1], (g[2] or "") + "A" + acc) + g[3:] if acc else g
+
+
+def accent_of(g):
+    tag = g[2] if len(g) > 2 else None
+    return tag[-1] if tag and len(tag) > 1 and tag[-2] == "A" else None
+
+
+def accent_to_role(s, acc):
+    """Before the finals: the accent (accent_of the glyph) moves to the
+    role, as ("T", kind + code, ...), so the final glyph is made from the
+    role and the glyph is the plain character again."""
+    return (s[0], s[1] + acc) + s[2:] if acc and s[0] == "T" else s
+
+
+def role_accent(s):
+    return s[1][1] if s[0] == "T" and len(s[1]) > 1 else None
+
+
+def strip_accent(g):
+    return (g[0], g[1], g[2][:-2] or None) + g[3:] if accent_of(g) else g
 
 
 def fold_finish(s, c):
@@ -625,9 +678,9 @@ def fold_finish(s, c):
     kind = s[0] if s[0] in ("Y", " ") else "c"
     r = c[1] if c[0] == "done" else ("T",) + c[1:]
     if r[0] == "T":
-        return ("T", kind) + r[1:]
+        return ("T", kind) + r[1:5]
     if r[0] == "Targ":
-        return ("T", kind) + r[1:]
+        return ("T", kind) + r[1:6]
     return r
 
 
@@ -1161,10 +1214,13 @@ def program(relaxed=False):
         P += [Derive(tr, ["S"], lambda t, s, l=level: role_input(l)(s), spaces=True),
               LTR(tr, role_step, (None, None, None, None), spaces=True), strip(tr, spaces=True),
               Map("S", lambda v: (" ", v[1]) if v[0] == "sp" else v, spaces=True)]
-    P += [Derive("A", [], lambda a: fold(RUN, a, 1)),
+    run = RUN if relaxed else RUN_ACCENTS
+    P += [Derive("A", [], lambda a: fold(run, a, 1)),
           Derive("B", ["A"], lambda b, a: fold(a, b, 2)),
-          Derive("C", ["B"], lambda c, b: fold(b, c, 3)),
-          Derive("S", ["C"], fold_finish),
+          Derive("C", ["B"], lambda c, b: fold(b, c, 3))]
+    if not relaxed:
+        P.append(Derive("G", ["C"], put_accent))
+    P += [Derive("S", ["C"], fold_finish),
           Map("S", lambda v: ("T", " ", 0, 0, 0, 0) if v[0] == " " else v, spaces=True)]
     if relaxed:
         P.append(Derive("S", ["G"], mark_virtual, keys=[is_virtual]))
@@ -1177,6 +1233,8 @@ def program(relaxed=False):
         P += [Derive("C", ["S"], numerator_flag(level)),
               Context("C", copy_width, targets=lambda v, l=level: v == ("wN?", l),
                       ctx_track="B", ctx_view=lambda v, l=level: v[0] == "mid" and v[1] == l)]
+    if not relaxed:
+        P += [Derive("S", ["G"], accent_to_role, keys=[accent_of]), Map("G", strip_accent)]
     P += finals()
     return P
 
@@ -1203,7 +1261,9 @@ def finals():
         def fn(target, s, b):
             if name == "G" and target[0] == "fendbase":
                 return target
-            return made(name, s, b, char=target[1] if name == "G" else None)
+            if name == "G":
+                return made(name, s, b, char=target[1])
+            return made(name, s, b)
         return fn
     def keyed(name, sources=("S", "B")):
         keys = [lambda s, n=name: assemble.slot_key(n, s)]
@@ -1215,6 +1275,9 @@ def finals():
          Derive("B", ["S"], lambda b, nc: assemble.localize(b, nc), keys=[assemble.need_class]),
          final(Derive("A", ["S", "B"], slot("A"), keys=keyed("A"))),
          final(Derive("G", ["S", "B"], slot("G"), keys=keyed("G"))),
+         # an accented character's glyph, from the plain one (see accent_to_role)
+         final(Derive("G", ["S"], lambda g, acc: g + (acc,) if acc and g[0] == "glyph" else g,
+                      keys=[role_accent])),
          final(Derive("C", ["S", "B"], slot("C"), keys=keyed("C"))),
          final(Derive("B", ["S"], lambda b, s, f=slot("B"): f(b, s, assemble.needed(b, "B")), keys=keyed("B", ("S",)))),
          final(Map("S", lambda v: made("S", v))),

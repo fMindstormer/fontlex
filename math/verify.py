@@ -5,7 +5,8 @@
     python math/verify.py --simulate [--n N] [--relaxed]
 
 What a shaped line draws is read back from the glyphs: a character's glyph
-(by name: its base glyph, scaled by style), a radical (by name), and rules
+(by name: its base glyph, scaled by style, and its accent), a radical (by
+name), and rules
 (the outline's box). Lines are samples.EDGES and N random ones unless
 given; --simulate checks the passes in Python, before any font is built.
 With --relaxed, the relaxed notation (relaxed.py: samples.RELAXED_EDGES
@@ -38,9 +39,10 @@ class Reader:
 
     def ink(self, name, x, y):
         """What the glyph draws at (x, y), as layout.py describes it."""
-        m = re.fullmatch(r"(.+)\.s(\d)([bm])", name)
+        m = re.fullmatch(r"(.+)\.s(\d)([bm])(?:\.a(\w))?", name)
         if m and m.group(1) in self.char_of:
-            return ("glyph", self.char_of[m.group(1)], int(m.group(2)), x, y)
+            out = ("glyph", self.char_of[m.group(1)], int(m.group(2)), x, y)
+            return [out, ("accent", m.group(4), int(m.group(2)), x, y)] if m.group(4) else out
         m = re.fullmatch(r"_radical(\d)(\d)([bm])", name)
         if m:
             return ("radical", int(m.group(1)), int(m.group(2)), x, y)
@@ -62,7 +64,9 @@ class Reader:
                 ink.append(("missing",))
                 continue
             r = self.ink(self.order[g], round(x), round(y))
-            if r is not None:
+            if isinstance(r, list):
+                ink += r
+            elif r is not None:
                 ink.append(r)
         return sorted(L.merge(ink)), round(width)
 

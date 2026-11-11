@@ -32,6 +32,8 @@ x=\frac{-b\pm\sqrt{D}}{2a}
 \sqrt{x^2+y^2}
 x_{n+1}=\frac{x_n}{2}+\frac{a}{2x_n}
 \sum_{k=1}^n k=\frac{n(n+1)}{2}
+\overline{z+w}=\overline{z}+\overline{w}
+\vec{F}=m\ddot{x}, \hat{p}, \tilde{n}, \bar{x}_i
 \frac{1}{1+\frac{1}{x}}
 \alpha_1^2+\beta_1^2 \theta\to\infty"""
 
@@ -44,7 +46,7 @@ PAGE = """<!doctype html>
 {{STYLE}}
 main { max-width: 56rem; }
 .nav { margin: 0 0 .75rem; }
-textarea#code { min-height: 39rem; white-space: pre; overflow-x: auto; font-size: 1.6rem; line-height: 2.7; }
+textarea#code { min-height: 43.5rem; white-space: pre; overflow-x: auto; font-size: 1.6rem; line-height: 2.7; }
 .keys { display: flex; flex-wrap: wrap; gap: .35rem .9rem; padding: 0; list-style: none; font-size: .92rem; }
 .keys code { white-space: nowrap; }
 </style>
@@ -69,7 +71,9 @@ textarea#code { min-height: 39rem; white-space: pre; overflow-x: auto; font-size
 
   <h2>What it typesets</h2>
   <ul>
-    <li><code>\\frac{a}{b}</code>, <code>\\sqrt{x}</code>, <code>x^2</code>, <code>x_1</code>,
+    <li><code>\\frac{a}{b}</code>, <code>\\sqrt{x}</code>, <code>\\overline{z}</code>, accents (<code>\\hat{x}</code>, <code>\\bar{x}</code>,
+    <code>\\vec{v}</code>, <code>\\dot{x}</code>, <code>\\ddot{x}</code>, <code>\\tilde{n}</code>: on each character of
+    what they cover), <code>x^2</code>, <code>x_1</code>,
     <code>x^{n+1}</code>, and both scripts at once, stacked (<code>x_1^2</code>, in either order).</li>
     <li>Braces as groups: <code>{a+b}^2</code>.</li>
     <li>Symbols: <ul class="keys">{{SYMBOLS}}</ul></li>

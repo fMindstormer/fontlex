@@ -5,7 +5,9 @@ A line is ordinary text in which a small subset of LaTeX is laid out:
 
     \\frac{N}{D}    a fraction            x^a  x^{..}   a superscript
     \\sqrt{X}       a square root         x_a  x_{..}   a subscript
-    {X}            a group                x_a^b  x^b_a  stacked scripts
+    \\overline{X}   a bar over X          x_a^b  x^b_a  stacked scripts
+    \\hat{X} ...    an accent (ACCENTS) on each character of X
+    {X}            a group
     \\alpha ...     a symbol (SYMBOLS)
 
 A construct the font can't lay out shows as the source text, in the style
@@ -24,7 +26,10 @@ Every advance is a multiple of UNIT.
 layout(line) returns (ink, advance): ink is a sorted list of
   ("glyph", name, style, x, y)        a character's glyph (name in the base
                                       font) at `style`, its origin at (x, y)
-  ("rule", x0, x1, y0, y1)            a fraction bar or a root's overbar
+  ("accent", code, style, x, y)       an accent (ACCENTS) over the character
+                                      at (x, y)
+  ("rule", x0, x1, y0, y1)            a fraction bar, or a root's or
+                                      \\overline's overbar
   ("radical", style, kind, x, y)      a radical sign, `kind` its height
 and advance the line's width. Rules that touch or overlap at the same
 height are merged, since the font draws them in pieces.
@@ -64,7 +69,10 @@ SYMBOLS = {
     "to": "→", "rightarrow": "→", "leftarrow": "←", "leftrightarrow": "↔",
     "Rightarrow": "⇒", "iff": "⇔", "ldots": "…", "cdots": "⋯", "prime": "′",
 }
-COMMANDS = ("frac", "sqrt")
+# Accents: the command and its code. An accent is drawn over each character
+# of its argument (the innermost accent, where they nest).
+ACCENTS = {"hat": "h", "bar": "b", "vec": "v", "dot": "d", "ddot": "e", "tilde": "t"}
+COMMANDS = ("frac", "sqrt", "overline") + tuple(ACCENTS)
 
 
 def down(s):
@@ -159,7 +167,7 @@ def give_up(toks, line):
 # parsing -------------------------------------------------------------------
 
 class Node:
-    """A construct: kind "frac", "sqrt", "group", "sup" or "sub"; `parts`
+    """A construct: kind "frac", "sqrt", "overline", an accent, "group", "sup" or "sub"; `parts`
     are lists of items (a fraction has two, the others one); `start` and
     `end` its first and last token; `ok` whether it is laid out."""
 
@@ -215,7 +223,7 @@ def parse(toks):
             node.end = inner.end
             if not inner.complete:
                 return node
-            if node.kind == "sqrt":
+            if node.kind != "frac":
                 node.complete = True
                 return node
             if pos < len(toks) and toks[pos][0] == "{":
@@ -290,57 +298,67 @@ class Layout:
         width = self.seq(self.items, 0, 0, 0, top=True)
         return sorted(merge(self.ink)), width
 
-    def glyph(self, tok, s, x, y):
+    def glyph(self, tok, s, x, y, acc=None):
         kind, start, end, value = self.toks[tok]
         if kind == " ":
             return WIDTH[0]
         if kind == "sym":
-            self.ink.append(("glyph", value, s, x, y))
+            self.char(value, s, x, y, acc)
             return WIDTH[s]
         # a command (\frac, \sqrt) is drawn letter by letter
         for k, ch in enumerate(self.line[start:end]):
-            self.ink.append(("glyph", ch, s, x + k * WIDTH[s], y))
+            self.char(ch, s, x + k * WIDTH[s], y, acc)
         return (end - start) * WIDTH[s]
 
-    def source(self, node, s, x, y):
+    def char(self, ch, s, x, y, acc):
+        self.ink.append(("glyph", ch, s, x, y))
+        if acc:
+            self.ink.append(("accent", acc, s, x, y))
+
+    def source(self, node, s, x, y, acc=None):
         """A construct that isn't laid out: its characters as text."""
         w = 0
         for t in region(node, self.toks):
-            w += self.glyph(t, s, x + w, y)
+            w += self.glyph(t, s, x + w, y, acc)
         return w
 
-    def seq(self, items, s, x, y, top=False):
-        """Lay out items from (x, y) at style s; returns the width."""
+    def seq(self, items, s, x, y, top=False, acc=None):
+        """Lay out items from (x, y) at style s; returns the width. acc: the
+        accent each character gets."""
         w, i = 0, 0
         while i < len(items):
             it = items[i]
             if not isinstance(it, Node):
-                w += self.glyph(it, s, x + w, y)
+                w += self.glyph(it, s, x + w, y, acc)
             elif not it.ok:
-                w += self.source(it, s, x + w, y)
+                w += self.source(it, s, x + w, y, acc)
             elif it.kind in ("sup", "sub"):
                 nxt = items[i + 1] if i + 1 < len(items) else None
                 pair = isinstance(nxt, Node) and nxt.ok and nxt.kind in ("sup", "sub") \
                     and nxt.kind != it.kind and nxt.start == it.end + 1
                 if pair:
                     sub, sup = (it, nxt) if it.kind == "sub" else (nxt, it)
-                    a = self.seq(sub.parts[0], down(s), x + w, y - SUB_STACKED[s])
-                    b = self.seq(sup.parts[0], down(s), x + w, y + SUP[s])
+                    a = self.seq(sub.parts[0], down(s), x + w, y - SUB_STACKED[s], acc=acc)
+                    b = self.seq(sup.parts[0], down(s), x + w, y + SUP[s], acc=acc)
                     w += max(a, b)
                     i += 2
                     continue
                 shift = SUP[s] if it.kind == "sup" else -SUB[s]
-                w += self.seq(it.parts[0], down(s), x + w, y + shift)
+                w += self.seq(it.parts[0], down(s), x + w, y + shift, acc=acc)
             elif it.kind == "group":
-                w += self.seq(it.parts[0], s, x + w, y)
-            elif it.kind == "sqrt":
+                w += self.seq(it.parts[0], s, x + w, y, acc=acc)
+            elif it.kind in ACCENTS:
+                w += self.seq(it.parts[0], s, x + w, y, acc=ACCENTS[it.kind])
+            elif it.kind in ("sqrt", "overline"):
                 kind = 2 if has(it.parts[0], lambda n: n.kind == "frac") else \
                     1 if has(it.parts[0], lambda n: n.kind == "sup") else 0
-                inner = self.seq(it.parts[0], s, x + w + WIDTH[s], y)
-                self.ink.append(("radical", s, kind, x + w, y))
+                sign = WIDTH[s] if it.kind == "sqrt" else 0     # an overline has no sign
+                inner = self.seq(it.parts[0], s, x + w + sign, y, acc=acc)
+                if sign:
+                    self.ink.append(("radical", s, kind, x + w, y))
                 top_ = y + root_top(s, kind)
-                self.ink.append(("rule", x + w + WIDTH[s], x + w + WIDTH[s] + inner, top_, top_ + RULE[s]))
-                w += WIDTH[s] + inner
+                self.ink.append(("rule", x + w + sign, x + w + sign + inner, top_, top_ + RULE[s]))
+                w += sign + inner
             elif it.kind == "frac":
                 t = down(s)
                 num, den = it.parts
@@ -349,8 +367,8 @@ class Layout:
                 m = max(wn, wd)
                 up = numerator_shift(s, has(num, lambda n: n.kind == "frac"))
                 dn = denominator_shift(s, has(den, lambda n: n.kind == "frac"))
-                self.seq(num, t, x + w + MARGIN + (m - wn) // 2, y + up)
-                self.seq(den, t, x + w + MARGIN + (m - wd) // 2, y - dn)
+                self.seq(num, t, x + w + MARGIN + (m - wn) // 2, y + up, acc=acc)
+                self.seq(den, t, x + w + MARGIN + (m - wd) // 2, y - dn, acc=acc)
                 bar = y + AXIS[s]
                 self.ink.append(("rule", x + w + MARGIN // 2, x + w + m + 3 * MARGIN // 2,
                                  bar - RULE[s] // 2, bar + RULE[s] // 2))

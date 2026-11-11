@@ -28,6 +28,8 @@ sys.path.insert(1, os.path.join(HERE, ".."))
 
 from fontTools import subset
 from fontTools.otlLib import builder as otl
+from fontTools.pens.boundsPen import BoundsPen
+from fontTools.pens.recordingPen import DecomposingRecordingPen
 from fontTools.pens.transformPen import TransformPen
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.ttLib import TTFont, newTable
@@ -46,6 +48,10 @@ BASE = os.path.join(HERE, "..", "fonts", "JetBrainsMono-Regular.ttf")
 FINAL = {"glyph", "radical", "space", "hid", "root", "qbase", "fendbase", "adv", "dx", "dy", "dxy",
          "dx@root", "dx@fend", "at@base", "y", "ink", "_"}
 SLOT_INDEX = {t: i for i, t in enumerate(P.ORDER)}
+# Each accent's shape: a character of the base font, and its scale.
+ACCENT_SHAPES = {"h": (0x2C6, 1), "b": (0xAF, 1), "v": (0x2192, 0.5), "d": (0x2D9, 1), "e": (0xA8, 1),
+                 "t": (0x2DC, 1)}
+ACCENT_GAP = 60          # between a character's top and its accent
 FILTER = 0x0010
 SKELETON = mp.SKELETON
 
@@ -165,6 +171,26 @@ class Font:
         self.anchor[name] = v
         return name
 
+    def accent(self, code):
+        """An accent's glyph (ACCENT_SHAPES), centered on x = 0 with its
+        bottom at y = 0, drawing nothing of its own (a component)."""
+        name = f"_accent{code}"
+        if name not in self.b.ids:
+            full = TTFont(BASE)
+            gs = full.getGlyphSet()
+            cp, scale = ACCENT_SHAPES[code]
+            outline = DecomposingRecordingPen(gs)       # the base font's accents are made of components
+            gs[full.getBestCmap()[cp]].draw(outline)
+            bp = BoundsPen(None)
+            outline.replay(bp)
+            x0, y0, x1, _ = bp.bounds
+            pen = TTGlyphPen(None)
+            outline.replay(TransformPen(pen, (scale, 0, 0, scale, -scale * (x0 + x1) / 2, -scale * y0)))
+            g = pen.glyph()
+            g.recalcBounds(None)
+            self.b.add(name, g, 0, g.xMin, 3)
+        return name
+
     def make_final(self, v):
         b = self.b
         k = v[0]
@@ -175,14 +201,21 @@ class Font:
         if k == "hid":
             return b.empty("_hid", 0, gdef_class=3)
         if k == "glyph":
-            _, ch, st, mode = v
+            _, ch, st, mode, *acc = v
             base = self.cmap[ord(ch)]
-            if st == 0 and mode == "b":
+            if st == 0 and mode == "b" and not acc:
                 return base
             sc = L.SCALE[st]
-            name = f"{base}.s{st}{mode}"
-            return b.composite(name, [(base, 0, 0, ((sc, 0), (0, sc)))] if sc != 1 else [(base, 0, 0)],
-                               L.WIDTH[st] if mode == "b" else 0, 1 if mode == "b" else 3)
+            scale = (((sc, 0), (0, sc)),) if sc != 1 else ()
+            name = f"{base}.s{st}{mode}" + (f".a{acc[0]}" if acc else "")
+            parts = [(base, 0, 0) + scale]
+            if acc:
+                # the accent centered over the character, ACCENT_GAP above its top
+                bp = BoundsPen(self.gs)
+                self.gs[base].draw(bp)
+                top = bp.bounds[3] if bp.bounds else L.HEIGHT[0]
+                parts.append((self.accent(acc[0]), round(L.WIDTH[0] / 2 * sc), round((top + ACCENT_GAP) * sc)) + scale)
+            return b.composite(name, parts, L.WIDTH[st] if mode == "b" else 0, 1 if mode == "b" else 3)
         if k == "radical":
             _, st, kind, mode = v
             return self.radical(f"_radical{st}{kind}{mode}", st, kind, mode)
@@ -835,23 +868,22 @@ def compile_insert(font, p, J, SP):
 # the first lookups: commands, then the tracks ----------------------------------
 
 def commands(font):
-    """\\frac and \\sqrt get their own backslash and letters; a symbol's
+    """\\frac, \\sqrt and \\overline get their own backslash and letters; a symbol's
     backslash becomes the symbol's own glyph (until the final passes) and
     its letters hide."""
     b, cmap = font.b, font.cmap
     letters = {cmap[ord(c)] for c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"}
     hid = font.glyph("G", ("hid",))
     to_hid = font.pl.nested({g: hid for g in letters})
-    lf = font.pl.nested({cmap[ord(c)]: font.char_glyph(("g", c, "Lf")) for c in "frac"})
-    ls = font.pl.nested({cmap[ord(c)]: font.char_glyph(("g", c, "Ls")) for c in "sqrt"})
+    letter_of = {name: font.pl.nested({cmap[ord(c)]: font.char_glyph(("g", c, P.LETTERS[name])) for c in name})
+                 for name in L.COMMANDS}
     names = list(L.COMMANDS) + list(L.SYMBOLS)
     rules = []
     bs = cmap[ord("\\")]
     for name in sorted(names, key=lambda n: -len(n)):
         seq = [{bs}] + [{cmap[ord(c)]} for c in name]
         if name in L.COMMANDS:
-            tag, letter = ("F", lf) if name == "frac" else ("R", ls)
-            head = font.char_glyph(("g", "\\", tag))
+            head, letter = font.char_glyph(("g", "\\", P.HEADS[name])), letter_of[name]
         else:
             tag = f"Y{1 + len(name)}"
             head = font.char_glyph(("g", L.SYMBOLS[name], tag))
@@ -874,12 +906,10 @@ def initial(font):
     kinds = {"{": ("O",), "}": ("C",), "^": ("P",), "_": ("B",)}
     for ch in font.chars:
         add(("g", ch, None), kinds.get(ch, ("c",)))
-    add(("g", "\\", "F"), ("F",))
-    add(("g", "\\", "R"), ("R",))
-    for c in "frac":
-        add(("g", c, "Lf"), ("Lf",))
-    for c in "sqrt":
-        add(("g", c, "Ls"), ("Ls",))
+    for name, head in P.HEADS.items():
+        add(("g", "\\", head), (head,))
+        for c in name:
+            add(("g", c, P.LETTERS[name]), (P.LETTERS[name],))
     for name, ch in L.SYMBOLS.items():
         add(("g", ch, f"Y{1 + len(name)}"), ("Y", 1 + len(name)))
     mapping = {}
@@ -972,7 +1002,7 @@ def gpos(font):
 
     # heights in flow
     flow_bases = [g for g, v in finals.items()
-                  if (v[0] in ("glyph", "radical") and v[-1] == "b") or v[0] in ("root", "qbase", "fendbase")]
+                  if (v[0] in ("glyph", "radical") and v[3] == "b") or v[0] in ("root", "qbase", "fendbase")]
     ys = by_kind["y"]
     rules = []
     for g, v in sorted(ys.items()):
@@ -1013,7 +1043,7 @@ def gpos(font):
     # chains
     members = {}
     for g, v in finals.items():
-        if v[0] in ("glyph", "radical") and v[-1] == "m":
+        if v[0] in ("glyph", "radical") and v[3] == "m":
             members[g] = anchor(0, 0)
         elif v[0] == "dx":
             members[g] = anchor(-v[1] * L.UNIT, 0)

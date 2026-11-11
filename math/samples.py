@@ -18,16 +18,21 @@ def formula(rng, depth=0):
             out.append("\\frac{" + formula(rng, depth + 1) + "}{" + formula(rng, depth + 1) + "}")
         elif depth < 4 and r < 0.2:
             out.append("\\sqrt{" + formula(rng, depth + 1) + "}")
-        elif depth < 4 and r < 0.34:
+        elif depth < 4 and r < 0.24:
+            out.append("\\overline{" + formula(rng, depth + 1) + "}")
+        elif depth < 4 and r < 0.28:
+            accent = rng.choice(sorted(L.ACCENTS))
+            out.append(f"\\{accent}{{" + (rng.choice(ATOMS) if rng.random() < 0.6 else formula(rng, depth + 1)) + "}")
+        elif depth < 4 and r < 0.4:
             base = rng.choice(ATOMS)
             scripts = rng.sample(["^", "_"], rng.randint(1, 2))
             s = base
             for sc in scripts:
                 s += sc + (rng.choice(ATOMS) if rng.random() < 0.5 else "{" + formula(rng, depth + 1) + "}")
             out.append(s)
-        elif depth < 4 and r < 0.38:
+        elif depth < 4 and r < 0.44:
             out.append("{" + formula(rng, depth + 1) + "}")
-        elif r < 0.45 and not depth:
+        elif r < 0.51 and not depth:
             out.append(" ")
         else:
             out.append(rng.choice(ATOMS))
@@ -73,6 +78,12 @@ EDGES = [
     "\\sqrt{\\sqrt{\\sqrt{x}}}", "\\sqrt{\\sqrt{\\sqrt{\\sqrt{x}}}}", "\\alpha\\beta", "\\alphabet",
     "\\frac{" + "a" * 30 + "}{b}", "\\sqrt{" + "x" * 40 + "}", "x^" + "\\alpha",
     "\\frac{a}{b}\\frac{c}{d}", "x_1^2_3^4", "x^1_2^3", "a_{b_{c_{d}}}", "\\frac{a^{b}}{c_{d}}",
+    "\\over", "\\overline", "\\overline{}", "\\overline{x", "\\overline x", "\\overlinex{a}", "\\overline{x^2}",
+    "\\overline{\\overline{\\overline{x}}}", "\\overline{\\overline{\\overline{\\overline{x}}}}",
+    "\\sqrt{\\overline{x}}", "\\overline{\\sqrt{x}}", "\\overline{\\frac{a}{b}}", "\\frac{\\overline{a}}{b}",
+    "\\hat", "\\hat{", "\\hat{}", "\\hat{x", "\\hat x", "\\hatx{y}", "\\hat{\\alpha}", "\\vec{v}^2", "\\bar{x}_1",
+    "\\tilde{\\hat{x}y}", "\\dot{\\ddot{\\vec{x}}}", "\\hat{\\hat{\\hat{\\hat{x}}}}", "\\hat{\\frac{a}{b}}",
+    "\\vec{\\frac{\\hat{a}}{b}}", "\\overline{\\hat{x}}", "\\hat{x^{\\bar{2}}}", "\\hat{\\frac{a}{b",
 ]
 
 
