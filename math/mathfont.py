@@ -29,6 +29,7 @@ sys.path.insert(1, os.path.join(HERE, ".."))
 from fontTools import subset
 from fontTools.otlLib import builder as otl
 from fontTools.pens.boundsPen import BoundsPen
+from fontTools.pens.cu2quPen import Cu2QuPen
 from fontTools.pens.recordingPen import DecomposingRecordingPen
 from fontTools.pens.transformPen import TransformPen
 from fontTools.pens.ttGlyphPen import TTGlyphPen
@@ -46,7 +47,7 @@ import relaxed as R
 
 BASE = os.path.join(HERE, "..", "fonts", "JetBrainsMono-Regular.ttf")
 FINAL = {"glyph", "radical", "space", "hid", "root", "qbase", "fendbase", "adv", "dx", "dy", "dxy",
-         "dx@root", "dx@fend", "at@base", "y", "ink", "_"}
+         "dx@root", "dx@fend", "at@base", "y", "ink", "paren", "_"}
 SLOT_INDEX = {t: i for i, t in enumerate(P.ORDER)}
 # Each accent's shape: a character of the base font, and its scale.
 ACCENT_SHAPES = {"h": (0x2C6, 1), "b": (0xAF, 1), "v": (0x2192, 0.5), "d": (0x2D9, 1), "e": (0xA8, 1),
@@ -225,6 +226,9 @@ class Font:
             return b.empty(f"_fendbase{v[1]}", 0, gdef_class=1)
         if k == "adv":
             return b.empty(f"_adv{v[1]}".replace("-", "m"), 0, gdef_class=1)
+        if k == "paren":
+            _, side, st, kind, dx = v
+            return self.paren(f"_paren{side}{st}{kind}o{dx}".replace("-", "m"), side, st, kind, dx)
         if k == "ink":
             _, band, direction, start, length, digit = v
             x0 = start * L.UNIT
@@ -388,6 +392,38 @@ class Font:
                 pen.lineTo(tuple(map(round, p)))
             pen.closePath()
         return self.b.add(name, pen.glyph(), w if mode == "b" else 0, 0, 1 if mode == "b" else 3)
+
+    def paren(self, name, side, st, kind, dx):
+        """A binomial's parenthesis: a crescent in a box L.PAREN[st] wide,
+        reaching a little past the binomial's parts above and below its
+        axis, thick in the middle and thin at the ends; a mark, dx 30s from
+        the glyph it hangs off."""
+        w, sc = L.PAREN[st], L.SCALE[st]
+        a, h = L.AXIS[st], L.paren_reach(st, kind) + L.GAP[st] // 2
+        end, belly, th, tip = 0.74 * w, 0.2 * w, 66 * sc, 22 * sc
+
+        def control(e, b):              # a cubic's control x for its middle at b
+            return (8 * b - 2 * e) / 6
+        outer = [(end, a + h), (control(end, belly), a + 0.55 * h), (control(end, belly), a - 0.55 * h), (end, a - h)]
+        inner = [(end + tip, a - h), (control(end + tip, belly + th), a - 0.5 * h),
+                 (control(end + tip, belly + th), a + 0.5 * h), (end + tip, a + h)]
+        if side == "R":
+            outer, inner = ([(w - x, y) for x, y in c] for c in (outer, inner))
+        # clockwise, as TrueType draws outer contours: reversed when the
+        # outline goes round the other way
+        pts = outer + inner
+        if sum(p[0] * q[1] - q[0] * p[1] for p, q in zip(pts, pts[1:] + pts[:1])) > 0:
+            outer, inner = inner[::-1], outer[::-1]
+        off = dx * L.UNIT
+        outer, inner = ([(round(x + off), round(y)) for x, y in c] for c in (outer, inner))
+        tt = TTGlyphPen(None)
+        pen = Cu2QuPen(tt, max_err=1)
+        pen.moveTo(outer[0])
+        pen.curveTo(*outer[1:])
+        pen.lineTo(inner[0])
+        pen.curveTo(*inner[1:])
+        pen.closePath()
+        return self.b.add(name, tt.glyph(), 0, 0, 3)
 
     # lookups -----------------------------------------------------------------
 
@@ -1018,10 +1054,14 @@ def gpos(font):
         lookup(1, [otl.buildSinglePosSubtable(adv, b.ids)])
     rules = []
     fendbases = set(by_kind["fendbase"])
+    by_advance = {}             # one rule per advance: a binomial's often equals a fraction's
     for g, v in sorted(by_kind["dx@fend"].items()):
-        single = lookup(1, [otl.buildSinglePosSubtable({x: otl.buildValue({"XAdvance": (2 * v[1] + 4) * L.UNIT}) for x in fendbases}, b.ids)],
+        p = v[2] if len(v) > 2 else 0               # a binomial's parenthesis
+        by_advance.setdefault(2 * v[1] + 4 + 2 * p, set()).add(g)
+    for advance, gs in by_advance.items():
+        single = lookup(1, [otl.buildSinglePosSubtable({x: otl.buildValue({"XAdvance": advance * L.UNIT}) for x in fendbases}, b.ids)],
                         nested=True)
-        rules.append(chain_pos([fendbases], [{g}], [(0, single)], font))
+        rules.append(chain_pos([fendbases], [gs], [(0, single)], font))
     if rules:
         lookup(8, rules, 0, set(by_kind["dx@fend"]) | fendbases)
     # marks on bases
@@ -1029,7 +1069,8 @@ def gpos(font):
     for g, v in by_kind["dx@root"].items():
         marks[g] = (0, anchor(-v[1] * L.UNIT, 0))
     for g, v in by_kind["dx@fend"].items():
-        marks[g] = (1, anchor(-v[1] * L.UNIT, 0))
+        p = v[2] if len(v) > 2 else 0
+        marks[g] = (1, anchor(-(p + 2 * v[1] + 1 if p else v[1]) * L.UNIT, 0))
     for g, v in by_kind["at@base"].items():
         marks[g] = (2, anchor(0, 0))
     for g in by_kind["root"]:
@@ -1062,8 +1103,10 @@ def gpos(font):
         _, band, direction, start, length, digit = v
         end = (start + (length if direction == "R" else -length)) * L.UNIT
         ink_parents[g] = {0: anchor(end, 0)}
-    if inks:
-        lookup(6, [mark_mark({g: (0, anchor(0, 0)) for g in inks}, ink_parents, gid)], 0, set(inks) | set(movers))
+    parens = by_kind["paren"]          # hang off movers as ink does, and nothing hangs off them
+    if inks or parens:
+        lookup(6, [mark_mark({g: (0, anchor(0, 0)) for g in list(inks) + list(parens)}, ink_parents, gid)], 0,
+               set(inks) | set(parens) | set(movers))
     t = newTable("GPOS")
     t.table = ot.GPOS()
     t.table.Version = 0x00010000

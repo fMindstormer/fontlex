@@ -4,6 +4,7 @@ checked against.
 A line is ordinary text in which a small subset of LaTeX is laid out:
 
     \\frac{N}{D}    a fraction            x^a  x^{..}   a superscript
+    \\binom{N}{K}   a binomial coefficient: N over K, no bar, in parentheses
     \\sqrt{X}       a square root         x_a  x_{..}   a subscript
     \\overline{X}   a bar over X          x_a^b  x^b_a  stacked scripts
     \\hat{X} ...    an accent (ACCENTS) on each character of X
@@ -31,6 +32,8 @@ layout(line) returns (ink, advance): ink is a sorted list of
   ("rule", x0, x1, y0, y1)            a fraction bar, or a root's or
                                       \\overline's overbar
   ("radical", style, kind, x, y)      a radical sign, `kind` its height
+  ("paren", side, style, kind, x, y)  a binomial's parenthesis, side "L" or
+                                      "R", kind 1 if a part holds a fraction
 and advance the line's width. Rules that touch or overlap at the same
 height are merged, since the font draws them in pieces.
 """
@@ -48,8 +51,10 @@ SUP = (380, 270, 190)          # a superscript's baseline, above the base's
 SUB = (160, 110, 80)           # a subscript's, below it
 SUB_STACKED = (220, 150, 110)  # a subscript's below a superscript
 
+PAREN = (240, 180, 120)        # a binomial's parenthesis: its box's width
+
 MAX_DEPTH = 3       # constructs inside constructs
-MAX_FRACTIONS = 2   # fractions inside fractions
+MAX_FRACTIONS = 2   # fractions (and binomials) inside fractions
 MAX_CHARS = 24      # characters in a construct that isn't inside another
 BRACE_LIMIT = MAX_DEPTH + 1   # braces open at once
 
@@ -72,7 +77,12 @@ SYMBOLS = {
 # Accents: the command and its code. An accent is drawn over each character
 # of its argument (the innermost accent, where they nest).
 ACCENTS = {"hat": "h", "bar": "b", "vec": "v", "dot": "d", "ddot": "e", "tilde": "t"}
-COMMANDS = ("frac", "sqrt", "overline") + tuple(ACCENTS)
+COMMANDS = ("frac", "binom", "sqrt", "overline") + tuple(ACCENTS)
+FRACS = ("frac", "binom")      # two parts, one over the other
+
+
+def is_frac(n):
+    return n.kind in FRACS
 
 
 def down(s):
@@ -99,6 +109,15 @@ def fraction_depth(s):
 
 def fraction_height(s):
     return numerator_shift(s, False) + HEIGHT[down(s)]
+
+
+def paren_reach(s, kind):
+    """How far a binomial's parentheses reach above and below its axis:
+    as far as its parts do, where both hold a fraction if kind is 1."""
+    t, f = down(s), bool(kind)
+    top = numerator_shift(s, f) + (fraction_height(t) if f else HEIGHT[t])
+    bottom = denominator_shift(s, f) + (fraction_depth(t) if f else DEPTH[t])
+    return max(top - AXIS[s], bottom + AXIS[s])
 
 
 def root_top(s, kind):
@@ -223,7 +242,7 @@ def parse(toks):
             node.end = inner.end
             if not inner.complete:
                 return node
-            if node.kind != "frac":
+            if node.kind not in FRACS:
                 node.complete = True
                 return node
             if pos < len(toks) and toks[pos][0] == "{":
@@ -260,7 +279,7 @@ def validate(items, toks, depth=0, fractions=0):
     for it in items:
         if not isinstance(it, Node):
             continue
-        d, f = depth + 1, fractions + (it.kind == "frac")
+        d, f = depth + 1, fractions + is_frac(it)
         has_space = any(toks[t][0] == " " for t in region(it, toks))
         last = toks[it.end][2] if it.end is not None else toks[-1][2]
         long = depth == 0 and last - toks[it.start][1] > MAX_CHARS
@@ -350,7 +369,7 @@ class Layout:
             elif it.kind in ACCENTS:
                 w += self.seq(it.parts[0], s, x + w, y, acc=ACCENTS[it.kind])
             elif it.kind in ("sqrt", "overline"):
-                kind = 2 if has(it.parts[0], lambda n: n.kind == "frac") else \
+                kind = 2 if has(it.parts[0], is_frac) else \
                     1 if has(it.parts[0], lambda n: n.kind == "sup") else 0
                 sign = WIDTH[s] if it.kind == "sqrt" else 0     # an overline has no sign
                 inner = self.seq(it.parts[0], s, x + w + sign, y, acc=acc)
@@ -359,20 +378,27 @@ class Layout:
                 top_ = y + root_top(s, kind)
                 self.ink.append(("rule", x + w + sign, x + w + sign + inner, top_, top_ + RULE[s]))
                 w += sign + inner
-            elif it.kind == "frac":
+            elif it.kind in FRACS:
                 t = down(s)
                 num, den = it.parts
                 wn = self.measure(num, t)
                 wd = self.measure(den, t)
                 m = max(wn, wd)
-                up = numerator_shift(s, has(num, lambda n: n.kind == "frac"))
-                dn = denominator_shift(s, has(den, lambda n: n.kind == "frac"))
-                self.seq(num, t, x + w + MARGIN + (m - wn) // 2, y + up, acc=acc)
-                self.seq(den, t, x + w + MARGIN + (m - wd) // 2, y - dn, acc=acc)
-                bar = y + AXIS[s]
-                self.ink.append(("rule", x + w + MARGIN // 2, x + w + m + 3 * MARGIN // 2,
-                                 bar - RULE[s] // 2, bar + RULE[s] // 2))
-                w += m + 2 * MARGIN
+                fn, fd = has(num, is_frac), has(den, is_frac)
+                up = numerator_shift(s, fn)
+                dn = denominator_shift(s, fd)
+                p = PAREN[s] if it.kind == "binom" else 0      # the parenthesis on each side
+                self.seq(num, t, x + w + MARGIN + p + (m - wn) // 2, y + up, acc=acc)
+                self.seq(den, t, x + w + MARGIN + p + (m - wd) // 2, y - dn, acc=acc)
+                if p:
+                    kind = int(fn or fd)
+                    self.ink.append(("paren", "L", s, kind, x + w + MARGIN // 2, y))
+                    self.ink.append(("paren", "R", s, kind, x + w + 3 * MARGIN // 2 + p + m, y))
+                else:
+                    bar = y + AXIS[s]
+                    self.ink.append(("rule", x + w + MARGIN // 2, x + w + m + 3 * MARGIN // 2,
+                                     bar - RULE[s] // 2, bar + RULE[s] // 2))
+                w += m + 2 * MARGIN + 2 * p
             i += 1
         return w
 

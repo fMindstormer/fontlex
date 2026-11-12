@@ -181,7 +181,7 @@ the denominator.
 The first compiler needed 178,000 lookup subtables, where the format
 allows a few thousand lookups. Class-based rules, one pool of nested
 lookups shared by every pass, and a two-step substitution for glyphs with
-too many possible successors brought it to 1,457 lookups
+too many possible successors brought it to 1,635 lookups
 ([math/README.md](math/README.md)).
 
 ### Relaxed math: a compiler front end, inside a font
@@ -320,7 +320,7 @@ know of earlier work we've missed, please open an issue.
 |---|---|---|
 | [Python](https://fmindstormer.github.io/fontlex/python.html), [JavaScript](https://fmindstormer.github.io/fontlex/javascript.html) ([README](specs/README.md)) | runs a lexer compiled from a YAML spec and colors each token; Python also puts a bar under every character past PEP 8's 79 columns | every glyph's state matches a reference lexer: 20,000 random strings, every transition, every spec example; the ruler's bars on 2,007 lines; HarfBuzz and Core Text |
 | [Markdown](https://fmindstormer.github.io/fontlex/markdown.html) ([README](markdown/README.md)) | renders GitHub Flavored Markdown line by line: CommonMark's inline rules, strikethrough, autolinks, block markup; markup hidden; mono and proportional | within its bounds, every one-line spec example, 20,000 random lines and 10,723 lines of real documents exactly as GitHub renders them |
-| [Math](https://fmindstormer.github.io/fontlex/math.html) ([README](math/README.md)) | typesets a small subset of LaTeX as you type: fractions, square roots, overlines, accents, superscripts and subscripts, Greek letters and symbols, nested 3 deep | 20,000 random lines laid out to the font unit as a separate layout model says, in HarfBuzz and Core Text; by screenshot in Chrome, Firefox and WebKit, on macOS, Linux and Windows |
+| [Math](https://fmindstormer.github.io/fontlex/math.html) ([README](math/README.md)) | typesets a small subset of LaTeX as you type: fractions, binomials, square roots, overlines, accents, superscripts and subscripts, Greek letters and symbols, nested 3 deep | 20,000 random lines laid out to the font unit as a separate layout model says, in HarfBuzz and Core Text; by screenshot in Chrome, Firefox and WebKit, on macOS, Linux and Windows |
 | [Relaxed math](https://fmindstormer.github.io/fontlex/relaxed-math.html) ([README](math/README.md#the-relaxed-notation)) | typesets math as people type it in plain text, `(a+b)/(c+d)`, `x^2`, `sqrt(x)`, and leaves prose alone: `and/or`, `w/o`, dates and paths stay text | the same, against a model of the notation; of 461,327 lines of man pages and READMEs, 311 get a construct, about half of them real math |
 | [German genders](https://fmindstormer.github.io/fontlex/german.html) ([README](german/README.md)) | colors nouns by gender, from lists learned from a treebank and Wiktionary | on held-out newspaper text, 97% of nouns colored, 99.5% of them right |
 | [German syllables](https://fmindstormer.github.io/fontlex/german-syllables.html) ([README](german/syllables/README.md)) | colors syllables in turn, as German schools teach reading | 97.5% of held-out first-reader words split exactly right |

@@ -32,6 +32,7 @@ x=\frac{-b\pm\sqrt{D}}{2a}
 \sqrt{x^2+y^2}
 x_{n+1}=\frac{x_n}{2}+\frac{a}{2x_n}
 \sum_{k=1}^n k=\frac{n(n+1)}{2}
+(x+y)^n=\sum_{k=0}^n\binom{n}{k}x^ky^{n-k}
 \overline{z+w}=\overline{z}+\overline{w}
 \vec{F}=m\ddot{x}, \hat{p}, \tilde{n}, \bar{x}_i
 \frac{1}{1+\frac{1}{x}}
@@ -46,7 +47,7 @@ PAGE = """<!doctype html>
 {{STYLE}}
 main { max-width: 56rem; }
 .nav { margin: 0 0 .75rem; }
-textarea#code { min-height: 43.5rem; white-space: pre; overflow-x: auto; font-size: 1.6rem; line-height: 2.7; }
+textarea#code { min-height: 47.8rem; white-space: pre; overflow-x: auto; font-size: 1.6rem; line-height: 2.7; }
 .keys { display: flex; flex-wrap: wrap; gap: .35rem .9rem; padding: 0; list-style: none; font-size: .92rem; }
 .keys code { white-space: nowrap; }
 </style>
@@ -56,7 +57,7 @@ textarea#code { min-height: 43.5rem; white-space: pre; overflow-x: auto; font-si
   <a href="https://github.com/fMindstormer/fontlex/releases/latest">Download</a></p>
   <h1>Fontlex Math</h1>
   <p class="lede">The box below is a plain text box holding a little LaTeX. The font typesets it: fractions,
-  roots, superscripts and subscripts, Greek letters and a few symbols, laid out by the text engine that lays out
+  binomials, roots, superscripts and subscripts, Greek letters and a few symbols, laid out by the text engine that lays out
   the letters, as you type. The characters stay exactly as typed. No script on this page lays anything out.</p>
 
   <div class="editor" id="editor">
@@ -71,13 +72,13 @@ textarea#code { min-height: 43.5rem; white-space: pre; overflow-x: auto; font-si
 
   <h2>What it typesets</h2>
   <ul>
-    <li><code>\\frac{a}{b}</code>, <code>\\sqrt{x}</code>, <code>\\overline{z}</code>, accents (<code>\\hat{x}</code>, <code>\\bar{x}</code>,
+    <li><code>\\frac{a}{b}</code>, <code>\\binom{n}{k}</code>, <code>\\sqrt{x}</code>, <code>\\overline{z}</code>, accents (<code>\\hat{x}</code>, <code>\\bar{x}</code>,
     <code>\\vec{v}</code>, <code>\\dot{x}</code>, <code>\\ddot{x}</code>, <code>\\tilde{n}</code>: on each character of
     what they cover), <code>x^2</code>, <code>x_1</code>,
     <code>x^{n+1}</code>, and both scripts at once, stacked (<code>x_1^2</code>, in either order).</li>
     <li>Braces as groups: <code>{a+b}^2</code>.</li>
     <li>Symbols: <ul class="keys">{{SYMBOLS}}</ul></li>
-    <li>Constructs inside constructs, {{DEPTH}} deep, with at most {{FRACTIONS}} fractions inside one another,
+    <li>Constructs inside constructs, {{DEPTH}} deep, with at most {{FRACTIONS}} fractions (or binomials) inside one another,
     and at most {{CHARS}} characters in a construct that isn't inside another. Text inside a fraction or a
     script is set smaller, in three sizes.</li>
     <li>A space inside a construct leaves it as its characters (WebKit gives every glyph of a space a space's

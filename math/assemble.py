@@ -24,7 +24,7 @@ U30 = L.UNIT            # movers and pads count in 30s
 
 DIGIT = 23              # a rule's length in 30s is split into two pieces: below 23, and a multiple of it
 SLOTS = ("G", "S", "A", "B", "C")
-VALUES = ("mid", "fend", "qend", "e1", "e2", "o2", "npad", "dpad", "kind")
+VALUES = ("mid", "fend", "qend", "e1", "e2", "o2", "npad", "dpad", "kind", "fkind")
 NONE = ("_",)
 
 
@@ -59,7 +59,10 @@ def final(t):
     ("at@base",), marks on the glyph that starts or ends a fraction or ends
     a root in flow; bases ("root",), ("qbase",), ("fendbase", wN) and
     ("adv", v) (an advance of v 30s); ("y", y) the base glyph's height in
-    flow; ("ink", band, direction, start, length, digit) a rule's piece."""
+    flow; ("ink", band, direction, start, length, digit) a rule's piece;
+    ("paren", side, style, kind, dx) a binomial's parenthesis, dx 30s from
+    the glyph it hangs off, like ink. A binomial's end in flow has
+    ("dx@fend", pad, p): its parenthesis hangs off it, p 30s wide."""
     s, b, c = t["S"], t.get("B"), t.get("C")
     out = {k: NONE for k in SLOTS}
     # B and C may be finished already, when a slot that doesn't use them is made
@@ -91,14 +94,18 @@ def final(t):
     details = s[7:]
     out["G"] = ("hid",)
     margin = L.MARGIN // U30
+    binom = P.is_binom(s)
+    p = L.PAREN[st] // U30 if binom else 0       # a binomial's parenthesis, beside the margin
     if name == "froot":
         if k == 0:
             out["G"] = ("root",)
-            out["S"] = ("dx@root", margin)
+            out["S"] = ("dx@root", margin + p)
             if y:
                 out["A"] = ("y", y)
         else:
-            out["G"] = ("dx", margin)
+            out["G"] = ("dx", margin + p)
+        if binom:
+            out["B"] = ("paren", "L", st, b[1] if b[0] == "fkind" else 0, -(margin // 2 + p))
     elif name == "nopen":
         _, d, flag = b[:3]
         out["G"] = ("dx", max(0, -d))
@@ -107,26 +114,32 @@ def final(t):
         _, _, wn, flag = b
         out["G"] = ("dx", -2 * wn)
         out["A"] = ("dy", -L.numerator_shift(st, flag))
-        out["B"], out["C"] = rule_pieces(bar_band(st), "R", -1, 2 * wn + 2)
+        if not binom:
+            out["B"], out["C"] = rule_pieces(bar_band(st), "R", -1, 2 * wn + 2)
     elif name == "dopen":
         _, d, flag = b[:3]
         down = L.denominator_shift(st, flag)
         out["G"] = ("dx", d)
         out["A"] = ("dy", -down)
-        out["B"], out["C"] = rule_pieces(bar_band(st, down), "R", -1, -d + 1)
+        if not binom:
+            out["B"], out["C"] = rule_pieces(bar_band(st, down), "R", -1, -d + 1)
     elif name == "fend":
-        _, _, d, flag = b
+        d, flag = b[2], b[3]
         pad = max(0, -d)
         if k == 0:
             out["G"] = ("fendbase", c[2])
             if y:
                 out["S"] = ("y", y)
-            out["A"] = ("dx@fend", pad)
-            out["B"], out["C"] = rule_pieces(bar_band(st), "R", 0, pad + 1)
+            out["A"] = ("dx@fend", pad, p) if binom else ("dx@fend", pad)
+            if not binom:
+                out["B"], out["C"] = rule_pieces(bar_band(st), "R", 0, pad + 1)
         else:
             out["G"] = ("dx", max(0, d))
-            out["A"] = ("dxy", margin, L.denominator_shift(st, flag))
-            out["B"], out["C"] = rule_pieces(bar_band(st), "L", -1, pad + 1)
+            out["A"] = ("dxy", margin + p, L.denominator_shift(st, flag))
+            if not binom:
+                out["B"], out["C"] = rule_pieces(bar_band(st), "L", -1, pad + 1)
+        if binom:
+            out["B"] = ("paren", "R", st, details[1] if len(details) > 1 else 0, 0 if k == 0 else -(margin // 2 + p))
     elif name == "sroot":
         kind = b[1]
         out["G"] = ("radical", st, kind, "m" if k else "b")
@@ -179,7 +192,7 @@ def slot_key(slot, s):
         second = arg is not None and arg[1] == "second"
         return ("T", "c", 0, k, 0, 0) + ((("U", "second", 0, 0),) if slot == "B" and second else ())
     name, level, st, k, o, y = s[1:7]
-    uses = ROLE_USES.get(name, {}).get(slot, "")
+    uses = ROLE_USES.get(name, {}).get(slot, "") + ("sk" if P.is_binom(s) else "")
     details = s[7:]
     if name == "sopen":
         details = details[:2] + (False,)
@@ -210,6 +223,8 @@ def need_class(s):
         arg = s[6] if len(s) > 6 else None
         return ("T", arg is not None and arg[1] == "second")
     name = s[1]
+    if P.is_binom(s):
+        return (name, s[4] > 0, "b")
     return (name, s[4] > 0, s[8] if name in ("sopen", "gclose") and len(s) > 8 else None)
 
 
@@ -225,6 +240,11 @@ def need(slot, nc, b):
         return P.BLANK
     name, k, pos = nc
     tag = b[0]
+    # A binomial's tokens read what a fraction's do (their slots that would
+    # draw its bar draw nothing), so B's values are shared; its \\binom
+    # reads its parentheses' kind.
+    if pos == "b" and name == "froot" and tag == "fkind":
+        return ("fkind", b[1]) if slot == "B" else P.BLANK
     if name == "nopen" and tag == "npad":
         return {"G": ("npad", min(0, b[1]), False), "A": ("npad", 0, b[2])}.get(slot, P.BLANK)
     if name == "dopen" and tag == "dpad":
@@ -307,8 +327,12 @@ def place(toks):
                 parent = link
             elif kind == "dx@fend":
                 wn = base[2][1]
-                parent = (base[0] + (2 + 2 * wn + g[1]) * U30, base[1])
-                pen += (2 * wn + 2 * g[1] + 4) * U30
+                p = g[2] if len(g) > 2 else 0
+                off = p + 2 * g[1] + 1 if p else g[1]      # a binomial's: where its parenthesis goes
+                parent = (base[0] + (2 + 2 * wn + off) * U30, base[1])
+                pen += (2 * wn + 2 * g[1] + 4 + 2 * p) * U30
+            elif kind == "paren":
+                ink.append(("paren", g[1], g[2], g[3], parent[0] + g[4] * U30, parent[1]))
             elif kind == "at@base":
                 parent = (base[0], base[1])
             elif kind == "ink":

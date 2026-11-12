@@ -1,8 +1,8 @@
 # Fontlex Math: formulas typeset by a font
 
 A font that typesets a little LaTeX as you type it, in any text box:
-fractions, square roots, superscripts and subscripts, Greek letters and
-symbols. The text engine that lays out the letters does the layout. The
+fractions, binomial coefficients, square roots, superscripts and
+subscripts, Greek letters and symbols. The text engine that lays out the letters does the layout. The
 characters stay exactly as typed, so copying them gives back the LaTeX, and
 with the font's `calt` feature off you see them all. `math/demo.html` is a
 page with the font in a text box.
@@ -13,6 +13,8 @@ plain text, `(a+b)/(c+d)` or `x^2`, and leaves ordinary text alone: see
 `math/relaxed.html`.
 
 - `\frac{a}{b}`, with the numerator and denominator centered over a bar.
+- `\binom{n}{k}`, n over k with no bar, between parentheses as tall as the
+  parts reach (taller when either part holds a fraction).
 - `\sqrt{x}`, with a sign as tall as its contents need (one height for
   text, one over superscripts, one over fractions) and an overbar.
 - `\overline{z}`, a bar over its contents at the height a root's overbar
@@ -27,14 +29,14 @@ plain text, `(a+b)/(c+d)` or `x^2`, and leaves ordinary text alone: see
 - `\alpha` … `\Omega`, operators and relations such as `\pm`, `\le`,
   `\to`, `\infty` and `\sum`: the list is `SYMBOLS` in `layout.py`.
 
-Constructs nest 3 deep, with at most 2 fractions inside one another and at
-most 24 characters in a construct that isn't inside another. Text inside a
-fraction or a script is set smaller, in three sizes. Anything incomplete
-(`\frac{a}{`), or past those limits, stays as its characters until it isn't,
-so a formula appears as you finish typing it. A space inside a construct
-also leaves it as characters: WebKit gives every glyph of a space character
-a space's width, which would break the layout. Spaces between formulas are
-fine. Each line is read on its own.
+Constructs nest 3 deep, with at most 2 fractions (or binomials) inside one
+another and at most 24 characters in a construct that isn't inside
+another. Text inside a fraction or a script is set smaller, in three
+sizes. Anything incomplete (`\frac{a}{`), or past those limits, stays as
+its characters until it isn't, so a formula appears as you finish typing
+it. A space inside a construct also leaves it as characters: WebKit gives
+every glyph of a space character a space's width, which would break the
+layout. Spaces between formulas are fine. Each line is read on its own.
 
 ## Results
 
@@ -45,7 +47,7 @@ font unit.
 
 | Lines | Count | HarfBuzz 14.6.0 | Core Text (macOS 27) |
 |---|---:|---:|---:|
-| Edge cases (`samples.EDGES`: incomplete and broken input) | 75 | 100% | 100% |
+| Edge cases (`samples.EDGES`: incomplete and broken input) | 100 | 100% | 100% |
 | Random formulas, some mistyped | 20,000 | 100% | 100% |
 
 The passes themselves, run in Python by `program.py`, match the model on
@@ -57,10 +59,10 @@ places them. Two screenshots, one with each, are compared pixel by pixel
 with 2 px of tolerance at 100 px per em, where the layout's smallest step
 (30 units) is 3 px. Results on 340 lines:
 
-- **Chrome 155:** the same on all of them (before `\overline` and the
-  accents).
+- **Chrome 155:** the same on all of them (before `\overline`, the
+  accents and `\binom`).
 - **WebKit (macOS 27):** the same on all 235 lines narrow enough to
-  snapshot (before `\overline` and the accents).
+  snapshot (before `\overline`, the accents and `\binom`).
 - **Chromium 139 and Firefox 158, on Linux and on Windows:** the same on
   all of them (`browsers.py`, run by CI's Browsers workflow).
 
@@ -68,13 +70,14 @@ Typing a formula into a text box key by key ends with the same pixels as
 setting the text at once, in all of these browsers but WebKit, which
 wasn't tried.
 
-The font has 60,634 glyphs, 1,457 substitution lookups (about 1,050 of
-them nested lookups shared by every pass, in 2,477 subtables) and 301
-positioning lookups. It is 8.0 MB as TrueType and 0.89 MB as WOFF2. The
+The font has 63,358 glyphs, 1,635 substitution lookups (about 1,230 of
+them nested lookups shared by every pass, in 2,816 subtables) and 309
+positioning lookups. It is 8.8 MB as TrueType and 0.98 MB as WOFF2. The
 accents take about 12,600 of the glyphs: each character, in each size and
-in and out of a fraction, with each accent. That leaves about 4,900 glyph
-ids of OpenType's 65,535, so this is near the limit of what Fontlex Math
-can add by giving characters new glyphs. Shaping takes about 0.3 ms per
+in and out of a fraction, with each accent. `\binom` takes about 2,700:
+the passes' values for a binomial's own tokens, which differ from a
+fraction's. That leaves about 2,200 glyph ids of OpenType's 65,535, so
+Fontlex Math is near the limit of what it can add. Shaping takes about 0.3 ms per
 character in HarfBuzz (12 ms for a 40-character line).
 
 ## How it works

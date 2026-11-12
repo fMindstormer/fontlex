@@ -46,6 +46,10 @@ class Reader:
         m = re.fullmatch(r"_radical(\d)(\d)([bm])", name)
         if m:
             return ("radical", int(m.group(1)), int(m.group(2)), x, y)
+        m = re.fullmatch(r"_paren([LR])(\d)(\d)o(m?)(\d+)", name)
+        if m:
+            dx = int(m.group(5)) * (-1 if m.group(4) else 1) * L.UNIT
+            return ("paren", m.group(1), int(m.group(2)), int(m.group(3)), x + dx, y)
         if name.startswith("_ink"):
             g = self.glyf[name]
             if g.numberOfContours <= 0:

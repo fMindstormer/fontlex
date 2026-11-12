@@ -36,6 +36,7 @@ BLANK = ("_",)
 U = L.UNIT * 2                     # widths are counted in 60s (a margin is one)
 WIDTH = tuple(w // U for w in L.WIDTH)
 MARGINS = 2 * L.MARGIN // U
+PARENS = tuple(2 * p // U for p in L.PAREN)     # a binomial's two parentheses, in 60s
 
 
 class Map:
@@ -106,11 +107,11 @@ def restore_space(v):
 
 # tokens -------------------------------------------------------------------
 
-# A command's backslash and the kind of its letters: \frac, \sqrt, and H
-# for \overline and the accents, whose letters say which it is.
-HEADS = {"frac": "F", "sqrt": "R", "overline": "H", **{a: "H" for a in L.ACCENTS}}
-HEAD_KINDS = ("F", "R", "H")
-LETTERS = {"frac": "Lf", "sqrt": "Ls", "overline": "Lo", **{a: "L" + c for a, c in L.ACCENTS.items()}}
+# A command's backslash and the kind of its letters: \frac, \binom (K),
+# \sqrt, and H for \overline and the accents, whose letters say which it is.
+HEADS = {"frac": "F", "binom": "K", "sqrt": "R", "overline": "H", **{a: "H" for a in L.ACCENTS}}
+HEAD_KINDS = ("F", "K", "R", "H")
+LETTERS = {"frac": "Lf", "binom": "Lk", "sqrt": "Ls", "overline": "Lo", **{a: "L" + c for a, c in L.ACCENTS.items()}}
 LETTER_KINDS = tuple(LETTERS.values())
 ACCENT_FRAMES = {"A" + c for c in L.ACCENTS.values()}     # an accent's braces: a group, but for the accent
 TAGS = set(HEAD_KINDS) | set(LETTER_KINDS) | {"Y"}
@@ -200,7 +201,7 @@ def demote(v, depth):
 # 2. what each brace belongs to ----------------------------------------------
 
 # Qo: an overline's, a root without a sign; Ah, Ab...: an accent's
-OPENS = {"Lf": "N", "Ls": "Q", "Lo": "Qo", "P": "U", "B": "W", **{"L" + c: "A" + c for c in L.ACCENTS.values()}}
+OPENS = {"Lf": "N", "Lk": "N", "Ls": "Q", "Lo": "Qo", "P": "U", "B": "W", **{"L" + c: "A" + c for c in L.ACCENTS.values()}}
 
 
 def is_open(v):
@@ -383,7 +384,7 @@ def valid_step(state, v):
         stacked = kind in ("U", "W") and valid and pending[2]
         return ("O", valid), (None, (kind, valid, stacked) if kind != "G" else None, "x")
     if k in HEAD_KINDS:
-        want = {"F": ("N",), "R": ("Q",), "H": ("Qo",) + tuple(ACCENT_FRAMES)}[k]
+        want = {"F": ("N",), "K": ("N",), "R": ("Q",), "H": ("Qo",) + tuple(ACCENT_FRAMES)}[k]
         valid = root is not None and root[0] in want and root[1]
         return ("root", valid), (pending, None, "x")
     if k in ("P", "B"):
@@ -454,7 +455,7 @@ def role_input(level):
             return ("in",)
         if d < level - 1:
             return ("out",)
-        if k in ("Fv", "Rv", "Hv"):
+        if k in ("Fv", "Kv", "Rv", "Hv"):
             return (k[0], s[2])
         if k in ("Pv", "Bv"):
             return (k[0],) + s[2:]
@@ -469,6 +470,13 @@ def role_input(level):
 
 
 SCRIPT = {"P": "U", "B": "W"}
+BINOM = ("b",)
+FRAC_ROLES = ("froot", "mid", "dopen", "fend")
+
+
+def is_binom(s):
+    """Whether a role (an R value) is one of a binomial's own tokens'."""
+    return s[0] == "R" and s[1] in FRAC_ROLES and s[7:8] == BINOM
 
 
 def role_step(state, v):
@@ -476,8 +484,9 @@ def role_step(state, v):
     frame: the level's open frame: None, ("ok", kind), ("bad", end) inside
       a construct not laid out (end "D": a fraction's, which ends at the
       denominator's closer, or the numerator's when there is none), or
-      ("D?",) between a fraction's two parts;
-    root: ("F",), ("R",) or ("H",) while a laid out command's letters pass, or
+      ("D?",) between a fraction's two parts; a binomial's N, D and D?
+      frames end in "b", and so do the roles of its own tokens (BINOM);
+    root: ("F",), ("K",), ("R",) or ("H",) while a laid out command's letters pass, or
       ("S", kind, pos) between a script's ^ or _ and its brace;
     pend: (kind, pos) for a script whose argument is the next token;
     last: "sup1" or "sub1" right after the first script of a stacked pair.
@@ -488,7 +497,8 @@ def role_step(state, v):
     nlast = None
     if k in HEAD_KINDS:
         if v[1]:
-            return ("role", {"F": "froot", "R": "sroot", "H": "oroot"}[k]), (frame, (k,), None, None)
+            role = ("role", {"F": "froot", "K": "froot", "R": "sroot", "H": "oroot"}[k]) + (BINOM if k == "K" else ())
+            return role, (frame, (k,), None, None)
         return ("out",), (frame, None, None, None)
     if k == "L":
         if root is not None and root[0] in HEAD_KINDS:
@@ -497,7 +507,7 @@ def role_step(state, v):
     if k == "Z":                     # a fraction's slash, between its parts (front.py)
         if frame is not None and frame[0] == "bad":
             return ("inv",), state
-        if frame == ("D?",):
+        if frame is not None and frame[0] == "D?":
             return ("role", "hide"), state
         return ("out",), (frame, None, None, None)
     if k in ("P", "B"):
@@ -525,15 +535,17 @@ def role_step(state, v):
         kind, valid = v[1], v[2]
         if frame is not None and frame[0] == "bad":
             return ("inv",), state
-        if frame == ("D?",):
-            return ("role", "dopen"), (("ok", "D"), None, None, None)
+        if frame is not None and frame[0] == "D?":
+            b = frame[1:]
+            return ("role", "dopen") + b, (("ok", "D") + b, None, None, None)
         if not valid:
             return ("inv",), (("bad", "D" if kind == "N" else "other"), None, None, None)
         if kind in ("U", "W"):
             pos = root[2] if root is not None and root[0] == "S" else "alone"
             fk = kind + ("s" if pos != "alone" else "")
             return ("role", "gopen"), (("ok", fk, pos), None, None, None)
-        return ("role", {"N": "nopen", "Q": "qopen", "Qo": "qopen"}.get(kind, "bopen")), (("ok", kind), None, None, None)
+        b = BINOM if kind == "N" and root == ("K",) else ()
+        return ("role", {"N": "nopen", "Q": "qopen", "Qo": "qopen"}.get(kind, "bopen")), (("ok", kind) + b, None, None, None)
     if k == "C":
         kind, broken = v[1], v[2]
         if frame is not None and frame[0] == "bad":
@@ -542,10 +554,11 @@ def role_step(state, v):
         if frame is None or frame[0] != "ok":
             return ("out",), (None, None, None, None)
         fk = frame[1]
-        if fk == "N":
-            return ("role", "mid"), (("D?",), None, None, None)
-        if fk == "D":
-            return ("role", "fend"), (None, None, None, None)
+        if fk in ("N", "D"):
+            b = frame[2:]
+            if fk == "N":
+                return ("role", "mid") + b, (("D?",) + b, None, None, None)
+            return ("role", "fend") + b, (None, None, None, None)
         if fk in ("Q", "Qo"):
             return ("role", "qend"), (None, None, None, None)
         if fk[0] in "UW":
@@ -741,7 +754,7 @@ def contribution(s, b):
     if name == "mid":
         return [(o, b[2], False, False)]
     if name == "fend":
-        return [(o, max(0, -b[2]) + MARGINS, False, False)]
+        return [(o, max(0, -b[2]) + MARGINS + (PARENS[st] if is_binom(s) else 0), False, False)]
     if name == "sroot":
         return [(o, WIDTH[st], False, False)]
     if name == "qend":
@@ -784,7 +797,11 @@ def width_key(s):
 
 
 def pad_key(s):
-    return s[:3] if s[0] == "R" else ("T",)
+    """What pad_input() reads of S: a role's name and level, and whether
+    it is a binomial's (the marker kept where is_binom() looks)."""
+    if s[0] != "R":
+        return ("T",)
+    return s[:3] + ((0, 0, 0, 0) + BINOM if is_binom(s) else ())
 
 
 def result_key(b):
@@ -1017,7 +1034,9 @@ def pad_input(level):
             if name == "fend":
                 return ("fend", b[2], b[3])
             if name == "mid":
-                return ("mid", b[3])
+                return ("midb" if is_binom(s) else "mid", b[3])
+            if name == "froot" and is_binom(s):
+                return ("froot",)
             if name in ("dopen", "nopen", "sroot"):
                 return (name,)
             if name == "qend":
@@ -1072,7 +1091,9 @@ def pad_low(v):
 
 def pad_low_step(state, v):
     """pad_step with d's low digit; a numerator's opener and a root's sign
-    keep what they are, for the high digit's pass and the merge."""
+    keep what they are, for the high digit's pass and the merge. A
+    binomial's \\binom learns whether either part holds a fraction (its
+    parentheses' kind), as ("fkind", kind)."""
     k = v[0]
     if k == "fend":
         return ("x",), ("d", v[1], v[2])
@@ -1080,14 +1101,18 @@ def pad_low_step(state, v):
         if state is None or state[0] != "d":
             raise Impossible
         return ("dpadL", state[1], state[2]), state
-    if k == "mid":
+    if k in ("mid", "midb"):
         if state is None or state[0] != "d":
             raise Impossible
-        return ("mid",), ("n", state[1], v[1])
+        return ("mid",), (("n", state[1], v[1]) if k == "mid" else ("nb", state[1], v[1], state[2]))
     if k == "nopen":
-        if state is None or state[0] != "n":
+        if state is None or state[0] not in ("n", "nb"):
             raise Impossible
-        return ("npadL", state[1], state[2]), None
+        return ("npadL", state[1], state[2]), (("f", int(state[2] or state[3])) if state[0] == "nb" else None)
+    if k == "froot":
+        if state is None or state[0] != "f":
+            raise Impossible
+        return ("fkind", state[1]), None
     if k == "qend":
         return ("x",), ("k", v[1])
     if k == "sroot":
@@ -1125,7 +1150,7 @@ def pad_high_step(state, v):
 def merge_pads(b, a, c):
     if a[0] in ("dpadL", "npadL"):
         return (a[0][:4], c[1] * BASE + a[1], a[2])
-    return a if a[0] == "kind" else b
+    return a if a[0] in ("kind", "fkind") else b
 
 
 def pads(level):
@@ -1137,7 +1162,7 @@ def pads(level):
             RTL("A", pad_low_step, None, view=width_view), strip("A"),
             Derive("C", ["A"], pad_high_input),
             RTL("C", pad_high_step, None, view=lambda v: v != BLANK), strip("C"),
-            Derive("B", ["A", "C"], merge_pads),
+            Derive("B", ["A", "C"], lambda b, a, c, l=level: merge_pads(b, a, c) + ((l,) if a[0] == "fkind" else ())),
             Map("A", lambda v: BLANK), Map("C", lambda v: BLANK)]
 
 
@@ -1159,6 +1184,13 @@ def copy_width(prev, v):
     """A fraction's end learns its numerator's width, as ("wN", level, w):
     with the level, so no level's results look like another's targets."""
     return ("wN", v[1], prev[2] if prev is not None and prev[0] == "mid" else 0)
+
+
+def paren_kind(prev, v):
+    """A binomial's end learns its parentheses' kind from its \\binom's B,
+    ("fkind", kind, level), as a detail after its marker: so only a
+    binomial's own values are multiplied by it."""
+    return v + (prev[1] if prev is not None else 0,)
 
 
 # the program ----------------------------------------------------------------
@@ -1233,6 +1265,11 @@ def program(relaxed=False):
         P += [Derive("C", ["S"], numerator_flag(level)),
               Context("C", copy_width, targets=lambda v, l=level: v == ("wN?", l),
                       ctx_track="B", ctx_view=lambda v, l=level: v[0] == "mid" and v[1] == l)]
+    if not relaxed:
+        for level in range(1, L.MAX_DEPTH + 1):
+            P.append(Context("S", paren_kind, ctx_track="B",
+                             targets=lambda v, l=level: is_binom(v) and v[1] == "fend" and v[2] == l and len(v) == 8,
+                             ctx_view=lambda v, l=level: v[0] == "fkind" and v[2] == l))
     if not relaxed:
         P += [Derive("S", ["G"], accent_to_role, keys=[accent_of]), Map("G", strip_accent)]
     P += finals()

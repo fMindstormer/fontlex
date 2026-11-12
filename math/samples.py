@@ -15,7 +15,8 @@ def formula(rng, depth=0):
     for _ in range(rng.randint(1, 4 if depth else 6)):
         r = rng.random()
         if depth < 4 and r < 0.12:
-            out.append("\\frac{" + formula(rng, depth + 1) + "}{" + formula(rng, depth + 1) + "}")
+            cmd = "binom" if rng.random() < 0.3 else "frac"
+            out.append(f"\\{cmd}{{" + formula(rng, depth + 1) + "}{" + formula(rng, depth + 1) + "}")
         elif depth < 4 and r < 0.2:
             out.append("\\sqrt{" + formula(rng, depth + 1) + "}")
         elif depth < 4 and r < 0.24:
@@ -56,7 +57,7 @@ def mangle(rng, line):
         return line[:i] + " " + line[i:]
     if r < 0.9:
         return line[:i] + rng.choice("{}^_") + line[i:]
-    return line[:i] + "\\frac{" + line[i:]
+    return line[:i] + rng.choice(("\\frac{", "\\binom{")) + line[i:]
 
 
 def lines(n, seed=1):
@@ -84,6 +85,12 @@ EDGES = [
     "\\hat", "\\hat{", "\\hat{}", "\\hat{x", "\\hat x", "\\hatx{y}", "\\hat{\\alpha}", "\\vec{v}^2", "\\bar{x}_1",
     "\\tilde{\\hat{x}y}", "\\dot{\\ddot{\\vec{x}}}", "\\hat{\\hat{\\hat{\\hat{x}}}}", "\\hat{\\frac{a}{b}}",
     "\\vec{\\frac{\\hat{a}}{b}}", "\\overline{\\hat{x}}", "\\hat{x^{\\bar{2}}}", "\\hat{\\frac{a}{b",
+    "\\binom", "\\binom{", "\\binom{n}", "\\binom{n}{", "\\binom{n}{k}", "\\binom {n}{k}", "\\binom{n} {k}",
+    "\\binomial{n}{k}", "\\binom{n}k", "\\binom{}{}", "\\binom{n}{k}}", "\\binom{n+1}{k}", "\\binom{n}{k+1}",
+    "\\binom{\\binom{a}{b}}{c}", "\\binom{\\frac{a}{b}}{\\frac{c}{d}}", "\\frac{\\binom{a}{b}}{\\binom{c}{d}}",
+    "\\binom{\\binom{\\binom{a}{b}}{c}}{d}", "\\sqrt{\\binom{n}{k}}", "\\overline{\\binom{n}{k}}",
+    "\\hat{\\binom{n}{k}}", "x^{\\binom{n}{2}}", "\\binom{n}{k}^2", "\\binom{n}{k}\\binom{a}{b}",
+    "\\binom{x^2}{y_1}", "\\binom{" + "n" * 30 + "}{k}",
 ]
 
 
