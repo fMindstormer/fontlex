@@ -962,7 +962,9 @@ def initial(font):
 def relaxed_commands(font):
     """The relaxed notation's (relaxed.lex): a two-character symbol's first
     character becomes the symbol and the second hides; "sqrt(" after no
-    letter, digit, point or "_" gets a root's glyphs, as \\sqrt has."""
+    letter, digit, point or "_" gets a root's glyphs, as \\sqrt has, and
+    an accent's name before "(" its glyphs (front.accent_tag): whether its
+    parentheses hold only letters is the passes' to say."""
     cmap = font.cmap
     hid = font.glyph("G", ("hid",))
     rules = []
@@ -972,12 +974,17 @@ def relaxed_commands(font):
         rules.append(([], [{a}, {b}], [], [(0, font.pl.nested({a: head})), (1, font.pl.nested({b: hid}))]))
     font.pl.add(fb.lookup(6, [font.pl.chain_rule(*r) for r in rules]))
     word = {cmap[ord(c)] for c in font.chars if c.isalnum() or c in "._"}
-    seq = [{cmap[ord(c)]} for c in "sqrt"]
     paren = {cmap[ord("(")]}
-    head = font.pl.nested({cmap[ord("s")]: font.char_glyph(("g", "s", "R"))})
-    letters = font.pl.nested({cmap[ord(c)]: font.char_glyph(("g", c, "Ls")) for c in "qrt"})
-    rules = [([word], seq, [paren], []),
-             ([], seq, [paren], [(0, head)] + [(k, letters) for k in range(1, 4)])]
+    rules = []
+    for name in R.COMMANDS:          # (ddot before dot doesn't matter: dot's needs no letter before it)
+        seq = [{cmap[ord(c)]} for c in name]
+        if name == "sqrt":
+            tags = ["R", "Ls", "Ls", "Ls"]
+        else:
+            tags = [front.accent_tag(k, name) for k in range(len(name))]
+        subs = [(k, font.pl.nested({cmap[ord(c)]: font.char_glyph(("g", c, tag))}))
+                for k, (c, tag) in enumerate(zip(name, tags))]
+        rules += [([word], seq, [paren], []), ([], seq, [paren], subs)]
     font.pl.add(fb.lookup(6, [font.pl.chain_rule(*r) for r in rules]))
 
 
@@ -994,6 +1001,9 @@ def relaxed_initial(font):
     add(("g", "s", "R"), ("R",))
     for c in "qrt":
         add(("g", c, "Ls"), ("Ls", c))
+    for name in R.ACCENTS:
+        for k, c in enumerate(name):
+            add(("g", c, front.accent_tag(k, name)), front.accent_class(k, c))
     for sym in R.SYMBOLS.values():
         add(("g", sym, "Y2"), ("Y",))
     mapping = {}

@@ -141,6 +141,7 @@ sqrt(x^2+y^2) <= x+y
 x_(n+1) = x_n/2 + a/(2x_n)
 f(x) = 1/(1+e^-x)
 H_2O, 2^10 = 1024, a_1^2 + a_2^2
+bar(x) = (x_1+x_2+x_3)/3, vec(AB), ddot(x) = -x
 and/or, w/o, km/h, C/C++, 10/23/2026"""
 
 RELAXED_PAGE = """<!doctype html>
@@ -152,7 +153,7 @@ RELAXED_PAGE = """<!doctype html>
 {{STYLE}}
 main { max-width: 66rem; }
 .nav { margin: 0 0 .75rem; }
-textarea#code { min-height: 42rem; white-space: pre; overflow-x: auto; font-size: 1.6rem; line-height: 2.7; }
+textarea#code { min-height: 46.7rem; white-space: pre; overflow-x: auto; font-size: 1.6rem; line-height: 2.7; }
 .try { display: grid; gap: 1rem 1.5rem; align-items: start; }
 @media (min-width: 62rem) { .try { grid-template-columns: minmax(0, 1fr) 15rem; } .tips { order: 2; } }
 .try .editor { min-width: 0; }
@@ -171,7 +172,7 @@ textarea#code { min-height: 42rem; white-space: pre; overflow-x: auto; font-size
   <h1>Fontlex Relaxed Math</h1>
   <p class="lede">The box below is a plain text box holding math the way people type it in plain text:
   <code>(a+b)/(c+d)</code>, <code>x^2</code>, <code>sqrt(x)</code>. The font typesets it as you type: fractions,
-  roots, superscripts and subscripts, laid out by the text engine that lays out the letters. Ordinary text stays
+  roots, accents, superscripts and subscripts, laid out by the text engine that lays out the letters. Ordinary text stays
   ordinary, so <code>and/or</code>, <code>w/o</code>, dates and paths are left alone. The characters stay exactly
   as typed. No script on this page lays anything out.</p>
 
@@ -198,6 +199,8 @@ textarea#code { min-height: 42rem; white-space: pre; overflow-x: auto; font-size
     <li>Scripts: <code>x^2</code>, <code>x^(n+1)</code>, <code>x^-1</code>, <code>x_1</code>, <code>H_2O</code>,
     and both at once, stacked: <code>x_i^2</code>.</li>
     <li>Roots: <code>sqrt(x^2+1)</code>.</li>
+    <li>Accents, over letters: <code>hat(x)</code>, <code>bar(z)</code>, <code>vec(AB)</code>,
+    <code>dot(x)</code>, <code>ddot(x)</code>, <code>tilde(f)</code>.</li>
     <li>Symbols: <code>&lt;=</code> <code>&gt;=</code> <code>!=</code> <code>-&gt;</code> <code>=&gt;</code>
     <code>+-</code> become ≤ ≥ ≠ → ⇒ ±. Greek letters and other symbols can be typed as themselves.</li>
   </ul>
@@ -207,13 +210,16 @@ textarea#code { min-height: 42rem; white-space: pre; overflow-x: auto; font-size
   <h2>What stays text</h2>
   <ul>
     <li>A fraction's parts are numbers (<code>12</code>, <code>3.5</code>), a number and a letter
-    (<code>2a</code>), one letter, a group in parentheses, a call like <code>f(x)</code> or <code>sin(x)</code>, or
-    a root, each with its scripts. Longer words make no fraction: <code>and/or</code>, <code>km/h</code>,
+    (<code>2a</code>), one letter, a group in parentheses, a call like <code>f(x)</code> or <code>sin(x)</code>,
+    a root or an accent, each with its scripts. Longer words make no fraction: <code>and/or</code>, <code>km/h</code>,
     <code>page/2</code>.</li>
     <li>Two lone letters make a fraction only in an expression (<code>a+b/c</code>, <code>x = a/b</code>), so
     <code>w/o</code>, <code>n/a</code> and <code>I/O</code> stay as they are.</li>
     <li>Slashes in a row (<code>a/b/c</code>, <code>10/23/2026</code>, <code>//</code>) make none, nor does any
     slash in a run of characters where one touches a longer word (<code>tr/a-z/A-Z/</code>).</li>
+    <li>An accent's parentheses hold letters and nothing else, so <code>dot(a,b)</code> and
+    <code>vec(x+1)</code> stay text, and so do <code>np.dot(x)</code> and <code>ahat(x)</code>, where the name
+    follows a letter, digit, point or underscore.</li>
     <li>No script touches another underscore, and a number has no subscript: <code>file_1_2</code>,
     <code>1_000</code> stay text.</li>
   </ul>

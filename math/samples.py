@@ -105,7 +105,11 @@ def relaxed_operand(rng, depth):
         return "(" + relaxed_formula(rng, depth + 1) + ")"
     if depth < 3 and r < 0.38:
         return "sqrt(" + relaxed_formula(rng, depth + 1) + ")"
-    if r < 0.45:
+    if r < 0.43:
+        inner = rng.choice(["x", "y", "v", "z", "AB", "θ"]) if rng.random() < 0.7 or depth >= 3 else \
+            relaxed_formula(rng, depth + 1)
+        return rng.choice(list(L.ACCENTS)) + "(" + inner + ")"
+    if r < 0.5:
         return rng.choice("fg") + "(" + relaxed_formula(rng, depth + 1) + ")" if depth < 3 else "x"
     return rng.choice(["a", "b", "x", "y", "n", "1", "2", "12", "3.5", "2a", "3x", "ab"])
 
@@ -165,4 +169,8 @@ RELAXED_EDGES = [
     "sqrtx", "asqrt(x)", "((((x))))", "(((((x)))))", "1/(1/(1/x))", "(1/(1/x))/2", "x^(y^(z^w))",
     "sqrt(sqrt(sqrt(x)))", "sqrt(sqrt(sqrt(sqrt(x))))", "(" + "a" * 30 + ")/b", "w/o", "and/or", "a/b",
     "a+b/c", "C/C++", "1_000", "x_1^2_3", "<=>", "=>", "<==", "x ->0", "(a + b)/2", "1/2 + 1/3",
+    "hat", "hat(", "hat()", "hat(x", "hatx", "ahat(x)", "np.dot(x)", "x_dot(y)", "dot(a,b)", "dot(a, b)",
+    "vec(AB)", "hat(12)", "hat(x y)", "bar(x_1)", "hat(hat(x))", "x^hat(y)", "hat(x)_1^2", "hat(x)^2/2",
+    "vec(v)/(1+hat(x))", "hat(x)y", "tilde(f)(x)", "ddot(x) = -x", "((((hat(x))))", "(((((hat(x)))))",
+    "dot(x)/ddot(x)",
 ]

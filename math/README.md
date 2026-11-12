@@ -193,6 +193,8 @@ Fontlex Relaxed Math typesets what plain-text math looks like:
   `1/(1+1/x)`;
 - scripts: `x^2`, `x^(n+1)`, `x^-1`, `x_1`, `H_2O`, and stacked, `x_i^2`;
 - roots: `sqrt(x^2+1)`;
+- accents, over letters: `hat(x)`, `bar(z)`, `vec(AB)`, `dot(x)`,
+  `ddot(x)`, `tilde(f)`;
 - `<=` `>=` `!=` `->` `=>` `+-` as ≤ ≥ ≠ → ⇒ ±.
 
 Parentheses around all of a fraction's part, a script's argument or a
@@ -204,9 +206,9 @@ every line of every text box it is used in, and slashes, carets and
 underscores are common in prose and code. The rules, in `relaxed.py`:
 
 - A fraction's part is a number (`12`, `3.5`), a number and one letter
-  (`2a`), one letter, a group in parentheses, a call (`f(x)`, `sin(x)`) or
-  a root, each with its scripts. A longer word is never one: `and/or`,
-  `km/h`, `page/2` stay text.
+  (`2a`), one letter, a group in parentheses, a call (`f(x)`, `sin(x)`), a
+  root or an accent, each with its scripts. A longer word is never one:
+  `and/or`, `km/h`, `page/2` stay text.
 - Two lone letters make a fraction only next to an operator with an
   operand past it (`a+b/c`, `x = a/b`), so `w/o`, `n/a`, `I/O-conversion`
   and `C/C++` stay text.
@@ -214,6 +216,9 @@ underscores are common in prose and code. The rules, in `relaxed.py`:
   slashes in a row (`a/b/c`, `10/23/2026`, `//`) make no fraction. Nor does
   any slash in a run of characters without a space where some slash touches
   a longer word (`tr/a-z/A-Z/`, `s/x/y/g`).
+- An accent's parentheses hold letters and nothing else: `dot(a,b)`,
+  `hat()` and `vec(x+1)` stay text. Its name, like `sqrt`, counts only
+  after no letter, digit, point or underscore: `np.dot(x)` stays text.
 - No script touches another underscore, and a number takes no subscript:
   `T_U_INT`, `1_000_000`, `1.09_01` stay text.
 - A number has at most one point, so an IP address is no fraction.
@@ -224,11 +229,14 @@ lines, rendered with `mandoc`), 311 lines get a construct. About half are
 real math (`2^63 - 1`, `1/9 the page length`, `-1/2`); the rest are mostly
 numbers over numbers (`7/8 bit`, `27/811 test scripts`, a date like
 `6/14`), which can't be told from `1/2`, and some code (`^G` for a control
-character, `A-Z_a-z` in a regular expression).
+character, `A-Z_a-z` in a regular expression). Accents came later; over the
+same pages rendered again (547,908 lines, as macOS now has more), they
+typeset five more lines, none of them math: `bar(baz)` four times in a Perl
+example and `bar(i)` in a sentence about C.
 
 ### How it works
 
-`front.py` has 122 passes that read a line as `relaxed.py` does and leave
+`front.py` has 124 passes that read a line as `relaxed.py` does and leave
 it as the tokens of the LaTeX that lays out the same: `(a+b)/(c+d)` becomes
 `\frac{a+b}{c+d}`, with the parentheses as the braces. What the line
 doesn't have, the `\frac` and the braces around `1` and `2` in `1/2`, is
@@ -257,7 +265,7 @@ anyway.
 
 | Lines | Count | HarfBuzz 14.6.0 | Core Text (macOS 27) |
 |---|---:|---:|---:|
-| Edge cases (`samples.RELAXED_EDGES`: incomplete input, prose) | 51 | 100% | 100% |
+| Edge cases (`samples.RELAXED_EDGES`: incomplete input, prose) | 76 | 100% | 100% |
 | Random formulas and words, some mistyped | 20,000 | 100% | 100% |
 
 The passes, run in Python, match `relaxed.py` on 100,000 more random lines.
@@ -271,9 +279,9 @@ By screenshot, as for Fontlex Math:
   with the same exception. Typing key by key ends as setting the text at
   once does.
 
-The font has 55,176 glyphs, 2,044 substitution lookups (1,596 of them
-nested, in 3,149 subtables) and 301 positioning lookups. It is 10.1 MB as
-TrueType and 1.3 MB as WOFF2. Shaping takes 0.34 ms per character in
+The font has 61,193 glyphs, 2,075 substitution lookups (1,595 of them
+nested, in 3,255 subtables) and 301 positioning lookups. It is 11.1 MB as
+TrueType and 1.4 MB as WOFF2. Shaping takes 0.34 ms per character in
 HarfBuzz.
 
 ### Its limits
@@ -287,4 +295,7 @@ HarfBuzz.
   construct can't span two runs, so `e^(iπ)` stays text there. HarfBuzz on
   its own and WebKit lay it out.
 - A part is a whole word, so `2/3x` is 2 over 3x, and `x^2y` is x² y.
+- An accent goes over letters only, each its own, as in Fontlex Math:
+  `vec(AB)` is an arrow over A and one over B. For an accented letter
+  with a script, write `hat(x)_1`; `hat(x_1)` stays text.
 - Native Windows apps (DirectWrite) don't typeset it, for the same reason.

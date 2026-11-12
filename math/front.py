@@ -13,7 +13,8 @@ hides (Z). Everything else that isn't a construct's becomes text ("c").
 
 The passes:
  1. paren depth (parentheses past BRACE_LIMIT, and what follows, are text),
-    then which parentheses match, and which groups are empty;
+    then which parentheses match, and which groups are empty; an accent
+    whose parentheses hold anything but letters becomes letters;
  2. what each token's right neighbor is, then words: where they start and
     end, and their kind (number, number and letter, letter, function,
     other), as relaxed.word_kind;
@@ -87,6 +88,20 @@ def char_class(ch):
     return ("x",)
 
 
+def accent_class(k, ch):
+    """An accent's name, as the font first reads it (relaxed.lex): its
+    first letter H, the others La, each with the letter's class."""
+    return ("H" if k == 0 else "La", char_class(ch)[1])
+
+
+def accent_tag(k, name):
+    """The letter's kind in program.tokens' terms."""
+    return "H" if k == 0 else P.LETTERS[name]
+
+
+CMD_TAGS = {"H"} | {P.LETTERS[a] for a in R.ACCENTS}
+
+
 def tokens(line):
     """The font's tokens for a line, as program.tokens gives them for
     LaTeX: S holds the character's class."""
@@ -94,10 +109,13 @@ def tokens(line):
     for kind, start, end, value in R.lex(line):
         if kind == "sym":
             out.append({"text": line[start:end], "char": value, "S": ("Y",), "G": ("g", value, "Y2")})
-        elif kind == "cmd":
+        elif kind == "cmd" and value == "sqrt":
             out.append({"text": "s", "char": "s", "S": ("R",), "G": ("g", "s", "R")})
             for ch in "qrt":
                 out.append({"text": ch, "char": ch, "S": ("Ls", ch), "G": ("g", ch, "Ls")})
+        elif kind == "cmd":
+            for k, ch in enumerate(value):
+                out.append({"text": ch, "char": ch, "S": accent_class(k, ch), "G": ("g", ch, accent_tag(k, value))})
         elif kind == " ":
             out.append({"text": " ", "char": " ", "S": (" ",)})
         else:
@@ -114,13 +132,13 @@ def tokens(line):
 def depth_step(state, v):
     d, dead = state
     k = v[0]
-    extra = [("c", v[1])] if k in ("l", "Ls") else []
+    extra = [("c", v[1])] if k in ("l", "Ls", "H", "La") else []
     if k == " ":
         return V(" ", d), state
     if dead:
         if k in ("(", ")"):
             return V("e", d), state
-        if k in ("^", "_", "/", "R", "Ls"):
+        if k in ("^", "_", "/", "R", "Ls", "H", "La"):
             return V("x", d), state
         return V(k, d, *extra), state
     if k == "(":
@@ -153,6 +171,25 @@ def empty_closer(prev, v):
     return put(v, "empty") if prev is not None and prev[0] == "(" and has(prev, "empty") else v
 
 
+def accent_contents(state, v):
+    """Right to left: an accent's name stays one only before a "(" whose
+    group holds letters and nothing else (no space, no parenthesis): state
+    "C" after a ")", "L" after letters before one, "P" after such a "(",
+    "A" inside a good accent's name; otherwise it becomes letters."""
+    k = v[0]
+    if k == ")":
+        return v, "C"
+    if k == "l":
+        return v, ("L" if state in ("C", "L") else None)
+    if k == "(":
+        return v, ("P" if state == "L" else None)
+    if k in ("H", "La"):
+        if state in ("P", "A"):
+            return v, ("A" if k == "La" else None)
+        return V("l", v[1], *flags(v)), None
+    return v, None
+
+
 # 2. neighbors, words -----------------------------------------------------------
 
 def right_class(v, right):
@@ -170,7 +207,7 @@ def right_class(v, right):
         return "("
     if k == "_":
         return "_"
-    if k in ("Ls", "R") and right in ("(", "q"):
+    if k in ("Ls", "R", "La", "H") and right in ("(", "q"):
         return "q"
     return "x"
 
@@ -304,7 +341,7 @@ def tidy(v):
         return out
     if v[0] in (")", "Y"):
         return V(v[0], v[1], *[f for f in flags(v) if f == "empty"], *(["us"] if get(v, "n") == "_" else []))
-    if v[0] in ("R", "Ls"):
+    if v[0] in ("R", "Ls", "H", "La"):
         return V(v[0], v[1], *(["sq"] if get(v, "n") in ("q", "(") else []), *([("c", get(v, "c"))] if v[0] == "Ls" else []))
     if v[0] == "(":
         return V("(", v[1], *[f for f in flags(v) if f == "empty"])
@@ -315,12 +352,12 @@ def tidy(v):
 
 def paren_owner(prev, v):
     """A "(" after a function's name (or one letter) opens its arguments;
-    after "sqrt", a root's contents."""
+    after "sqrt" or an accent's name, the construct's contents."""
     if has(v, "empty") or prev is None:
         return v
     if prev[0] == "w" and has(prev, "end") and get(prev, "k") in ("let", "fn"):
         return put(v, "app")
-    if prev[0] == "Ls":
+    if prev[0] in ("Ls", "La"):
         return put(v, "sq")
     return v
 
@@ -393,9 +430,9 @@ def element_start(v, prev_us):
         if has(v, "app") or has(v, "sq"):
             return None
         return (not has(v, "empty"), False, prev_us, False, True)
-    if k == "R":
+    if k in ("R", "H"):
         return (has(v, "sq"), False, prev_us, False, False)
-    if k == "Ls" or k == ")":
+    if k in ("Ls", "La") or k == ")":
         return None
     if k == "Y":
         return (True, False, prev_us, False, False)
@@ -409,8 +446,8 @@ def element_end(v):
         return has(v, "end") and not (get(v, "n") == "(" and get(v, "k") in ("let", "fn"))
     if k == "(":
         return False
-    if k == "R":
-        return False
+    if k in ("R", "H", "La"):
+        return False          # (an accent's name, left as one, is one: accent_contents)
     if k == "Ls":
         return get(v, "c") == "t" and not has(v, "sq")
     return True
@@ -701,9 +738,14 @@ def results(b):
     return b[1:] if b is not None and b[0] == "r" else ()
 
 
-def latex_kind(v, b):
+def cmd_tag(g):
+    return g[2] if g[0] == "g" and g[2] in CMD_TAGS else None
+
+
+def latex_kind(v, b, tag):
     """The token's kind in program.tokens' terms (a virtual token has it
-    already), from its S and the results its level left in B."""
+    already), from its S, the results its level left in B and, for an
+    accent's name, its glyph's tag (cmd_tag)."""
     if len(v) != 3:
         return v
     k = v[0]
@@ -722,6 +764,8 @@ def latex_kind(v, b):
         return ("Z",) if get(r, "Z") else ("c",)
     if k in ("R", "Ls"):
         return (k,) if has(v, "sq") else ("c",)
+    if k in ("H", "La"):
+        return (tag,) if has(v, "sq") else ("c",)
     return ("c",)
 
 
@@ -753,6 +797,7 @@ def front():
     P_ = [LTR("S", depth_step, (0, False), spaces=True), strip("S", spaces=True),
           RTL("S", match_step, (frozenset(), False), spaces=True), strip("S", spaces=True),
           Context("S", empty_closer, targets=lambda v: v[0] == ")", spaces=True),
+          RTL("S", accent_contents, None, spaces=True), strip("S", spaces=True),
           RTL("S", next_step, "x", spaces=True), strip("S", spaces=True),
           LTR("S", word_step, None, spaces=True), strip("S", spaces=True),
           RTL("S", kind_step, None, spaces=True), strip("S", spaces=True),
@@ -767,7 +812,7 @@ def front():
     for level in LEVELS:
         P_ += level_passes(level)
     P_ += [Insert(before, after),
-           Derive("S", ["B"], latex_kind, spaces=True),
+           Derive("S", ["B", "G"], latex_kind, keys=[None, cmd_tag], spaces=True),
            Map("B", lambda v: BLANK)]
     return P_
 
@@ -786,8 +831,8 @@ def expected(line):
             return [("Y", toks[i][3])]
         if kind == " ":
             return [(" ", " ")]
-        if kind == "cmd" or (kind == "text" and toks[i][3] == "sqrt"):
-            return [("c", ch) for ch in "sqrt"]
+        if kind == "cmd" or (kind == "text" and toks[i][3] in R.COMMANDS):
+            return [("c", ch) for ch in toks[i][3]]
         return [("c", toks[i][3])]
 
     def seq(lo, hi):
@@ -809,6 +854,9 @@ def expected(line):
             return [x for i in range(w0, w1 + 1) for x in plain(i)] + emit(R.El("group", w1 + 1, e.hi))
         if e.kind == "sqrt":
             return [("R", "s"), ("Ls", "q"), ("Ls", "r"), ("Ls", "t"), ("O", "(")] + \
+                seq(e.lo + 2, e.hi - 1) + [("C", ")")]
+        if e.kind == "accent":
+            return [(accent_tag(k, e.name), ch) for k, ch in enumerate(e.name)] + [("O", "(")] + \
                 seq(e.lo + 2, e.hi - 1) + [("C", ")")]
         if e.kind == "script":
             out = emit(e.base)

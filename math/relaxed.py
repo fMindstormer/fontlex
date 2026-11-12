@@ -4,6 +4,7 @@ font that typesets math written the way people write it in plain text.
     (a+b)/(c+d)   1/2   x/2   2a/3   a+b/c     fractions
     x^2  x^(n+1)  x_1  x_i^2  H_2O  x^-1      scripts
     sqrt(x)  sqrt(x^2+1)                      square roots
+    hat(x)  bar(z)  vec(AB)  dot(x)  ddot(x)  tilde(f)   accents
     <=  >=  !=  ->  =>  +-                    symbols
 
 The layout is layout.py's; what differs is what counts as a construct.
@@ -12,8 +13,13 @@ Ordinary text must stay ordinary, so the rules are narrow:
 - An operand (of a fraction, a script's base) is a whole word that is a
   number (12, 3.5), a number and one letter (2a), or one letter; a
   symbol; a parenthesized group; a group after one letter or a function
-  name (f(x), sin(x), with its parentheses shown); or sqrt(..). Scripts
-  after it belong to it. Longer words (and/or, km/h, page/2) are text.
+  name (f(x), sin(x), with its parentheses shown); sqrt(..); or an
+  accent. Scripts after it belong to it. Longer words (and/or, km/h,
+  page/2) are text.
+- An accent (hat, bar, vec, dot, ddot, tilde, as after a backslash in
+  LaTeX) takes parentheses with letters in them and nothing else: hat(x),
+  vec(AB). Otherwise its name is a word like any other: dot(a,b), hat(),
+  vec(x+1).
 - A group that is all of a fraction's operand, a script's argument or a
   root's contents loses its parentheses: (a+b)/2. With a script it keeps
   them: (a+b)^2/c. An empty group, as in f(), is none of these.
@@ -30,6 +36,8 @@ Ordinary text must stay ordinary, so the rules are narrow:
   nothing: C/C++ and $1/g stay text.
 - A subscript's base isn't a number, and no script touches another
   underscore: 1_000_000, 1.09_01 and T_U_INT stay text.
+- sqrt and the accents' names count after no letter, digit, point or
+  "_": asqrt(x) and np.dot(x) stay text.
 - A space inside a construct, or past layout.py's limits on depth and
   length, leaves it as its characters (as in layout.py: WebKit gives a
   space's glyphs a space's width).
@@ -45,12 +53,14 @@ SYMBOLS = {"<=": "≤", ">=": "≥", "!=": "≠", "->": "→", "=>": "⇒", "+-"
 FUNCTIONS = ("sin", "cos", "tan", "log", "ln", "exp")
 OPERATORS = set("+-=<>*·×÷±≤≥≠→⇒")
 EDGES = OPERATORS | set(".,;:!?[]{}()~\"'`")    # what may touch a fraction
+ACCENTS = tuple(L.ACCENTS)
+COMMANDS = ("sqrt",) + ACCENTS
 
 
 def lex(line):
-    """[(kind, start, end, value)]: kind "cmd" (sqrt, before a parenthesis
-    and after no letter or digit), "sym", "(", ")", "^", "_", "/", " " or
-    "char"."""
+    """[(kind, start, end, value)]: kind "cmd" (value sqrt or an accent's
+    name, before a parenthesis and after no letter, digit, point or "_"),
+    "sym", "(", ")", "^", "_", "/", " " or "char"."""
     out, i = [], 0
     while i < len(line):
         two = line[i:i + 2]
@@ -58,13 +68,38 @@ def lex(line):
             out.append(("sym", i, i + 2, SYMBOLS[two]))
             i += 2
             continue
-        if line.startswith("sqrt(", i) and not (i and (line[i - 1].isalnum() or line[i - 1] in "._")):
-            out.append(("cmd", i, i + 4, "sqrt"))
-            i += 4
+        name = command_at(line, i)
+        if name:
+            out.append(("cmd", i, i + len(name), name))
+            i += len(name)
             continue
         ch = line[i]
         out.append((ch if ch in "()^_/ " else "char", i, i + 1, ch))
         i += 1
+    return out
+
+
+def command_at(line, i):
+    if i and (line[i - 1].isalnum() or line[i - 1] in "._"):
+        return None
+    for name in COMMANDS:
+        if line.startswith(name + "(", i):
+            return name
+    return None
+
+
+def plain_accents(toks, match):
+    """An accent whose parenthesis doesn't hold letters and only letters,
+    up to its own closer, is its name's characters."""
+    out = []
+    for i, t in enumerate(toks):
+        if t[0] == "cmd" and t[3] in ACCENTS:
+            j = match.get(i + 1)
+            if j is None or j == i + 2 or \
+                    not all(toks[k][0] == "char" and toks[k][3].isalpha() for k in range(i + 2, j)):
+                out += [("char", t[1] + k, t[1] + k + 1, ch) for k, ch in enumerate(t[3])]
+                continue
+        out.append(t)
     return out
 
 
@@ -99,6 +134,7 @@ def match(toks):
 class El:
     """A piece of one parenthesis level: kind "word" (sub: "num", "numlet",
     "let", "fn" or "other"), "group", "app" (a word and a group), "sqrt",
+    "accent" (name: which),
     "sym", "op" (any other token: value its character), "script" (an
     operand with its scripts) or "frac"; lo and hi its first and last
     token."""
@@ -111,7 +147,7 @@ class El:
     def operand(self):
         if self.kind == "group" and self.hi == self.lo + 1:
             return False        # (), as in code
-        return self.kind in ("group", "app", "sqrt", "sym", "script") or \
+        return self.kind in ("group", "app", "sqrt", "accent", "sym", "script") or \
             self.kind == "word" and self.sub in ("num", "numlet", "let")
 
 
@@ -183,7 +219,8 @@ def poisoned(line, toks):
 class Parser:
     def __init__(self, line):
         self.line = line
-        self.toks, self.match = match(lex(line))
+        toks, m = match(lex(line))
+        self.toks, self.match = match(plain_accents(toks, m))
         self.poisoned = poisoned(line, self.toks)
 
     def elements(self, lo, hi):
@@ -197,6 +234,10 @@ class Parser:
                 continue
             if kind == "cmd":
                 j = self.match.get(i + 1)
+                if toks[i][3] != "sqrt":
+                    out.append(El("accent", i, j, name=toks[i][3]))   # plain_accents left only good ones
+                    i = j + 1
+                    continue
                 if j is not None and j > i + 2:
                     out.append(El("sqrt", i, j))
                     i = j + 1
@@ -355,6 +396,8 @@ class Parser:
             return list(range(w0, w1 + 1)) + self.items(El("group", w1 + 1, e.hi))
         if e.kind == "sqrt":
             return [self.node("sqrt", e.lo, e.hi, [self.seq(e.lo + 2, e.hi - 1)])]
+        if e.kind == "accent":
+            return [self.node(e.name, e.lo, e.hi, [self.seq(e.lo + 2, e.hi - 1)])]
         if e.kind == "script":
             out = self.items(e.base)
             for kind, at, pieces in e.scripts:

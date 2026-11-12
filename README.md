@@ -188,7 +188,7 @@ too many possible successors brought it to 1,635 lookups
 
 Fontlex Relaxed Math reads math the way people type it in a chat or a
 commit message: `(a+b)/(c+d)`, `x^2`, `sqrt(b^2-4ac)`. It doesn't lay out
-anything itself. 122 passes in front parse the plain text and rewrite it,
+anything itself. 124 passes in front parse the plain text and rewrite it,
 inside the font, as the LaTeX that Fontlex Math already knows how to lay
 out: `(a+b)/(c+d)` becomes `\frac{a+b}{c+d}`, with the parentheses as the
 braces. What the line doesn't have, the `\frac` and the braces around `1`
@@ -202,7 +202,7 @@ checked against 461,327 lines of macOS man pages and READMEs, of which
 311 get a construct, about half of them real math. The first build of this font
 needed 113,000 glyphs, because every combination of the passes' results
 became a glyph of its own. Moving results onto scratch tracks and giving
-dead values' glyphs back brought it to 55,176.
+dead values' glyphs back brought it to 55,176; accents took it to 61,193.
 
 ### Learner fonts: data, then compilation
 

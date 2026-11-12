@@ -617,8 +617,7 @@ def fold(prev, o, level):
     """One level pass's output, read after the ones above it: ("run", style,
     chain depth, opaque, y[, accent]) while the token is inside laid out
     frames, then ("done", result) with what combine() would give, less the
-    token's kind. The accent, the innermost accent frame's code, is there
-    for Fontlex Math (RUN_ACCENTS), not for the relaxed notation (RUN)."""
+    token's kind. The accent is the innermost accent frame's code."""
     if prev[0] == "done":
         return prev
     _, st, k, op, y, *acc = prev
@@ -645,8 +644,7 @@ def enter(prev, frame, level):
     return ("run", min(2, st + (frame in REDUCING)), k, level if frame in OPAQUE else op, y, *acc)
 
 
-RUN = ("run", 0, 0, 0, 0)
-RUN_ACCENTS = ("run", 0, 0, 0, 0, None)
+RUN = ("run", 0, 0, 0, 0, None)
 
 
 def fold_accent(c):
@@ -664,6 +662,14 @@ def put_accent(g, c):
     only the final glyph reads: no pass between multiplies by it."""
     acc = fold_accent(c)
     return (g[0], g[1], (g[2] or "") + "A" + acc) + g[3:] if acc else g
+
+
+def accentable(relaxed):
+    """Which characters an accent can be over: in the relaxed notation,
+    letters only (relaxed.plain_accents). Without this the font would make
+    an accented glyph for every character, as nothing tells the compiler
+    what can't happen."""
+    return (lambda ch: ch.isalpha()) if relaxed else (lambda ch: True)
 
 
 def accent_of(g):
@@ -1246,12 +1252,11 @@ def program(relaxed=False):
         P += [Derive(tr, ["S"], lambda t, s, l=level: role_input(l)(s), spaces=True),
               LTR(tr, role_step, (None, None, None, None), spaces=True), strip(tr, spaces=True),
               Map("S", lambda v: (" ", v[1]) if v[0] == "sp" else v, spaces=True)]
-    run = RUN if relaxed else RUN_ACCENTS
-    P += [Derive("A", [], lambda a: fold(run, a, 1)),
+    P += [Derive("A", [], lambda a: fold(RUN, a, 1)),
           Derive("B", ["A"], lambda b, a: fold(a, b, 2)),
           Derive("C", ["B"], lambda c, b: fold(b, c, 3))]
-    if not relaxed:
-        P.append(Derive("G", ["C"], put_accent))
+    can = accentable(relaxed)
+    P.append(Derive("G", ["C"], lambda g, c: put_accent(g, c) if can(g[1]) else g))
     P += [Derive("S", ["C"], fold_finish),
           Map("S", lambda v: ("T", " ", 0, 0, 0, 0) if v[0] == " " else v, spaces=True)]
     if relaxed:
@@ -1270,13 +1275,12 @@ def program(relaxed=False):
             P.append(Context("S", paren_kind, ctx_track="B",
                              targets=lambda v, l=level: is_binom(v) and v[1] == "fend" and v[2] == l and len(v) == 8,
                              ctx_view=lambda v, l=level: v[0] == "fkind" and v[2] == l))
-    if not relaxed:
-        P += [Derive("S", ["G"], accent_to_role, keys=[accent_of]), Map("G", strip_accent)]
-    P += finals()
+    P += [Derive("S", ["G"], accent_to_role, keys=[accent_of]), Map("G", strip_accent)]
+    P += finals(accentable(relaxed))
     return P
 
 
-def finals():
+def finals(can=lambda ch: True):
     """Each slot's glyph (see assemble.final), in an order that leaves the
     tracks a slot is made from unfinished until then. B is first reduced to
     what the slots need of it, for the token's S (assemble.localize), so
@@ -1313,7 +1317,7 @@ def finals():
          final(Derive("A", ["S", "B"], slot("A"), keys=keyed("A"))),
          final(Derive("G", ["S", "B"], slot("G"), keys=keyed("G"))),
          # an accented character's glyph, from the plain one (see accent_to_role)
-         final(Derive("G", ["S"], lambda g, acc: g + (acc,) if acc and g[0] == "glyph" else g,
+         final(Derive("G", ["S"], lambda g, acc: g + (acc,) if acc and g[0] == "glyph" and can(g[1]) else g,
                       keys=[role_accent])),
          final(Derive("C", ["S", "B"], slot("C"), keys=keyed("C"))),
          final(Derive("B", ["S"], lambda b, s, f=slot("B"): f(b, s, assemble.needed(b, "B")), keys=keyed("B", ("S",)))),
