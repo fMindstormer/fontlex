@@ -63,7 +63,7 @@ with 2 px of tolerance at 100 px per em, where the layout's smallest step
   accents and `\binom`).
 - **WebKit (macOS 27):** the same on all 235 lines narrow enough to
   snapshot (before `\overline`, the accents and `\binom`).
-- **Chromium 139 and Firefox 158, on Linux and on Windows:** the same on
+- **Chromium 139 and Firefox 160, on Linux and on Windows:** the same on
   all of them (`browsers.py`, run by CI's Browsers workflow).
 
 Typing a formula into a text box key by key ends with the same pixels as
@@ -271,13 +271,17 @@ anyway.
 The passes, run in Python, match `relaxed.py` on 100,000 more random lines.
 By screenshot, as for Fontlex Math:
 
-- **Chrome 155:** 348 of 349 lines the same. The exception is a line that
-  mixes Greek and Latin letters inside a construct (see below).
+- **Chrome 155:** 348 of 349 lines the same (before accents). The
+  exception is a line that mixes Greek and Latin letters inside a construct
+  (see below).
 - **WebKit:** the same on 322 of the 323 lines narrow enough to snapshot,
-  and 1 pixel apart on the other.
-- **Chromium 139 and Firefox 158, on Linux and on Windows:** 348 of 349,
-  with the same exception. Typing key by key ends as setting the text at
-  once does.
+  and 1 pixel apart on the other (before accents).
+- **Chromium 139 and Firefox 160, on Linux and on Windows:** 352 of 377.
+  The other 25 mix Greek and Latin letters inside a construct. Typing key
+  by key ends as setting the text at once does.
+- **Firefox 158:** 36 more lines differ. Its HarfBuzz is 14.5.0; Firefox
+  160 (HarfBuzz 14.6.0) and later draw them as HarfBuzz does, so CI checks
+  Firefox 160.
 
 The font has 61,193 glyphs, 2,075 substitution lookups (1,595 of them
 nested, in 3,255 subtables) and 301 positioning lookups. It is 11.1 MB as
