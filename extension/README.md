@@ -69,7 +69,7 @@ Safari isn't supported: it needs an Xcode wrapper.
 
 *Measured* with `test_extension.mjs`, which loads `build/extension/` into
 Chromium 139 (headless, through Playwright), or `build/extension-firefox/`
-into Firefox 158 (headless, through Puppeteer and WebDriver BiDi, as a
+into Firefox 160 (headless, through Puppeteer and WebDriver BiDi, as a
 temporary add-on), and checks:
 
 - local pages in English (`lang="en-GB"`, dark background), French (with
@@ -86,7 +86,7 @@ Wikipedia article also renders in Chromium with its links and icons intact.
 ```sh
 npm install playwright-core puppeteer-core @puppeteer/browsers      # once
 CHROMIUM=/path/to/Chromium node extension/test_extension.mjs
-FIREFOX=$(npx @puppeteer/browsers install firefox@stable_158.0.1 --format "{{path}}") \
+FIREFOX=$(npx @puppeteer/browsers install firefox@stable_160.0 --format "{{path}}") \
   node extension/test_extension.mjs firefox
 ```
 
