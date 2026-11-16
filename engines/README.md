@@ -27,14 +27,14 @@ chaining contextual substitution (GSUB type 8) works on its own, and does
 nothing when it is wrapped in an extension lookup (type 7), which a font
 needs once its GSUB table is too large for 16-bit offsets. HarfBuzz and Core
 Text apply both. The probes isolate it: the same rule, with and without
-`useExtension`. Every Fontlex font that computes right to left has such
-lookups, and so breaks in DirectWrite:
+`useExtension`. The Fontlex fonts that compute right to left with many such
+lookups have them wrapped, and so break in DirectWrite:
 
 | Font | Reverse chaining lookups, wrapped | In DirectWrite |
 |---|---|---|
 | Fontlex Math, Relaxed Math | 19 and 50 | 327 of 345 and 315 of 351 lines differ; in each line bisected, the first right-to-left pass is the first to differ (`first_difference.py`) |
 | Fontlex Markdown (both editions) | 60 | not measured: DirectWrite took over 60 seconds on one line, `>\t\tfoo`, and the check stopped |
-| Fontlex English, French | 1 | most hints missing: 59% and 65% of words in context right |
+| Fontlex English, French | none (1, not wrapped since November 2026) | 99.4% and 99.9% of words in context right (59% and 65% with it wrapped); every line of the English READMEs, and 15 of the 16 French sample lines; what differs is below |
 | Fontlex Python, JavaScript | none (1, not wrapped) | right, apart from script runs (below) |
 | Fontlex German, German Syllables | none | every random and transition case right; one hand-written case each differs, not yet looked at |
 
@@ -44,10 +44,23 @@ Cyrillic letter starts a new run, so a lexer font's state starts over after
 that, the Python and JavaScript fonts color as HarfBuzz does, and every
 positioning check is the same.
 
-A font could avoid the first problem by keeping its reverse chaining lookups
-out of extension lookups: their subtables would have to sit within 64 KB of
-the lookup list. That is likely possible for the English and French fonts,
-which have one such lookup each, and not for the math fonts.
+The English and French fonts avoid the first problem by keeping their one
+reverse chaining lookup out of an extension lookup (`unwrapped` in
+`markdown/fontbuild.py`'s `build_gsub`): its subtables sit within 64 KB of the
+lookup list. The math and Markdown fonts have too many such lookups for that.
+Two things still differ in English and French, not yet looked at:
+
+- **Noun/verb pairs** (`research`, `project`; `sens`, `président`), whose
+  reading comes from the word before or an invisible marker after: 1,038 of
+  170,817 English words in context and 175 of 202,190 French ones are wrong,
+  and every miss the check prints is one of these words, drawn with the
+  other reading's hints or none. The fonts have 128 and 32 such pairs.
+- **One stylistic set on its own** (one kind of hint off) leaves most texts
+  without their other hints too: 2,427 to 4,154 of 17,213 English texts
+  right, and 2,613 to 11,909 of 20,221 French ones. With every set on,
+  all are right. Wrapping the reverse chaining lookup or not changes none of
+  these numbers. `dwshape.cpp` passes only the set, expecting the default
+  features to stay on, as they do in HarfBuzz; DirectWrite may drop `calt`.
 
 ## Running it
 

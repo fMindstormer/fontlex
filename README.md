@@ -389,8 +389,8 @@ page byte for byte, so `git status` afterwards shows nothing.
   instead of a product, at a price in time; for Fontlex Markdown that price
   is unmeasured.
 - **More engines.** Native Windows apps shape text with DirectWrite, which
-  ignores reverse chaining lookups once they are extension lookups, as large
-  fonts need: the math, Markdown and pronunciation fonts break there
+  ignores reverse chaining lookups inside extension lookups: the math and
+  Markdown fonts break there, English and French are nearly right
   ([engines/README.md](engines/README.md)). Browsers on Windows use HarfBuzz.
 
 ## License
