@@ -173,4 +173,6 @@ RELAXED_EDGES = [
     "vec(AB)", "hat(12)", "hat(x y)", "bar(x_1)", "hat(hat(x))", "x^hat(y)", "hat(x)_1^2", "hat(x)^2/2",
     "vec(v)/(1+hat(x))", "hat(x)y", "tilde(f)(x)", "ddot(x) = -x", "((((hat(x))))", "(((((hat(x)))))",
     "dot(x)/ddot(x)",
+    "vec(ABC)", "vec(AB)^2", "vec(AB)_1", "x_vec(AB)", "1/vec(AB)", "vec(AB)/vec(CD)", "sqrt(vec(PQ))",
+    "vec(ab)+vec(bc)", "hat(vec(AB))", "vec(AB", "vec(" + "A" * 25 + ")",
 ]

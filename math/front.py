@@ -174,17 +174,24 @@ def empty_closer(prev, v):
 def accent_contents(state, v):
     """Right to left: an accent's name stays one only before a "(" whose
     group holds letters and nothing else (no space, no parenthesis): state
-    "C" after a ")", "L" after letters before one, "P" after such a "(",
-    "A" inside a good accent's name; otherwise it becomes letters."""
+    "C" after a ")", ("L", n) after n letters before one (counted to 2),
+    ("P", n) after such a "(", "A" inside a good accent's name; otherwise
+    it becomes letters. The name's last letter is flagged "wide" when the
+    group holds two letters or more: vec is then one wide arrow
+    (relaxed.wide_vec), which latex_kind gives its own kind."""
     k = v[0]
     if k == ")":
         return v, "C"
     if k == "l":
-        return v, ("L" if state in ("C", "L") else None)
+        if state == "C":
+            return v, ("L", 1)
+        return v, (("L", 2) if isinstance(state, tuple) and state[0] == "L" else None)
     if k == "(":
-        return v, ("P" if state == "L" else None)
+        return v, (("P", state[1]) if isinstance(state, tuple) and state[0] == "L" else None)
     if k in ("H", "La"):
-        if state in ("P", "A"):
+        if state == "A" or isinstance(state, tuple) and state[0] == "P":
+            if k == "La" and state == ("P", 2):
+                v = put(v, "wide")
             return v, ("A" if k == "La" else None)
         return V("l", v[1], *flags(v)), None
     return v, None
@@ -342,7 +349,8 @@ def tidy(v):
     if v[0] in (")", "Y"):
         return V(v[0], v[1], *[f for f in flags(v) if f == "empty"], *(["us"] if get(v, "n") == "_" else []))
     if v[0] in ("R", "Ls", "H", "La"):
-        return V(v[0], v[1], *(["sq"] if get(v, "n") in ("q", "(") else []), *([("c", get(v, "c"))] if v[0] == "Ls" else []))
+        return V(v[0], v[1], *(["sq"] if get(v, "n") in ("q", "(") else []), *([("c", get(v, "c"))] if v[0] == "Ls" else []),
+                 *(["wide"] if has(v, "wide") else []))
     if v[0] == "(":
         return V("(", v[1], *[f for f in flags(v) if f == "empty"])
     if v[0] == "/":
@@ -765,7 +773,9 @@ def latex_kind(v, b, tag):
     if k in ("R", "Ls"):
         return (k,) if has(v, "sq") else ("c",)
     if k in ("H", "La"):
-        return (tag,) if has(v, "sq") else ("c",)
+        if not has(v, "sq"):
+            return ("c",)
+        return (P.WIDE,) if tag == P.LETTERS["vec"] and has(v, "wide") else (tag,)
     return ("c",)
 
 
@@ -856,8 +866,10 @@ def expected(line):
             return [("R", "s"), ("Ls", "q"), ("Ls", "r"), ("Ls", "t"), ("O", "(")] + \
                 seq(e.lo + 2, e.hi - 1) + [("C", ")")]
         if e.kind == "accent":
-            return [(accent_tag(k, e.name), ch) for k, ch in enumerate(e.name)] + [("O", "(")] + \
-                seq(e.lo + 2, e.hi - 1) + [("C", ")")]
+            tags = [accent_tag(k, e.name) for k in range(len(e.name))]
+            if R.wide_vec(e.name, e.lo, e.hi):
+                tags[-1] = P.WIDE
+            return list(zip(tags, e.name)) + [("O", "(")] + seq(e.lo + 2, e.hi - 1) + [("C", ")")]
         if e.kind == "script":
             out = emit(e.base)
             for kind, at, pieces in e.scripts:

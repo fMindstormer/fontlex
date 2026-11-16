@@ -61,7 +61,8 @@ What it typesets
 - Fractions: 1/2, x/2, 2a/3, (a+b)/(c+d), f(x)/2, 1/(1+1/x)
 - Scripts: x^2, x^(n+1), x^-1, x_1, H_2O, and both at once, x_i^2
 - Roots: sqrt(x^2+1)
-- Accents over letters: hat(x), bar(z), vec(AB), dot(x), ddot(x), tilde(f)
+- Accents over letters: hat(x), bar(z), vec(v), dot(x), ddot(x), tilde(f);
+  vec over two or more letters is one arrow over them all, vec(AB)
 - <= >= != -> => +- as the symbols they stand for
 
 Ordinary text stays text: and/or, w/o, km/h, C/C++, 10/23/2026.
@@ -84,7 +85,7 @@ Limits
 
 Tested
 ------
-20,076 lines compared glyph by glyph with a separate model of the notation,
+20,087 lines compared glyph by glyph with a separate model of the notation,
 in HarfBuzz 14.6.0 (the shaper in Chrome, Edge and Firefox) and Core Text
 (Safari, macOS): all the same. In Chromium 139 and Firefox 160 on Linux and
 on Windows, 352 of 377 lines draw the same pixels as HarfBuzz's layout (the

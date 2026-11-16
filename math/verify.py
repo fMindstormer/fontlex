@@ -50,6 +50,16 @@ class Reader:
         if m:
             dx = int(m.group(5)) * (-1 if m.group(4) else 1) * L.UNIT
             return ("paren", m.group(1), int(m.group(2)), int(m.group(3)), x + dx, y)
+        if name.startswith("_inka"):        # a rule's piece (if any) and a wide arrow's head, last
+            g = self.glyf[name]
+            coords, ends, _ = g.getCoordinates(self.glyf)
+            boxes, first = [], 0
+            for end in ends:
+                xs = [p[0] for p in coords[first:end + 1]]
+                ys = [p[1] for p in coords[first:end + 1]]
+                boxes.append((x + min(xs), x + max(xs), y + min(ys), y + max(ys)))
+                first = end + 1
+            return [("rule",) + box for box in boxes[:-1]] + [("arrow",) + boxes[-1]]
         if name.startswith("_ink"):
             g = self.glyf[name]
             if g.numberOfContours <= 0:

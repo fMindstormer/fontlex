@@ -230,9 +230,24 @@ class Font:
             _, side, st, kind, dx = v
             return self.paren(f"_paren{side}{st}{kind}o{dx}".replace("-", "m"), side, st, kind, dx)
         if k == "ink":
-            _, band, direction, start, length, digit = v
+            _, band, direction, start, length, digit, *head = v
             x0 = start * L.UNIT
             x1 = x0 + length * L.UNIT * (1 if direction == "R" else -1)
+            if head:                 # the piece and a wide arrow's head (verify.Reader: its last contour)
+                name = f"_inka{len(self.names)}"
+                pen = TTGlyphPen(None)
+                contours = [[(min(x0, x1), band[0]), (min(x0, x1), band[1]), (max(x0, x1), band[1]),
+                             (max(x0, x1), band[0])]] if length else []
+                contours.append(L.arrow_points(head[0], x0, (band[0] + band[1]) // 2))
+                for pts in contours:
+                    pen.moveTo(pts[0])
+                    for pt in pts[1:]:
+                        pen.lineTo(pt)
+                    pen.closePath()
+                g = pen.glyph()
+                g.recalcBounds(None)
+                b.add(name, g, 0, g.xMin)
+                return self.mark(name)
             name = f"_ink{len(self.names)}"
             if length:
                 return b.rect(name, min(x0, x1), band[0], max(x0, x1), band[1]) and self.mark(name)
@@ -1110,7 +1125,7 @@ def gpos(font):
     movers = [g for g, v in finals.items() if v[0] in ("dx", "dy", "dxy", "dx@root", "dx@fend", "at@base")]
     ink_parents = {g: {0: anchor(0, 0)} for g in movers}
     for g, v in inks.items():
-        _, band, direction, start, length, digit = v
+        _, band, direction, start, length, digit, *_ = v
         end = (start + (length if direction == "R" else -length)) * L.UNIT
         ink_parents[g] = {0: anchor(end, 0)}
     parens = by_kind["paren"]          # hang off movers as ink does, and nothing hangs off them

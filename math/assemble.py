@@ -28,13 +28,17 @@ VALUES = ("mid", "fend", "qend", "e1", "e2", "o2", "npad", "dpad", "kind", "fkin
 NONE = ("_",)
 
 
-def rule_pieces(band, direction, start, length):
+def rule_pieces(band, direction, start, length, head=None):
     """Two ink glyphs drawing `length` (in 30s) from `start` (30s from the
-    glyph they hang off), rightwards ("R") or leftwards ("L")."""
-    if length <= 0:
+    glyph they hang off), rightwards ("R") or leftwards ("L"). With head
+    (a style), the first piece of a leftward rule also draws a wide
+    arrow's head at `start`, pointing right (layout.arrow_points)."""
+    if length <= 0 and head is None:
         return [NONE, NONE]
+    length = max(0, length)
     low, high = length % DIGIT, length - length % DIGIT
-    return [("ink", band, direction, start, low, 0), ("ink", band, direction, 0, high, 1) if high else NONE]
+    first = ("ink", band, direction, start, low, 0) + ((head,) if head is not None else ())
+    return [first, ("ink", band, direction, 0, high, 1) if high else NONE]
 
 
 def bar_band(st, dy=0):
@@ -59,7 +63,8 @@ def final(t):
     ("at@base",), marks on the glyph that starts or ends a fraction or ends
     a root in flow; bases ("root",), ("qbase",), ("fendbase", wN) and
     ("adv", v) (an advance of v 30s); ("y", y) the base glyph's height in
-    flow; ("ink", band, direction, start, length, digit) a rule's piece;
+    flow; ("ink", band, direction, start, length, digit[, head]) a rule's
+    piece, with a wide arrow's head at style `head`;
     ("paren", side, style, kind, dx) a binomial's parenthesis, dx 30s from
     the glyph it hangs off, like ink. A binomial's end in flow has
     ("dx@fend", pad, p): its parenthesis hangs off it, p 30s wide."""
@@ -149,8 +154,9 @@ def final(t):
             out["S"] = ("y", y)
     elif name == "qend":
         _, _, wr, kind = b
+        arrow = details[:1] == ("a",)          # a wide arrow's: a raised bar, ending in a head
         top = L.root_top(st, kind)
-        band = (top, top + L.RULE[st])
+        band = L.arrow_band(st, kind) if arrow else (top, top + L.RULE[st])
         if k == 0:
             out["G"] = ("qbase",)
             if y:
@@ -158,7 +164,7 @@ def final(t):
             out["A"] = ("at@base",)
         else:
             out["G"] = ("dx", 0)
-        out["B"], out["C"] = rule_pieces(band, "L", 0, 2 * wr)
+        out["B"], out["C"] = rule_pieces(band, "L", 0, 2 * wr, st if arrow else None)
     elif name in ("sopen", "gclose"):
         kind, pos = details[0], details[1]
         shift = P.shift_of(kind + ("s" if pos != "alone" else ""), st)
@@ -336,11 +342,13 @@ def place(toks):
             elif kind == "at@base":
                 parent = (base[0], base[1])
             elif kind == "ink":
-                _, band, direction, start, length, digit = g
+                _, band, direction, start, length, digit, *head = g
                 x0 = parent[0] + start * U30
                 x1 = x0 + length * U30 if direction == "R" else x0 - length * U30
                 if length:
                     ink.append(("rule", min(x0, x1), max(x0, x1), parent[1] + band[0], parent[1] + band[1]))
+                if head:
+                    ink.append(L.arrow_box(head[0], x0, parent[1] + (band[0] + band[1]) // 2))
                 parent = (x1, parent[1])
     return sorted(L.merge(ink)), pen
 

@@ -193,8 +193,9 @@ Fontlex Relaxed Math typesets what plain-text math looks like:
   `1/(1+1/x)`;
 - scripts: `x^2`, `x^(n+1)`, `x^-1`, `x_1`, `H_2O`, and stacked, `x_i^2`;
 - roots: `sqrt(x^2+1)`;
-- accents, over letters: `hat(x)`, `bar(z)`, `vec(AB)`, `dot(x)`,
-  `ddot(x)`, `tilde(f)`;
+- accents, over letters: `hat(x)`, `bar(z)`, `vec(v)`, `dot(x)`,
+  `ddot(x)`, `tilde(f)`; `vec` over two or more letters is one arrow over
+  them all, `vec(AB)`;
 - `<=` `>=` `!=` `->` `=>` `+-` as ≤ ≥ ≠ → ⇒ ±.
 
 Parentheses around all of a fraction's part, a script's argument or a
@@ -265,7 +266,7 @@ anyway.
 
 | Lines | Count | HarfBuzz 14.6.0 | Core Text (macOS 27) |
 |---|---:|---:|---:|
-| Edge cases (`samples.RELAXED_EDGES`: incomplete input, prose) | 76 | 100% | 100% |
+| Edge cases (`samples.RELAXED_EDGES`: incomplete input, prose) | 87 | 100% | 100% |
 | Random formulas and words, some mistyped | 20,000 | 100% | 100% |
 
 The passes, run in Python, match `relaxed.py` on 100,000 more random lines.
@@ -283,8 +284,8 @@ By screenshot, as for Fontlex Math:
   160 (HarfBuzz 14.6.0) and later draw them as HarfBuzz does, so CI checks
   Firefox 160.
 
-The font has 61,193 glyphs, 2,075 substitution lookups (1,595 of them
-nested, in 3,255 subtables) and 301 positioning lookups. It is 11.1 MB as
+The font has 61,886 glyphs, 2,064 substitution lookups (1,584 of them
+nested, in 3,200 subtables) and 301 positioning lookups. It is 10.9 MB as
 TrueType and 1.4 MB as WOFF2. Shaping takes 0.34 ms per character in
 HarfBuzz.
 
@@ -300,6 +301,7 @@ HarfBuzz.
   its own and WebKit lay it out.
 - A part is a whole word, so `2/3x` is 2 over 3x, and `x^2y` is x² y.
 - An accent goes over letters only, each its own, as in Fontlex Math:
-  `vec(AB)` is an arrow over A and one over B. For an accented letter
-  with a script, write `hat(x)_1`; `hat(x_1)` stays text.
+  `hat(xy)` is x̂ŷ. The exception is `vec` over two or more letters, one
+  arrow over them all, as LaTeX's `\overrightarrow`. For an accented
+  letter with a script, write `hat(x)_1`; `hat(x_1)` stays text.
 - Native Windows apps (DirectWrite) don't typeset it, for the same reason.

@@ -199,8 +199,9 @@ textarea#code { min-height: 46.7rem; white-space: pre; overflow-x: auto; font-si
     <li>Scripts: <code>x^2</code>, <code>x^(n+1)</code>, <code>x^-1</code>, <code>x_1</code>, <code>H_2O</code>,
     and both at once, stacked: <code>x_i^2</code>.</li>
     <li>Roots: <code>sqrt(x^2+1)</code>.</li>
-    <li>Accents, over letters: <code>hat(x)</code>, <code>bar(z)</code>, <code>vec(AB)</code>,
-    <code>dot(x)</code>, <code>ddot(x)</code>, <code>tilde(f)</code>.</li>
+    <li>Accents, over letters: <code>hat(x)</code>, <code>bar(z)</code>, <code>vec(v)</code>,
+    <code>dot(x)</code>, <code>ddot(x)</code>, <code>tilde(f)</code>. <code>vec</code> over two or more
+    letters is one arrow over them all: <code>vec(AB)</code>.</li>
     <li>Symbols: <code>&lt;=</code> <code>&gt;=</code> <code>!=</code> <code>-&gt;</code> <code>=&gt;</code>
     <code>+-</code> become ≤ ≥ ≠ → ⇒ ±. Greek letters and other symbols can be typed as themselves.</li>
   </ul>

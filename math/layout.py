@@ -34,6 +34,7 @@ layout(line) returns (ink, advance): ink is a sorted list of
   ("radical", style, kind, x, y)      a radical sign, `kind` its height
   ("paren", side, style, kind, x, y)  a binomial's parenthesis, side "L" or
                                       "R", kind 1 if a part holds a fraction
+  ("arrow", x0, x1, y0, y1)           a wide arrow's head (arrow_head), by its box
 and advance the line's width. Rules that touch or overlap at the same
 height are merged, since the font draws them in pieces.
 """
@@ -79,6 +80,11 @@ SYMBOLS = {
 ACCENTS = {"hat": "h", "bar": "b", "vec": "v", "dot": "d", "ddot": "e", "tilde": "t"}
 COMMANDS = ("frac", "binom", "sqrt", "overline") + tuple(ACCENTS)
 FRACS = ("frac", "binom")      # two parts, one over the other
+# One arrow over all of X: an overline raised by its head's half-height,
+# ending in a head (arrow_head). Only the relaxed notation makes it, for
+# vec over two or more letters (relaxed.wide_vec); LaTeX's \vec stays on
+# each character.
+WIDE_ARROW = "overrightarrow"
 
 
 def is_frac(n):
@@ -124,6 +130,38 @@ def root_top(s, kind):
     """Where a square root's overbar starts: kind 0 over plain text, 1 over a
     superscript, 2 over a fraction."""
     return (HEIGHT[s], SUP[s] + HEIGHT[down(s)], fraction_height(s))[kind] + GAP[s]
+
+
+def arrow_head(s):
+    """A wide arrow's head at style s, a chevron in multiples of the bar's
+    thickness t: (reach, half height, stroke, overshoot). Its arms reach 3t
+    back from the tip and 2.5t up and down, 1.5t thick across; the tip
+    passes the bar's end by 0.6t, where the arms' outer edges cross the
+    bar's corners, so the bar ends inside the head."""
+    t = RULE[s]
+    return 3 * t, 5 * t // 2, 3 * t // 2, 3 * t // 5
+
+
+def arrow_points(s, x, y):
+    """The head's outline (clockwise) for a bar ending at x, centered on y."""
+    a, h, w, e = arrow_head(s)
+    tip = x + e
+    return [(tip, y), (tip - a, y - h), (tip - a - w, y - h), (tip - w, y),
+            (tip - a - w, y + h), (tip - a, y + h)]
+
+
+def arrow_box(s, x, y):
+    """The head's box, as ink: ("arrow", x0, x1, y0, y1)."""
+    pts = arrow_points(s, x, y)
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    return ("arrow", min(xs), max(xs), min(ys), max(ys))
+
+
+def arrow_band(s, kind):
+    """A wide arrow's bar: an overline's, raised so that its head's lowest
+    point is where the overline would be."""
+    c = root_top(s, kind) + arrow_head(s)[1]
+    return (c - RULE[s] // 2, c + RULE[s] // 2)
 
 
 # tokens --------------------------------------------------------------------
@@ -368,15 +406,21 @@ class Layout:
                 w += self.seq(it.parts[0], s, x + w, y, acc=acc)
             elif it.kind in ACCENTS:
                 w += self.seq(it.parts[0], s, x + w, y, acc=ACCENTS[it.kind])
-            elif it.kind in ("sqrt", "overline"):
-                kind = 2 if has(it.parts[0], is_frac) else \
+            elif it.kind in ("sqrt", "overline", WIDE_ARROW):
+                # a wide arrow's head reaches as high as a fraction would
+                kind = 2 if has(it.parts[0], lambda n: is_frac(n) or n.kind == WIDE_ARROW) else \
                     1 if has(it.parts[0], lambda n: n.kind == "sup") else 0
                 sign = WIDTH[s] if it.kind == "sqrt" else 0     # an overline has no sign
                 inner = self.seq(it.parts[0], s, x + w + sign, y, acc=acc)
                 if sign:
                     self.ink.append(("radical", s, kind, x + w, y))
-                top_ = y + root_top(s, kind)
-                self.ink.append(("rule", x + w + sign, x + w + sign + inner, top_, top_ + RULE[s]))
+                if it.kind == WIDE_ARROW:
+                    y0, y1 = arrow_band(s, kind)
+                    self.ink.append(("rule", x + w, x + w + inner, y + y0, y + y1))
+                    self.ink.append(arrow_box(s, x + w + inner, y + (y0 + y1) // 2))
+                else:
+                    top_ = y + root_top(s, kind)
+                    self.ink.append(("rule", x + w + sign, x + w + sign + inner, top_, top_ + RULE[s]))
                 w += sign + inner
             elif it.kind in FRACS:
                 t = down(s)

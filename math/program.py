@@ -112,7 +112,11 @@ def restore_space(v):
 HEADS = {"frac": "F", "binom": "K", "sqrt": "R", "overline": "H", **{a: "H" for a in L.ACCENTS}}
 HEAD_KINDS = ("F", "K", "R", "H")
 LETTERS = {"frac": "Lf", "binom": "Lk", "sqrt": "Ls", "overline": "Lo", **{a: "L" + c for a, c in L.ACCENTS.items()}}
-LETTER_KINDS = tuple(LETTERS.values())
+# A wide arrow's letters (the relaxed notation's vec over two or more
+# letters, layout.WIDE_ARROW): front.py gives the name's last one this
+# kind, which opens an overline with a head (frame Qa).
+WIDE = "Lw"
+LETTER_KINDS = tuple(LETTERS.values()) + (WIDE,)
 ACCENT_FRAMES = {"A" + c for c in L.ACCENTS.values()}     # an accent's braces: a group, but for the accent
 TAGS = set(HEAD_KINDS) | set(LETTER_KINDS) | {"Y"}
 
@@ -200,8 +204,11 @@ def demote(v, depth):
 
 # 2. what each brace belongs to ----------------------------------------------
 
-# Qo: an overline's, a root without a sign; Ah, Ab...: an accent's
-OPENS = {"Lf": "N", "Lk": "N", "Ls": "Q", "Lo": "Qo", "P": "U", "B": "W", **{"L" + c: "A" + c for c in L.ACCENTS.values()}}
+# Qo: an overline's, a root without a sign; Qa: a wide arrow's, an overline
+# with a head; Ah, Ab...: an accent's
+OPENS = {"Lf": "N", "Lk": "N", "Ls": "Q", "Lo": "Qo", WIDE: "Qa", "P": "U", "B": "W",
+         **{"L" + c: "A" + c for c in L.ACCENTS.values()}}
+OVERS = ("Q", "Qo", "Qa")     # the frames a root's counter measures
 
 
 def is_open(v):
@@ -384,7 +391,7 @@ def valid_step(state, v):
         stacked = kind in ("U", "W") and valid and pending[2]
         return ("O", valid), (None, (kind, valid, stacked) if kind != "G" else None, "x")
     if k in HEAD_KINDS:
-        want = {"F": ("N",), "K": ("N",), "R": ("Q",), "H": ("Qo",) + tuple(ACCENT_FRAMES)}[k]
+        want = {"F": ("N",), "K": ("N",), "R": ("Q",), "H": ("Qo", "Qa") + tuple(ACCENT_FRAMES)}[k]
         valid = root is not None and root[0] in want and root[1]
         return ("root", valid), (pending, None, "x")
     if k in ("P", "B"):
@@ -545,7 +552,8 @@ def role_step(state, v):
             fk = kind + ("s" if pos != "alone" else "")
             return ("role", "gopen"), (("ok", fk, pos), None, None, None)
         b = BINOM if kind == "N" and root == ("K",) else ()
-        return ("role", {"N": "nopen", "Q": "qopen", "Qo": "qopen"}.get(kind, "bopen")), (("ok", kind) + b, None, None, None)
+        return ("role", "nopen" if kind == "N" else "qopen" if kind in OVERS else "bopen"), \
+            (("ok", kind) + b, None, None, None)
     if k == "C":
         kind, broken = v[1], v[2]
         if frame is not None and frame[0] == "bad":
@@ -559,8 +567,8 @@ def role_step(state, v):
             if fk == "N":
                 return ("role", "mid") + b, (("D?",) + b, None, None, None)
             return ("role", "fend") + b, (None, None, None, None)
-        if fk in ("Q", "Qo"):
-            return ("role", "qend"), (None, None, None, None)
+        if fk in OVERS:          # a wide arrow's closer says so: its overbar ends in a head
+            return ("role", "qend") + (("a",) if fk == "Qa" else ()), (None, None, None, None)
         if fk[0] in "UW":
             pos = frame[2]
             kind = fk[0]
@@ -587,7 +595,7 @@ def role_view(v):
 # 6. what each token is ---------------------------------------------------------
 
 REDUCING = {"N", "D", "U", "Us", "W", "Ws"}
-OPAQUE = {"N", "D", "Q", "Qo", "Us", "Ws"}
+OPAQUE = {"N", "D", "Q", "Qo", "Qa", "Us", "Ws"}
 CHAIN = {"N", "D"}
 
 
@@ -737,7 +745,8 @@ def contribution(s, b):
     """What a token adds to the width of the construct whose part it is in
     (the deepest one that isn't see-through: fractions, roots, stacked
     scripts), and that construct's level: (level, width, holds a fraction,
-    holds a superscript), or None. Other constructs inside one are drawn
+    holds a superscript: 2 for a wide arrow, which a root clears as it
+    does a fraction), or None. Other constructs inside one are drawn
     from its own tokens' values."""
     if s[0] == "T":
         _, kind, st, k, o, y = s[:6]
@@ -764,7 +773,7 @@ def contribution(s, b):
     if name == "sroot":
         return [(o, WIDTH[st], False, False)]
     if name == "qend":
-        return [(o, b[2], False, False)]
+        return [(o, b[2], False, 2 if s[7:8] == ("a",) else False)]
     if name == "gclose" and b[0] in ("e1", "e2"):
         return [(o, b[2] if b[0] == "e1" else max(0, -b[2]), False, False)]
     return None
@@ -847,7 +856,7 @@ def sqrt_step(state, v):
         return ("x",), ("rad", 0, 0)
     if k == "w":
         if state[0] == "rad":
-            kind = 2 if (v[2] or state[2] == 2) else max(state[2], 1 if v[3] else 0)
+            kind = 2 if (v[2] or state[2] == 2 or v[3] == 2) else max(state[2], 1 if v[3] else 0)
             return ("x",), ("rad", min(CAP, state[1] + v[1]), kind)
         return ("x",), state
     if k == "qend":
@@ -993,7 +1002,7 @@ def sqrt_flag_step(kind, v):
     if v[0] == "r":
         return ("x",), 0
     if v[0] == "w":
-        return ("x",), 2 if (v[1] or kind == 2) else max(kind, 1 if v[2] else 0)
+        return ("x",), 2 if (v[1] or kind == 2 or v[2] == 2) else max(kind, 1 if v[2] else 0)
     return ("fl", kind), 0
 
 

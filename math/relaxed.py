@@ -19,7 +19,8 @@ Ordinary text must stay ordinary, so the rules are narrow:
 - An accent (hat, bar, vec, dot, ddot, tilde, as after a backslash in
   LaTeX) takes parentheses with letters in them and nothing else: hat(x),
   vec(AB). Otherwise its name is a word like any other: dot(a,b), hat(),
-  vec(x+1).
+  vec(x+1). Each letter gets its own accent, except that vec over two or
+  more letters is one arrow over them all (layout.WIDE_ARROW).
 - A group that is all of a fraction's operand, a script's argument or a
   root's contents loses its parentheses: (a+b)/2. With a script it keeps
   them: (a+b)^2/c. An empty group, as in f(), is none of these.
@@ -86,6 +87,12 @@ def command_at(line, i):
         if line.startswith(name + "(", i):
             return name
     return None
+
+
+def wide_vec(name, lo, hi):
+    """Whether an accent from token lo to its closer at hi is one wide
+    arrow: vec with two or more letters (lo is the name, lo + 1 the "(")."""
+    return name == "vec" and hi - lo - 2 >= 2
 
 
 def plain_accents(toks, match):
@@ -397,7 +404,8 @@ class Parser:
         if e.kind == "sqrt":
             return [self.node("sqrt", e.lo, e.hi, [self.seq(e.lo + 2, e.hi - 1)])]
         if e.kind == "accent":
-            return [self.node(e.name, e.lo, e.hi, [self.seq(e.lo + 2, e.hi - 1)])]
+            kind = L.WIDE_ARROW if wide_vec(e.name, e.lo, e.hi) else e.name
+            return [self.node(kind, e.lo, e.hi, [self.seq(e.lo + 2, e.hi - 1)])]
         if e.kind == "script":
             out = self.items(e.base)
             for kind, at, pieces in e.scripts:
