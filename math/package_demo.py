@@ -88,7 +88,7 @@ Tested
 20,087 lines compared glyph by glyph with a separate model of the notation,
 in HarfBuzz 14.6.0 (the shaper in Chrome, Edge and Firefox) and Core Text
 (Safari, macOS): all the same. In Chromium 139 and Firefox 160 on Linux and
-on Windows, 352 of 377 lines draw the same pixels as HarfBuzz's layout (the
+on Windows, 363 of 388 lines draw the same pixels as HarfBuzz's layout (the
 other 25 mix Greek and Latin). Firefox 158, with HarfBuzz 14.5.0, draws 36
 more differently. Before accents, in Chrome 155, 348 of 349 lines were the
 same, with the same exception, and in Safari's WebKit 322 of 323, the last

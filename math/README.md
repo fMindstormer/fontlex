@@ -277,7 +277,7 @@ By screenshot, as for Fontlex Math:
   (see below).
 - **WebKit:** the same on 322 of the 323 lines narrow enough to snapshot,
   and 1 pixel apart on the other (before accents).
-- **Chromium 139 and Firefox 160, on Linux and on Windows:** 352 of 377.
+- **Chromium 139 and Firefox 160, on Linux and on Windows:** 363 of 388.
   The other 25 mix Greek and Latin letters inside a construct. Typing key
   by key ends as setting the text at once does.
 - **Firefox 158:** 36 more lines differ. Its HarfBuzz is 14.5.0; Firefox
