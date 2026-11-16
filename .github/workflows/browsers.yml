@@ -24,8 +24,12 @@ jobs:
           pip install -r requirements.txt pillow==13.0.0
           npm install --no-save playwright-core@1.54.2 puppeteer-core@25.15.0 @puppeteer/browsers@3.2.5
           npx playwright-core install --with-deps chromium
-          echo "CHROMIUM=$(node -e 'console.log(require("playwright-core").chromium.executablePath())')" >> "$GITHUB_ENV"
-          echo "FIREFOX=$(npx @puppeteer/browsers install firefox@stable_160.0 --path "$RUNNER_TEMP/browsers" --format "{{path}}")" >> "$GITHUB_ENV"
+          chromium=$(node -e 'console.log(require("playwright-core").chromium.executablePath())')
+          firefox=$(npx @puppeteer/browsers install firefox@stable_160.0 --path "$RUNNER_TEMP/browsers" --format "{{path}}")
+          # a failed download stops here, not as a missing browser in a later step
+          for b in "$chromium" "$firefox"; do test -f "$b" || { echo "::error::no browser at '$b'"; exit 1; }; done
+          echo "CHROMIUM=$chromium" >> "$GITHUB_ENV"
+          echo "FIREFOX=$firefox" >> "$GITHUB_ENV"
       - name: Fontlex Math and Fontlex Relaxed Math, in Chromium and Firefox
         run: |
           status=0
