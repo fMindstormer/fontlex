@@ -445,14 +445,18 @@ def extension(lk):
     return lk
 
 
-def build_gsub(lookups, top=None, feature="calt", scripts=("DFLT", "latn"), sets=None):
+def build_gsub(lookups, top=None, feature="calt", scripts=("DFLT", "latn"), sets=None, unwrapped=()):
     """`sets` maps a stylistic set's tag (`ss01`) to its lookups' indices and
-    the name apps show for it; finish() names them."""
+    the name apps show for it; finish() names them. Lookups of the types in
+    `unwrapped` stay out of Extension lookups: DirectWrite ignores a reverse
+    chaining lookup (type 8) inside one (engines/README.md). Their subtables
+    then have to sit within 64 KB of the lookup list, which a font with one
+    or two of them can manage."""
     gsub = newTable("GSUB")
     t = gsub.table = ot.GSUB()
     t.Version = 0x00010000
     t.LookupList = ot.LookupList()
-    t.LookupList.Lookup = [extension(lk) for lk in lookups]
+    t.LookupList.Lookup = [lk if lk.LookupType in unwrapped else extension(lk) for lk in lookups]
     t.LookupList.LookupCount = len(lookups)
     features = {feature: (list(range(len(lookups))) if top is None else list(top), None)}
     features.update(sets or {})
