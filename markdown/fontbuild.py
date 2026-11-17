@@ -445,13 +445,26 @@ def extension(lk):
     return lk
 
 
+def reverse_chaining(font):
+    """The font's reverse chaining lookups: (plain, inside Extension ones)."""
+    plain = wrapped = 0
+    for lk in font["GSUB"].table.LookupList.Lookup:
+        if lk.LookupType == 8:
+            plain += 1
+        elif lk.LookupType == 7 and lk.SubTable[0].ExtensionLookupType == 8:
+            wrapped += 1
+    return plain, wrapped
+
+
 def build_gsub(lookups, top=None, feature="calt", scripts=("DFLT", "latn"), sets=None, unwrapped=()):
     """`sets` maps a stylistic set's tag (`ss01`) to its lookups' indices and
     the name apps show for it; finish() names them. Lookups of the types in
     `unwrapped` stay out of Extension lookups: DirectWrite ignores a reverse
     chaining lookup (type 8) inside one (engines/README.md). Their subtables
-    then have to sit within 64 KB of the lookup list, which a font with one
-    or two of them can manage."""
+    then have to sit within 16-bit offsets of the lookup list: Fontlex Math's
+    19 (28 KB) do, Relaxed Math's and Markdown's (386 and 548 KB) don't, and
+    saving silently puts lookups that don't fit back inside Extension ones
+    (check with reverse_chaining() after saving)."""
     gsub = newTable("GSUB")
     t = gsub.table = ot.GSUB()
     t.Version = 0x00010000

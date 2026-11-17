@@ -1231,7 +1231,10 @@ def build_font(font, verbose=False, relaxed=False):
         subtables = sum(len(lk.SubTable) for lk in font.pl.lookups)
         print(f"{len(J)} kinds of token at the end, {len(font.b.order)} glyphs, {len(font.pl.lookups)} GSUB lookups "
               f"({len(font.pool)} pooled), {subtables} subtables, {font.rules} format 2 rules")
-    gsub = fb.build_gsub(font.pl.lookups, font.pl.top, feature="calt", scripts=("DFLT", "grek", "latn"))
+    # DirectWrite skips reverse chaining lookups inside Extension ones; the
+    # relaxed notation's are too big to keep out (fontbuild.build_gsub).
+    gsub = fb.build_gsub(font.pl.lookups, font.pl.top, feature="calt", scripts=("DFLT", "grek", "latn"),
+                         unwrapped=() if relaxed else (8,))
     gp, gp_sets = gpos(font)
     return finish(font, gsub, gp, gp_sets, "Fontlex Relaxed Math" if relaxed else "Fontlex Math")
 
@@ -1336,7 +1339,10 @@ def main():
             json.dump({"gsub_sets": font.pl.first_set + len(font.pl.mark_sets),
                        "finals": sorted([name, d] for name, d in font.anchor.items())},
                       open(args.out + ".json", "w"))
+    plain = fb.reverse_chaining(f)[0]
     f.save(args.out)
+    if fb.reverse_chaining(TTFont(args.out, lazy=True))[0] < plain:
+        sys.exit(f"{args.out}: saving put reverse chaining lookups inside Extension ones, which DirectWrite skips")
     f.flavor = "woff2"
     f.save(os.path.splitext(args.out)[0] + ".woff2")
     print(f"wrote {args.out} and .woff2: {len(f.getGlyphOrder())} glyphs, {os.path.getsize(args.out)} bytes")
