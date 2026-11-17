@@ -90,6 +90,7 @@ class Font:
         self.mult = []
         self.inserts = {}        # virtual tokens before a character -> its glyph's number
         self.recycling = False   # reuse the glyphs of values no token holds any more
+        self.keyed = False       # right-to-left passes on their values' keys (keyed_rtl)
         self.free = []
         self.freed = 0
 
@@ -498,6 +499,10 @@ def compile_program(font, prog, J, SP, verbose=False):
             J, SP = compile_context(font, p, J, SP)
         elif isinstance(p, P.Insert):
             J, SP = compile_insert(font, p, J, SP)
+        elif isinstance(p, P.RTL) and font.keyed and (keyed := keyed_rtl(font, p, J, SP)) is not None:
+            assert prog[i + 1].fn is P.unwrap, "a transducer is followed by strip"
+            J, SP = compile_program(font, keyed, J, SP, verbose)
+            i += 1
         else:
             assert prog[i + 1].fn is P.unwrap, "a transducer is followed by strip"
             J, SP = compile_transducer(font, p, J, SP)
@@ -512,6 +517,110 @@ def compile_program(font, prog, J, SP, verbose=False):
                   f"{font.size_of(n0):8} rules  {time.time() - t0:5.1f}s", flush=True)
         i += 1
     return J, SP
+
+
+KEY, OUT = "rk", "ro"      # keyed_rtl's values on its scratch track
+
+
+def keyed_rtl(font, p, J, SP):
+    """A right-to-left pass as smaller passes, for a small reverse chaining
+    lookup: one small enough to keep out of an Extension lookup, inside
+    which DirectWrite skips it (fontbuild.build_gsub).
+
+    States that no input from the left tells apart become one (the
+    automaton minimized). Then, where the step tells few of the values
+    apart, the pass runs on keys: each value's key on a blank track, the
+    pass on the keys, and each value's output from its key's (a Derive,
+    which applies left to right), so the lookup covers keys, not values.
+    Two values share a key where, in every state, they lead to the same
+    state, and the same states give each of them the same output. Spaces,
+    a glyph each, are their own keys. None where neither pays."""
+    view = safe(p.view)
+    vals = list(dict.fromkeys(v for _, v in values(J, p.track) if view(v)))
+    spaces = [v for v in SP if view(v)] if p.spaces else []
+    table = {v: {} for v in vals + spaces}
+    states, todo = {p.init}, [p.init]
+    while todo:
+        s = todo.pop()
+        for v in table:
+            try:
+                out, ns = p.step(s, v)
+            except (TypeError, IndexError, KeyError, P.Impossible):
+                continue
+            table[v][s] = (out, ns)
+            if ns not in states:
+                states.add(ns)
+                todo.append(ns)
+    order = sorted(states, key=repr)
+    # each value's output classes: which states give it the same output
+    part = {}
+    for v, row in table.items():
+        seen = {}
+        part[v] = {s: seen.setdefault(row[s][0], len(seen)) for s in order if s in row}
+    sig = {v: tuple((part[v].get(s), table[v][s][1] if s in table[v] else None) for s in order) for v in vals}
+    keys = {}
+    for v in vals:
+        keys.setdefault(sig[v], len(keys))
+    key_of = {v: keys[sig[v]] for v in vals}
+    inputs = [next(v for v in vals if key_of[v] == k) for k in range(len(keys))] + spaces
+    # minimize: states alike in output class and next block for every input
+    block = {s: 0 for s in order}
+    while True:
+        nsig = {s: (block[s],) + tuple((part[v].get(s), block[table[v][s][1]] if s in table[v] else None)
+                                       for v in inputs) for s in order}
+        ids = {}
+        nblock = {s: ids.setdefault(nsig[s], len(ids)) for s in order}
+        if len(ids) == len(set(block.values())):
+            break
+        block = nblock
+    canon = {}
+    for s in order:
+        canon.setdefault(block[s], s)
+    canon = {s: canon[block[s]] for s in order}
+    n_states = len(set(canon.values()))
+    use_keys = 3 * len(keys) <= 2 * len(vals)
+    if not use_keys and n_states == len(order):
+        return None
+    font.stats.append(("keyed" if use_keys else "minimized", p.track, len(vals), len(order), n_states, len(keys)))
+
+    def minimal(state, v):
+        out, ns = p.step(state, v)
+        return out, canon[ns]
+    if not use_keys:
+        return [P.RTL(p.track, minimal, canon[p.init], view=p.view, spaces=p.spaces), P.strip(p.track, spaces=p.spaces)]
+    scratch = next((tr for tr in ("C", "B", "A") if tr != p.track
+                    and all(sets[tr] == {P.BLANK} for sets in J.values())), None)
+    if scratch is None:
+        return None
+    rep = {}                         # (key, output class) -> a state that gives it
+    for v in inputs[:len(keys)]:
+        for s, c in part[v].items():
+            rep.setdefault((key_of[v], c), s)
+
+    def key(x, v):
+        return (KEY, key_of[v]) if v in key_of else x
+
+    def step(state, x):
+        if x[:1] != (KEY,):
+            return minimal(state, x)     # a space
+        v = inputs[x[1]]
+        if state not in table[v]:
+            raise P.Impossible
+        return (OUT, x[1], part[v][state]), canon[table[v][state][1]]
+
+    def kview(x):
+        return x[:1] == (KEY,) or (x != P.BLANK and view(x))
+
+    def output(v, x):
+        if x[:1] != (OUT,):
+            return v
+        if key_of.get(v) != x[1]:
+            raise P.Impossible
+        return p.step(rep[(x[1], x[2])], v)[0]
+    return [P.Derive(scratch, [p.track], key),
+            P.RTL(scratch, step, canon[p.init], view=kview, spaces=p.spaces), P.strip(scratch, spaces=p.spaces),
+            P.Derive(p.track, [scratch], output),
+            P.Map(scratch, lambda x: P.BLANK)]
 
 
 def safe(pred):
@@ -1224,7 +1333,7 @@ def build(base=BASE, verbose=False, relaxed=False):
 def build_font(font, verbose=False, relaxed=False):
     """relaxed: the relaxed notation's font (relaxed.py, front.py)."""
     if relaxed:
-        font.recycling = True
+        font.recycling = font.keyed = True
         relaxed_commands(font)
         J, SP = relaxed_initial(font)
         prog = front.front() + P.program(relaxed=True)
@@ -1242,9 +1351,9 @@ def build_font(font, verbose=False, relaxed=False):
         print(f"{len(J)} kinds of token at the end, {len(font.b.order)} glyphs, {len(font.pl.lookups)} GSUB lookups "
               f"({len(font.pool)} pooled), {subtables} subtables, {font.rules} format 2 rules")
     # DirectWrite skips reverse chaining lookups inside Extension ones; the
-    # relaxed notation's are too big to keep out (fontbuild.build_gsub).
+    # relaxed notation's fit outside them once keyed (keyed_rtl).
     gsub = fb.build_gsub(font.pl.lookups, font.pl.top, feature="calt", scripts=("DFLT", "grek", "latn"),
-                         unwrapped=() if relaxed else (8,))
+                         unwrapped=(8,))
     gp, gp_sets = gpos(font)
     return finish(font, gsub, gp, gp_sets, "Fontlex Relaxed Math" if relaxed else "Fontlex Math")
 
