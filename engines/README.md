@@ -32,7 +32,8 @@ lookups have them wrapped, and so break in DirectWrite:
 
 | Font | Reverse chaining lookups, wrapped | In DirectWrite |
 |---|---|---|
-| Fontlex Math, Relaxed Math | 19 and 50 | 327 of 345 and 315 of 351 lines differ; in each line bisected, the first right-to-left pass is the first to differ (`first_difference.py`) |
+| Fontlex Math | none (19, not wrapped since November 2026) | every line the same, 400 of 400 (327 of 345 differed with them wrapped) |
+| Fontlex Relaxed Math | 51 | 245 of 387 lines differ; in each line bisected, the first right-to-left pass is the first to differ (`first_difference.py`) |
 | Fontlex Markdown (both editions) | 60 | not measured: DirectWrite took over 60 seconds on one line, `>\t\tfoo`, and the check stopped |
 | Fontlex English, French | none (1, not wrapped since November 2026) | 99.4% and 99.9% of words in context right (59% and 65% with it wrapped); every line of the English READMEs, and 15 of the 16 French sample lines; what differs is below |
 | Fontlex Python, JavaScript | none (1, not wrapped) | right, apart from script runs (below) |
@@ -44,10 +45,12 @@ Cyrillic letter starts a new run, so a lexer font's state starts over after
 that, the Python and JavaScript fonts color as HarfBuzz does, and every
 positioning check is the same.
 
-The English and French fonts avoid the first problem by keeping their one
-reverse chaining lookup out of an extension lookup (`unwrapped` in
-`markdown/fontbuild.py`'s `build_gsub`): its subtables sit within 64 KB of the
-lookup list. The math and Markdown fonts have too many such lookups for that.
+The English, French and Fontlex Math fonts avoid the first problem by
+keeping their reverse chaining lookups out of extension lookups (`unwrapped`
+in `markdown/fontbuild.py`'s `build_gsub`): Fontlex Math's 19 come to 28 KB,
+and fit under 16-bit offsets. Relaxed Math's come to 386 KB and Markdown's
+to 548 KB, too much for that: saving the font puts them back inside
+extension lookups, so the math build checks that it didn't.
 Two things still differ in English and French, not yet looked at:
 
 - **Noun/verb pairs** (`research`, `project`; `sens`, `président`), whose

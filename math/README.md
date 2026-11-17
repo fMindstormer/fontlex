@@ -179,11 +179,11 @@ Browsers workflow runs it in Chromium and Firefox on Linux and Windows:
 - Chrome shapes canvas text (`fillText`, `measureText`) word by word, so on
   a canvas a construct can't span a space. Text boxes and other page text
   are shaped whole.
-- Native Windows apps, which shape text with DirectWrite, don't typeset it:
-  DirectWrite ignores reverse chaining lookups inside extension lookups, and
-  the font's right-to-left passes are such lookups
-  ([engines/README.md](../engines/README.md)). Browsers on Windows shape
-  with HarfBuzz, and do.
+- Native Windows apps shape text with DirectWrite, which ignores reverse
+  chaining lookups inside extension lookups. The font's right-to-left
+  passes are reverse chaining lookups, kept out of extension lookups, and
+  every line checked comes out as in HarfBuzz
+  ([engines/README.md](../engines/README.md)).
 
 ## The relaxed notation
 
@@ -304,4 +304,6 @@ HarfBuzz.
   `hat(xy)` is x̂ŷ. The exception is `vec` over two or more letters, one
   arrow over them all, as LaTeX's `\overrightarrow`. For an accented
   letter with a script, write `hat(x)_1`; `hat(x_1)` stays text.
-- Native Windows apps (DirectWrite) don't typeset it, for the same reason.
+- Native Windows apps (DirectWrite) don't typeset it: its right-to-left
+  passes are too big to keep out of extension lookups, which DirectWrite
+  ignores them inside ([engines/README.md](../engines/README.md)).
