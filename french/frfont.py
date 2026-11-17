@@ -359,7 +359,7 @@ class FrenchFont:
             if h == "L":
                 plain.update({t: g for g, t in self.tie.items()})
             sets[tag] = ([single(plain)], label)
-        gsub = fb.build_gsub(lookups, top=top, sets=sets)
+        gsub = fb.build_gsub(lookups, top=top, sets=sets, unwrapped=(8,))
         return b.finish(gsub, family="Fontlex French"), n_rules
 
 

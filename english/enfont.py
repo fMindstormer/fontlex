@@ -313,7 +313,7 @@ class EnglishFont:
         for h, entry in HINTS.items():
             tag, label = HINT_SETS[entry]
             sets[tag] = ([single({self.hinted[(g, h)]: g for g in letters})], label)
-        gsub = fb.build_gsub(lookups, top=top, sets=sets)
+        gsub = fb.build_gsub(lookups, top=top, sets=sets, unwrapped=(8,))
         return b.finish(gsub, family="Fontlex English"), sum(len(v) for v in rules.values())
 
 
