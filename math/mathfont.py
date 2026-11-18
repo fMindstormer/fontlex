@@ -320,7 +320,9 @@ class Font:
             out[g] = self.pool[i][0]
         return out
 
-    def merged(self, mappings):
+    def merged(self, mappings, multiple=False):
+        if multiple:        # (passes.py's ltr(): a multiple substitution each)
+            return {name: self.pl.add(fb.lookup(2, [fb.multiple(m)]), top=False) for name, m in mappings.items()}
         return {name: self.nested(m) for name, m in sorted(mappings.items(), key=lambda kv: -len(kv[1]))}
 
     def temp_mark(self):
