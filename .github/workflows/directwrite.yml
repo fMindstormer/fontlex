@@ -42,6 +42,9 @@ jobs:
           python engines/first_difference.py build/Fontlex-RelaxedMath.ttf directwrite "(a+b)/(c+d)"
           python engines/first_difference.py build/Fontlex-RelaxedMath.ttf directwrite "a+b/c"
           python engines/first_difference.py build/Fontlex-Markdown.ttf directwrite "**bold** and *it*"
+          python engines/first_difference.py build/Fontlex-Markdown.ttf directwrite "*foo**bar*"
+          python engines/first_difference.py build/Fontlex-Markdown.ttf directwrite '[a](url &quot;tit&quot;)'
+          python engines/first_difference.py build/Fontlex-Markdown.ttf directwrite $'\tbar'
       - name: Every font, in DirectWrite
         continue-on-error: true
         timeout-minutes: 30
