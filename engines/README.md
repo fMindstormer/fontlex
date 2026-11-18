@@ -70,6 +70,15 @@ compiler now runs such a pass on those kinds (`keyed_rtl` in
 `math/mathfont.py`), which brings Relaxed Math's to 40 KB. Markdown's come
 to 548 KB, 85% of it from two passes over glyphs that hold a character and
 its state at once; there is no other glyph for the state to go on.
+They also need room. HarfBuzz's packer, which saves these fonts, keeps a
+lookup out of an extension lookup only while 8 bytes for every Extension
+subtable, and the unwrapped subtables, come to under 64 KB. Markdown had
+9,242 subtables, 74 KB of such records, so none fitted, however small.
+Class-based rules for the emphasis rounds (a subtable per group of
+closers, not per rule) and nested substitutions shared across passes
+bring that to 3,844 (Markdown Sans: 10,341 to 4,943), and about 40 KB of
+reverse chaining lookups now fit.
+
 Two things still differ in English and French, not yet looked at:
 
 - **Noun/verb pairs** (`research`, `project`; `sens`, `président`), whose

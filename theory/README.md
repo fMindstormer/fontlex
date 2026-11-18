@@ -53,7 +53,7 @@ inputs.
 | Resource | What it limits | Limit | Fontlex Markdown uses |
 |---|---|---|---|
 | Glyph ids | states: a pass with *s* states over *a* letters needs up to *s*·*a* variants | 65,535 | 63,367 (97%) |
-| Lookup headers | passes: every lookup's header lies within 16-bit offsets of the LookupList | 4,681 lookups of one filtered subtable (*measured*) | 1,945 lookups, 52% of the window |
+| Lookup headers | passes: every lookup's header lies within 16-bit offsets of the LookupList | 4,681 lookups of one filtered subtable (*measured*) | 819 lookups, 22% of the window |
 | Engine work | passes × run length | HarfBuzz: about 4,096 glyph operations per character | 0.3 ms a line, about 15× a plain font |
 
 **Glyphs are the scarce resource, passes the cheap one.** The 65,535 glyph
@@ -77,7 +77,7 @@ count is 16-bit, but the LookupList reaches each lookup's header through a
 can share a header, which is why `depth.py` packs 16,000 identical rounds
 but only 4,681 distinct ones (*measured*; fontTools stops with "all lookups
 are already Extension lookups"). The Sans edition of Fontlex Markdown uses
-62% of the window. The 24-bit glyph ids and offsets proposed for a future
+32% of the window. The 24-bit glyph ids and offsets proposed for a future
 OpenType would lift both this budget and the glyph budget.
 
 **Engines bound the work.** HarfBuzz charges about one operation per glyph
@@ -524,7 +524,7 @@ the document is printed.
 ### 5. Cost scales with passes, not with what you write
 
 Every pass visits the whole run, in every engine. Fontlex Markdown's 151
-top-level lookups (1,945 in all) shape a line in about 0.3 ms in HarfBuzz,
+top-level lookups (819 in all) shape a line in about 0.3 ms in HarfBuzz,
 roughly 15 times a plain font. The depth font at depth 1,000 takes 12 ms in
 HarfBuzz and 40 ms in Core Text. That is fine for a line, but it grows with
 paragraph length, because the run is the paragraph. Font programs belong in

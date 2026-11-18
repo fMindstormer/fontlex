@@ -62,8 +62,8 @@ follows an older CommonMark; commonmark.js counts a no-break space as
 whitespace inside HTML tags).
 
 Both editions give exactly these results. The font has 63,367 glyphs (of
-OpenType's 65,535) and is 722 KB as WOFF2; the proportional edition has
-54,841 and is 743 KB.
+OpenType's 65,535) and is 735 KB as WOFF2; the proportional edition has
+54,841 and is 758 KB.
 
 ## The proportional edition
 

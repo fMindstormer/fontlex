@@ -153,7 +153,7 @@ closer right after it. Matched pairs leave the view, so the next round
 matches the next level out. One pass that kept a stack of three openers
 would need about 14,000 states, on copies of every character; six rounds
 need a few states each. Link destinations, which one pass would read with
-364 states, are eight passes of 6 to 35. The whole font is 151 lookups (1,945
+364 states, are eight passes of 6 to 35. The whole font is 151 lookups (819
 counting nested ones) and uses 63,367 of OpenType's 65,535 glyph ids.
 Within its bounds it renders every one-line CommonMark spec example, and
 10,723 lines of real documents, exactly as GitHub does.
