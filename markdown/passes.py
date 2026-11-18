@@ -55,6 +55,8 @@ class Pipeline:
         self.key = lambda o: self.kind_of(o) or o
         self.bins = []        # [mapping, lookup index]: merged()'s lookups, shared by every pass
         self.seq_bins = []    # the same for multiple substitutions
+        self.companions = []  # rtl_keyed()'s marks, reused by every such pass
+        self.keyed_stats = []
 
     # glyphs -------------------------------------------------------------
 
@@ -147,8 +149,8 @@ class Pipeline:
                 bins.append([dict(m), out[name]])
         return out
 
-    def gsub(self):
-        return fb.build_gsub(self.lookups, self.top)
+    def gsub(self, unwrapped=()):
+        return fb.build_gsub(self.lookups, self.top, unwrapped=unwrapped)
 
     def coverage(self, glyphs):
         cov = ot.Coverage()
@@ -173,18 +175,19 @@ class Pipeline:
         st.SubstCount = len(st.SubstLookupRecord)
         return st
 
-    def class_rules(self, back_classes, input_classes, rules):
+    def class_rules(self, back_classes, input_classes, rules, ahead_classes=None):
         """A format 2 chaining subtable: many rules in one, where format 3
         takes a subtable each. Classes are {glyph: class} (none: class 0);
         rules is {first input class: [(backtrack classes in text order,
-        classes of the inputs after the first, records)]}, each list tried
-        in order, and the subtable covers the glyphs of those first classes."""
+        classes of the inputs after the first, records[, lookahead
+        classes])]}, each list tried in order, and the subtable covers the
+        glyphs of those first classes."""
         st = ot.ChainContextSubst()
         st.Format = 2
         st.Coverage = self.coverage({g for g, c in input_classes.items() if c in rules})
         st.BacktrackClassDef = self._classdef(back_classes)
         st.InputClassDef = self._classdef(input_classes)
-        st.LookAheadClassDef = self._classdef({})
+        st.LookAheadClassDef = self._classdef(ahead_classes or {})
         st.ChainSubClassSet = []
         for c in range(max(rules) + 1):
             if c not in rules:
@@ -192,11 +195,12 @@ class Pipeline:
                 continue
             cs = ot.ChainSubClassSet()
             cs.ChainSubClassRule = []
-            for back, inp, records in rules[c]:
+            for back, inp, records, *ahead in rules[c]:
+                ahead = list(ahead[0]) if ahead else []
                 r = ot.ChainSubClassRule()
                 r.Backtrack, r.BacktrackGlyphCount = list(reversed(back)), len(back)
                 r.Input, r.InputGlyphCount = list(inp), len(inp) + 1
-                r.LookAhead, r.LookAheadGlyphCount = [], 0
+                r.LookAhead, r.LookAheadGlyphCount = ahead, len(ahead)
                 r.SubstLookupRecord = []
                 for pos, idx in records:
                     rec = ot.SubstLookupRecord()
@@ -236,7 +240,7 @@ class Pipeline:
 
     # transducers -------------------------------------------------------
 
-    def _explore(self, inputs, step, init, anchored=False):
+    def _explore(self, inputs, step, init, anchored=False, make=None):
         states, index, todo, out = [init], {init: 0}, [init], {}
         if anchored:
             states, index, todo = [init, OTHER], {init: 0, OTHER: 1}, [init, OTHER]
@@ -255,7 +259,7 @@ class Pipeline:
                     continue
                 kind, ns = r
                 assert ns != OTHER, "no output can record OTHER"
-                o = kind if isinstance(kind, (str, Seq)) else self.var(g, kind)
+                o = kind if isinstance(kind, (str, Seq)) else (make or self.var)(g, kind)
                 out[(g, s)] = (o, ns)
                 if ns not in index:
                     index[ns] = len(states)
@@ -423,6 +427,114 @@ class Pipeline:
                     for i in range(a + 1, b):
                         cd.classDefs[order[i]] = ca
         return cd
+
+    def rtl_keyed(self, inputs, step, init, anchored=False, strip=True):
+        """A right-to-left pass compiled small. It runs on companion marks,
+        one after each input glyph, which stand for the few kinds of input
+        the pass tells apart (keys): a reverse chaining rule maps every key
+        for each state, where rtl() maps every input glyph. The companions
+        record the state; a ligature folds each back into its glyph, which
+        takes from it what the pass leaves there. Reverse chaining inside an
+        Extension lookup is lost on DirectWrite (fontbuild.build_gsub), so
+        these must stay small.
+
+        With `strip`, the state goes right after: an output's kind ends
+        ("s", state), the pass leaves var(base, the kind without it), and
+        the states are minimized against that; returns the glyphs the inputs
+        end as. Without, outputs stay as they are, and it returns what rtl()
+        does. `anchored` as for rtl(): every glyph is seen, and next to one
+        the pass doesn't read, the state is OTHER.
+
+        A glyph and its companion ligate: for a mark that keeps no ligature
+        ids, and for a base glyph it leaves a base (to lookup flags too)."""
+        states, _, out, _ = self._explore(inputs, step, init, anchored, make=lambda g, kind: (self.base_of(g), kind))
+        gs = sorted(inputs, key=self.gid)
+        none = OTHER if anchored else init      # what an unchanged glyph's left neighbor reads
+
+        def fin(g, s):        # what the input is left as; a pair the pass never meets counts as unchanged
+            if (g, s) not in out:
+                return g
+            base, kind = out[(g, s)][0]
+            if not strip:
+                return self.var(base, kind)
+            return self.var(base, kind[:-1]) if kind[:-1] else base
+
+        def nxt(g, s):
+            return out[(g, s)][1] if (g, s) in out else none
+        part = {s: tuple(fin(g, s) for g in gs) for s in states}
+        count = len(set(part.values()))
+        while True:           # Moore's refinement
+            ids = {}
+            new = {s: ids.setdefault((part[s], tuple(part[nxt(g, s)] for g in gs)), len(ids)) for s in states}
+            part = new
+            if len(ids) == count:
+                break
+            count = len(ids)
+        rep = {}
+        for s in states:
+            rep.setdefault(part[s], s)
+        classes, c0, c_other = list(rep), part[init], part.get(OTHER)
+        delta = {(c, g): part[nxt(g, rep[c])] for c in classes for g in gs}
+        left = {(g, c): fin(g, rep[c]) for c in classes for g in gs}
+        changed = {g for g in gs if any(left[(g, c)] != g for c in classes)}
+        keys = {}
+        for g in gs:
+            keys.setdefault((tuple(delta[(c, g)] for c in classes), g in changed), []).append(g)
+        key_of = {g: k for k, members in enumerate(keys.values()) for g in members}
+        changed_keys = {key_of[g] for g in changed}
+        rep_of = [members[0] for members in keys.values()]
+
+        # A companion records the state its left neighbor reads, and after a
+        # glyph the pass changes, the state it read too.
+        def record(k, c):
+            t = delta[(c, rep_of[k])]
+            return (t, c) if k in changed_keys else (t,)
+        values = sorted({record(k, c) for k in range(len(keys)) for c in classes})
+        need = len(keys) + len(values) + 1
+        while len(self.companions) < need:
+            self.companions.append(self.fb.empty(f"_c{len(self.companions)}", 0, gdef_class=3))
+        K = self.companions[:len(keys)]
+        D = dict(zip(values, self.companions[len(keys):len(keys) + len(values)]))
+        X = self.companions[need - 1]
+        self.add(fb.lookup(2, [fb.multiple({g: [g, K[key_of[g]]] for g in gs})]))
+
+        def mapping(c, fallback):
+            return {K[k]: D[record(k, c)] for k in range(len(keys))
+                    if fallback is None or record(k, c) != record(k, fallback)}
+        rules = []
+        if anchored:          # the glyph after a companion: an input (its companion then has the state), any other, or none
+            for c in classes:
+                ahead = {D[v] for v in values if v[0] == c}
+                m = mapping(c, c_other)
+                if m and ahead and c != c_other:
+                    rules.append((m, (), (set(gs), ahead)))
+            if c_other != c0:
+                rules.append((mapping(c_other, c0), (), (set(self.fb.order),)))
+        else:
+            for c in classes:
+                ahead = {D[v] for v in values if v[0] == c}
+                m = mapping(c, c0)
+                if m and ahead and c != c0:
+                    rules.append((m, (), (ahead,)))
+        rules.append((mapping(c0, None), (), ()))
+        self.reverse(rules, None if anchored else set(K) | set(D.values()))
+        unchanged = [g for g in gs if g not in changed]
+        if unchanged:
+            self.chain([([set(unchanged)], [set(D.values())], [], [(0, self.nested({d: X for d in D.values()}))])])
+        lig = ot.LigatureSubst()
+        lig.ligatures = {}
+        for g in gs:
+            pairs = [(X, g)] if g not in changed else sorted({(D[record(key_of[g], c)], left[(g, c)])
+                                                              for c in classes})
+            for comp, glyph in pairs:
+                L = ot.Ligature()
+                L.Component, L.LigGlyph, L.CompCount = [comp], glyph, 2
+                lig.ligatures.setdefault(g, []).append(L)
+        self.add(fb.lookup(4, [lig]))
+        self.keyed_stats.append((len(gs), len(states), len(classes), len(keys), len(values)))
+        if not strip:
+            return {(g, s): fin(g, s) for g in gs for s in states if (g, s) in out}, [s for s in states if s != OTHER]
+        return set(unchanged) | {left[(g, c)] for g in changed for c in classes}
 
     def rtl(self, inputs, step, init, sees=(), skeleton=True, anchored=False):
         """A right-to-left transducer (reverse chaining substitutions); the

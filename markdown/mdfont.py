@@ -147,6 +147,13 @@ class MarkdownFont:
         self.alive = (self.alive - set(inputs)) | set(out.values()) | self.pl.unchanged
         return out, states
 
+    def keyed(self, inputs, step, init):
+        """An anchored right-to-left pass, as transduce("rtl", ...,
+        skeleton=False, anchored=True), compiled small (passes.rtl_keyed)."""
+        out, states = self.pl.rtl_keyed(inputs, step, init, anchored=True, strip=False)
+        self.alive = (self.alive - set(inputs)) | set(out.values()) | self.pl.unchanged
+        return out, states
+
     def strip_state(self, outputs):
         """Map the outputs of a pass to their kinds without the pass's state."""
         strip = {o: self.pl.var(o, self.pl.kind_of(o)[:-1]) if self.pl.kind_of(o)[:-1] else self.pl.base_of(o)
@@ -154,9 +161,15 @@ class MarkdownFont:
         self.pl.single(strip)
         self.replace(strip.items())
 
-    def temporary(self, direction, inputs, step, init):
+    def temporary(self, direction, inputs, step, init, keyed=False):
         """A pass whose outputs (kind + ("s", state)) are stripped right after
-        it, so they can be pool glyphs shared with every other such pass."""
+        it, so they can be pool glyphs shared with every other such pass.
+        With `keyed`, a right-to-left one runs on companion marks instead
+        (passes.rtl_keyed): far smaller reverse chaining lookups."""
+        if keyed:
+            assert direction == "rtl"
+            self.alive = (self.alive - set(inputs)) | self.pl.rtl_keyed(inputs, step, init)
+            return
         self.pl.begin_temp()
         out, states = self.transduce(direction, inputs, step, init)
         self.strip_state(out.values())
@@ -226,7 +239,7 @@ class MarkdownFont:
                 out = kind[:2] + (found_k(kind) | {name},) if ch == "<" and "<" in R else kind
                 return None if not new and out == kind else (out + (("s", new),), new)
             self.temporary("rtl", {g: (self.char(g), pl.kind_of(g))
-                                   for g in self.kinded(lambda k: k[0] == "hx")}, back, frozenset())
+                                   for g in self.kinded(lambda k: k[0] == "hx")}, back, frozenset(), keyed=True)
         order = [name for name, _ in htmlauto.KINDS]
         final = {g: pl.base_of(g) for g in a0.values()}
         for g in self.kinded(lambda k: k[0] == "hx"):
@@ -330,7 +343,7 @@ class MarkdownFont:
                 new = seen or (i == 0 and n == m)
                 out = kind[:4] + (("v", seen),) if opener else kind
                 return None if not new and out == kind else (out + (("s", new),), new)
-            self.temporary("rtl", {g: self.pl.kind_of(g) for g in ticks}, step, False)
+            self.temporary("rtl", {g: self.pl.kind_of(g) for g in ticks}, step, False, keyed=True)
 
     def delimiter_runs(self):
         """Each `*` and `_` learns its run and flanking: ("dl", i, n, open,
@@ -435,7 +448,7 @@ class MarkdownFont:
                     new = auto.back(new, "O")
                 out = kind[:3] + (x or auto.start in R,) if ch == "]" and not esc else kind
                 return None if not new and out == kind else (out + (("s", new),), new)
-            self.temporary("rtl", inputs, step, frozenset())
+            self.temporary("rtl", inputs, step, frozenset(), keyed=True)
 
     # line blocks, right to left ----------------------------------------
 
@@ -463,11 +476,8 @@ class MarkdownFont:
                 return None
             names, new = r
             return _with_bk(sym[1], names) + (("s", new),), new
-        self.pl.begin_temp()
-        out, _ = self.transduce("rtl", {g: (self.char(g), self.pl.kind_of(g)) for g in glyphs}, wrapped, init,
-                                skeleton=skeleton, anchored=not skeleton)
-        self.strip_state(out.values())
-        self.pl.end_temp()
+        inputs = {g: (self.char(g), self.pl.kind_of(g)) for g in glyphs}
+        self.alive = (self.alive - set(inputs)) | self.pl.rtl_keyed(inputs, wrapped, init, anchored=not skeleton)
 
     def block_marks(self):
         """What the line-start pass (block_prefix) needs to know about what
@@ -538,21 +548,38 @@ class MarkdownFont:
         seven = {g: self.with_marks(g, {"html"}) for g in lts if self.pl.kind_of(g)[3] in ("open7", "close7")}
         self.pl.single(seven)
         self.replace(seven.items())
+        # Only lookahead: chaining rules (left to right) do as well as
+        # reverse chaining ones, and leave those the room they need under
+        # 16-bit offsets (passes.rtl_keyed). A name followed by a space, `>`
+        # or `/>` starts a block; any other character after it, none. The
+        # first kind of rule can all come first, in one class-based
+        # subtable: where a longer name matches, a letter follows any
+        # shorter one.
+        pl = self.pl
         lts = self.glyphs_of("<", lambda k: k[:1] == ("tk",) and not k[2])
-        html = {g: self.with_marks(g, {"html"}) for g in lts}
-        keep = {g: g for g in lts}
+        marked = {g: self.with_marks(g, {"html"}) for g in lts}
+        html = pl.nested(marked)
         seq = lambda text: [self.glyphs_of({c.lower(), c.upper()}) for c in text]
-        rules = [(html, (), seq(start)) for start in ("!--", "?", "![CDATA[")]
-        rules.append((html, (), [self.glyphs_of("!"), self.glyphs_of(set(htmlauto.LETTER))]))
+        subtables = [pl.chain_rule([], [lts], seq(start), [(0, html)]) for start in ("!--", "?", "![CDATA[")]
+        subtables.append(pl.chain_rule([], [lts], [self.glyphs_of("!"), self.glyphs_of(set(htmlauto.LETTER))],
+                                       [(0, html)]))
         names = [(n, k) for k, ns in HTML_BLOCK_NAMES.items() for n in ns]
+        label, starts, rest = dict.fromkeys(self.glyphs_of(JS_SPACE), " "), [], []
         for name, k in sorted(names, key=lambda nk: (-len(nk[0]), nk)):
             for slash in ("", "/") if k == 6 else ("",):
-                body = seq(slash + name)
-                rules += [(html, (), body + [self.glyphs_of(JS_SPACE)]), (html, (), body + [self.glyphs_of(">")])]
-                if k == 6:
-                    rules.append((html, (), body + [self.glyphs_of("/"), self.glyphs_of(">")]))
-                rules += [(keep, (), body + [set(self.b.order)]), (html, (), body)]
-        self.reverse(rules)
+                text = slash + name
+                for c in set(text) | set("/>"):
+                    label.update(dict.fromkeys(self.glyphs_of({c.lower(), c.upper()}), c.lower()))
+                starts += [text + end for end in [" ", ">"] + (["/>"] if k == 6 else [])]
+                body = seq(text)
+                rest += [pl.chain_rule([], [lts], body + [set(self.b.order)], []),
+                         pl.chain_rule([], [lts], body, [(0, html)])]
+        number = {c: i + 1 for i, c in enumerate(sorted(set(label.values())))}
+        subtables.append(pl.class_rules({}, dict.fromkeys(lts, 1),
+                                        {1: [([], [], [(0, html)], [number[c] for c in start]) for start in starts]},
+                                        {g: number[c] for g, c in label.items()}))
+        pl.add(fb.lookup(6, subtables + rest))
+        self.alive |= set(marked.values())
 
         # Task boxes, and whether an [x] comes later (any checks the box).
         boxed = lambda: self.glyphs_of("[")
@@ -631,8 +658,7 @@ class MarkdownFont:
                     new = r
             return kind + (("s", new),), new
         pl.begin_temp()
-        out, _ = self.transduce("rtl", {g: (self.char(g), pl.kind_of(g)) for g in dom | ends}, step, "eol",
-                                skeleton=False, anchored=True)
+        out, _ = self.keyed({g: (self.char(g), pl.kind_of(g)) for g in dom | ends}, step, "eol")
         state = lambda o: pl.kind_of(o)[-1][1]
         outs = set(out.values())
         of = lambda chars: {g for g in self.alive if self.char(g) in chars}
@@ -712,7 +738,7 @@ class MarkdownFont:
         pl.begin_temp()
         ins = {g: (self.char(g), pl.kind_of(g)) for g in self.alive if self.char(g) in trim | set(" \t<&") | past
                | htmlauto.LETTER or self.char(g) == "#" and pl.kind_of(g)[-1:] == ("hc",)}
-        out, _ = self.transduce("rtl", ins, tail, "eol", skeleton=False, anchored=True)
+        out, _ = self.keyed(ins, tail, "eol")
         tails = set(out.values())
 
         def cstate(g):
@@ -1148,8 +1174,8 @@ class MarkdownFont:
             st = (new, loc in (True, "at"))
             return kind + (("e", st[1], last), ("s", st)), st
         pl.begin_temp()
-        out, _ = self.transduce("rtl", {g: (None if g in markers else self.char(g), pl.kind_of(g))
-                                        for g in text | markers}, scan, "eol", skeleton=False, anchored=True)
+        out, _ = self.keyed({g: (None if g in markers else self.char(g), pl.kind_of(g))
+                             for g in text | markers}, scan, "eol")
         start, end = pl.var(self.url_base, ("em", "start")), pl.var(self.url_base, ("em", "end"))
         note = lambda k: next(x for x in reversed(k) if isinstance(x, tuple) and x[:1] == ("e",))
 
@@ -1632,7 +1658,7 @@ def build(base, bold, italic, bold_italic, mono=None, family="Fontlex Markdown")
     mf = MarkdownFont(base, bold, italic, bold_italic, mono)
     for stage in STAGES:
         getattr(mf, stage)()
-    font = mf.b.finish(mf.pl.gsub(), mf.pl.mark_sets, family)
+    font = mf.b.finish(mf.pl.gsub(unwrapped=(8,)), mf.pl.mark_sets, family)   # (fontbuild.build_gsub)
     return font, mf
 
 
@@ -1657,7 +1683,10 @@ def main(argv=None):
     out.mkdir(parents=True, exist_ok=True)
     first, *rest = args.family.split()
     path = out / f"{first}-{''.join(rest)}.ttf"
+    plain = fb.reverse_chaining(font)[0]
     font.save(path)
+    if fb.reverse_chaining(TTFont(path, lazy=True))[0] < plain:
+        sys.exit(f"{path}: saving put reverse chaining lookups inside Extension ones, which DirectWrite skips")
     # The web font goes without glyph names (verify.py reads them from the TTF).
     font = TTFont(path, recalcTimestamp=False)
     font["post"].formatType = 3.0
