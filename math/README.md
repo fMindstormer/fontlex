@@ -292,9 +292,12 @@ By screenshot, as for Fontlex Math:
   160 (HarfBuzz 14.6.0) and later draw them as HarfBuzz does, so CI checks
   Firefox 160.
 
-The font has 61,886 glyphs, 2,064 substitution lookups (1,584 of them
-nested, in 3,200 subtables) and 301 positioning lookups. It is 10.9 MB as
-TrueType and 1.4 MB as WOFF2. Shaping takes 0.34 ms per character in
+The font has 61,886 glyphs, 2,151 substitution lookups (1,584 of them
+nested, in 3,186 subtables) and 301 positioning lookups. It is 11.0 MB as
+TrueType and 1.5 MB as WOFF2. Its right-to-left passes run on the few kinds
+of value each tells apart (`keyed_rtl` in `mathfont.py`), so their reverse
+chaining lookups come to 40 KB, not 386 KB, and stay out of extension
+lookups, which DirectWrite ignores them inside. Shaping takes 0.34 ms per character in
 HarfBuzz.
 
 ### Its limits
@@ -312,6 +315,8 @@ HarfBuzz.
   `hat(xy)` is x̂ŷ. The exception is `vec` over two or more letters, one
   arrow over them all, as LaTeX's `\overrightarrow`. For an accented
   letter with a script, write `hat(x)_1`; `hat(x_1)` stays text.
-- Native Windows apps (DirectWrite) don't typeset it: its right-to-left
-  passes are too big to keep out of extension lookups, which DirectWrite
-  ignores them inside ([engines/README.md](../engines/README.md)).
+- Native Windows apps (DirectWrite) lay out 337 of the 387 lines checked.
+  The others mix Greek and Latin letters inside a construct, as in Chrome,
+  or end a fraction on a closer the font inserts (`a+b/c`), where
+  DirectWrite leaves the bar's last piece at the end of the line
+  ([engines/README.md](../engines/README.md)).
