@@ -61,9 +61,9 @@ where the two disagree with each other or with the spec (cmark-gfm's core
 follows an older CommonMark; commonmark.js counts a no-break space as
 whitespace inside HTML tags).
 
-Both editions give exactly these results. The font has 63,367 glyphs (of
-OpenType's 65,535) and is 735 KB as WOFF2; the proportional edition has
-54,841 and is 758 KB.
+Both editions give exactly these results. The font has 55,762 glyphs (of
+OpenType's 65,535) and is 678 KB as WOFF2; the proportional edition has
+46,736 and is 696 KB.
 
 ## The proportional edition
 
@@ -144,17 +144,17 @@ font has at most 65,535 glyphs, so the font spends passes to save states:
 | Raw HTML and autolinks | 14,737 | 8 passes, one per kind: 2 to 52 states each |
 
 Passes in one direction compose without changing direction, so CommonMark's
-inline rules take 103 lookups: 38 right to left, then 23 left to right, with
-42 plain substitutions among them that tidy up between passes.
+inline rules change direction once: 43 passes right to left, then 22 left
+to right, with lookups among them that set passes up and tidy up after.
 
 GitHub's extensions cost more changes of direction, though none is needed in
-principle; they buy glyphs. The whole font runs 151 lookups (60 right to
-left, 31 left to right, 60 plain substitutions) with seven changes of
-direction:
+principle; they buy glyphs. The whole font runs 218 lookups (59 right to
+left, 30 left to right, 129 plain substitutions and fixed rules) with seven
+changes of direction:
 
 | Direction | Lookups | What for |
 |---|---|---|
-| Right to left | 55 | the inline passes above, and the block markup's own right-to-left checks |
+| Right to left | 54 | the inline passes above, and the block markup's own right-to-left checks |
 | Left to right | 1 | each line's block prefix: where its inline content starts |
 | Right to left | 3 | where bare URLs can start (which needs the prefix: `www.` counts after a bullet) |
 | Left to right | 1 | a mark before each such start |

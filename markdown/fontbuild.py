@@ -462,8 +462,9 @@ def build_gsub(lookups, top=None, feature="calt", scripts=("DFLT", "latn"), sets
     `unwrapped` stay out of Extension lookups: DirectWrite ignores a reverse
     chaining lookup (type 8) inside one (engines/README.md). Their subtables
     then have to sit within 16-bit offsets of the lookup list: Fontlex Math's
-    19 (28 KB) and Relaxed Math's 51 (40 KB, keyed: math/mathfont.py's
-    keyed_rtl) do, Markdown's (548 KB) don't. HarfBuzz's packer keeps them
+    19 (28 KB), Relaxed Math's 51 (40 KB, keyed: math/mathfont.py's
+    keyed_rtl) and Markdown's 59 (39 KB, on companion marks: passes.py's
+    rtl_keyed) do. HarfBuzz's packer keeps them
     out only while 8 bytes per Extension subtable plus the unwrapped
     subtables come to under 64 KB, and saving silently puts lookups that
     don't fit back inside Extension ones (check with reverse_chaining()
