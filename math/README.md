@@ -68,7 +68,9 @@ with 2 px of tolerance at 100 px per em, where the layout's smallest step
 - **WebKit (macOS 27):** the same on all 235 lines narrow enough to
   snapshot (before `\overline`, the accents and `\binom`).
 - **Chromium 139 and Firefox 160, on Linux and on Windows:** the same on
-  all of them (`browsers.py`, run by CI's Browsers workflow).
+  all of them (`browsers.py`, run by CI's Browsers workflow), and on 435 of
+  the 436 lines it checks now; the other, `\vec{αβ}`, mixes Greek and Latin
+  letters inside a construct, which these browsers shape as two runs.
 
 Typing a formula into a text box key by key ends with the same pixels as
 setting the text at once, in all of these browsers but WebKit, which
@@ -187,7 +189,8 @@ Browsers workflow runs it in Chromium and Firefox on Linux and Windows:
 - Native Windows apps shape text with DirectWrite, which ignores reverse
   chaining lookups inside extension lookups. The font's right-to-left
   passes are reverse chaining lookups, kept out of extension lookups, and
-  every line checked comes out as in HarfBuzz
+  every line checked comes out as in HarfBuzz but one that mixes Greek and
+  Latin letters inside a construct, as in Chrome
   ([engines/README.md](../engines/README.md)).
 
 ## The relaxed notation
