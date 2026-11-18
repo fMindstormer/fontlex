@@ -32,6 +32,7 @@ jobs:
           python engines/compare.py build/Fontlex-Python.ttf directwrite "def f(x): return 1"
           python engines/compare.py build/Fontlex-English.ttf directwrite "the nation"
           python engines/compare.py build/Fontlex-Math.ttf directwrite "x^2" "\\frac{a}{b}"
+          python engines/compare.py build/Fontlex-RelaxedMath.ttf directwrite "a+b/c"
       - name: Probes, one mechanism each
         run: python engines/probes.py directwrite
       - name: The first lookup where DirectWrite parts from HarfBuzz
@@ -39,6 +40,7 @@ jobs:
           python engines/first_difference.py build/Fontlex-Math.ttf directwrite "x^2"
           python engines/first_difference.py build/Fontlex-Math.ttf directwrite "\\frac{a}{b}"
           python engines/first_difference.py build/Fontlex-RelaxedMath.ttf directwrite "(a+b)/(c+d)"
+          python engines/first_difference.py build/Fontlex-RelaxedMath.ttf directwrite "a+b/c"
           python engines/first_difference.py build/Fontlex-Markdown.ttf directwrite "**bold** and *it*"
       - name: Every font, in DirectWrite
         continue-on-error: true
