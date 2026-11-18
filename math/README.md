@@ -77,7 +77,7 @@ setting the text at once, in all of these browsers but WebKit, which
 wasn't tried.
 
 The font has 64,916 glyphs, 1,674 substitution lookups (about 1,260 of
-them nested lookups shared by every pass, in 2,905 subtables) and 309
+them nested lookups shared by every pass, in 2,905 subtables) and 310
 positioning lookups. It is 9.1 MB as TrueType and 1.0 MB as WOFF2. The
 accents take about 12,600 of the glyphs: each character, in each size and
 in and out of a fraction, with each accent. `\binom` takes about 2,700:
@@ -293,7 +293,7 @@ By screenshot, as for Fontlex Math:
   Firefox 160.
 
 The font has 61,886 glyphs, 2,151 substitution lookups (1,584 of them
-nested, in 3,186 subtables) and 301 positioning lookups. It is 11.0 MB as
+nested, in 3,186 subtables) and 302 positioning lookups. It is 11.0 MB as
 TrueType and 1.5 MB as WOFF2. Its right-to-left passes run on the few kinds
 of value each tells apart (`keyed_rtl` in `mathfont.py`), so their reverse
 chaining lookups come to 40 KB, not 386 KB, and stay out of extension
@@ -315,8 +315,6 @@ HarfBuzz.
   `hat(xy)` is x̂ŷ. The exception is `vec` over two or more letters, one
   arrow over them all, as LaTeX's `\overrightarrow`. For an accented
   letter with a script, write `hat(x)_1`; `hat(x_1)` stays text.
-- Native Windows apps (DirectWrite) lay out 337 of the 387 lines checked.
-  The others mix Greek and Latin letters inside a construct, as in Chrome,
-  or end a fraction on a closer the font inserts (`a+b/c`), where
-  DirectWrite leaves the bar's last piece at the end of the line
+- Native Windows apps (DirectWrite) lay out 372 of the 387 lines checked.
+  The others mix Greek and Latin letters inside a construct, as in Chrome
   ([engines/README.md](../engines/README.md)).

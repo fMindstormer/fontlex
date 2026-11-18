@@ -33,7 +33,7 @@ lookups have them wrapped, and so break in DirectWrite:
 | Font | Reverse chaining lookups, wrapped | In DirectWrite |
 |---|---|---|
 | Fontlex Math | none (19, not wrapped since November 2026) | 438 of 439 lines the same (327 of 345 differed with them wrapped); the other, `\vec{αβ}`, mixes Greek and Latin letters in a construct (script runs, below) |
-| Fontlex Relaxed Math | none (51, not wrapped since November 2026) | 337 of 387 lines the same (142 with them wrapped); the others mix Greek and Latin letters in a construct, or end a fraction on a closer the font inserts, as `a+b/c` does (below) |
+| Fontlex Relaxed Math | none (51, not wrapped since November 2026) | 372 of 387 lines the same (142 with them wrapped, 337 before the font placed a fraction's end, below); the others mix Greek and Latin letters in a construct (script runs, below) |
 | Fontlex Markdown (both editions) | 60 | not measured: DirectWrite took over 60 seconds on one line, `>\t\tfoo`, and the check stopped |
 | Fontlex English, French | none (1, not wrapped since November 2026) | 99.4% and 99.9% of words in context right (59% and 65% with it wrapped); every line of the English READMEs, and 15 of the 16 French sample lines; what differs is below |
 | Fontlex Python, JavaScript | none (1, not wrapped) | right, apart from script runs (below) |
@@ -42,12 +42,15 @@ lookups have them wrapped, and so break in DirectWrite:
 **It attaches a mark only to a base glyph that starts its cluster.** In
 `a+b/c` the fraction's closing brace isn't in the text: the font inserts
 it after `c`, so its base glyph (`_fendbase*`, which the bar's last piece
-attaches to) is inside `c`'s cluster. DirectWrite leaves the piece
+attached to) is inside `c`'s cluster. DirectWrite left the piece
 unattached, at the end of the line, where HarfBuzz puts it 60 units back;
-its glyphs are the same (`compare.py`). After `(c+d)` the closer is the `)`,
-which starts a cluster, and the bar is right. Of the 387 lines checked, 39
-end a fraction on an inserted closer, and every one printed differs this
-way.
+its glyphs were the same (`compare.py`). After `(c+d)` the closer is the
+`)`, which starts a cluster, and the bar was right. Of the 387 lines
+checked, 39 ended a fraction on an inserted closer. The math fonts now
+place that piece instead of attaching it: an offset back from the pen,
+which is past the base, and the base's height (`gpos` in
+`math/mathfont.py`). Their other marks on bases, at a root's start and an
+overline's end, sit on glyphs that start their clusters.
 
 **It shapes each script run on its own,** as Chrome does: a Greek or
 Cyrillic letter starts a new run, so a lexer font's state starts over after
