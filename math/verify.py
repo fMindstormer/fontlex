@@ -115,7 +115,7 @@ def main():
     import test_fontlex as tf
     r = Reader(args.font)
     shapers = {n: tf.SHAPERS[n](r.data) for n in (args.shaper or ["harfbuzz"])}
-    bad = 0
+    bad, differ = 0, []
     for line in lines:
         want = model(line)
         for n, sh in shapers.items():
@@ -123,6 +123,7 @@ def main():
             if got == want:
                 continue
             bad += 1
+            differ.append((n, line))
             if bad <= args.show:
                 print(f"DIFF {n} {line!r}")
                 for x in sorted(set(got[0]) | set(want[0]), key=str):
@@ -132,6 +133,11 @@ def main():
             elif bad == args.show + 1:
                 print("...")
     print(f"{len(lines)} lines, {', '.join(shapers)}: {bad} differ")
+    if differ:      # as browsers.py sorts them: Chrome, Firefox and DirectWrite shape Greek runs apart
+        other = [d for d in differ if not any("Ͱ" <= ch <= "Ͽ" for ch in d[1])]
+        print(f"    {bad - len(other)} with a Greek letter, {len(other)} other{':' if other else ''}")
+        for n, line in other[:20]:
+            print(f"    {n} {line!r}")
     return 1 if bad else 0
 
 
