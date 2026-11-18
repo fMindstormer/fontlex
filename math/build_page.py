@@ -35,6 +35,7 @@ x_{n+1}=\frac{x_n}{2}+\frac{a}{2x_n}
 (x+y)^n=\sum_{k=0}^n\binom{n}{k}x^ky^{n-k}
 \overline{z+w}=\overline{z}+\overline{w}
 \vec{F}=m\ddot{x}, \hat{p}, \tilde{n}, \bar{x}_i
+\vec{AB}+\vec{BC}=\overrightarrow{AC}
 \frac{1}{1+\frac{1}{x}}
 \alpha_1^2+\beta_1^2 \theta\to\infty"""
 
@@ -72,9 +73,10 @@ textarea#code { min-height: 47.8rem; white-space: pre; overflow-x: auto; font-si
 
   <h2>What it typesets</h2>
   <ul>
-    <li><code>\\frac{a}{b}</code>, <code>\\binom{n}{k}</code>, <code>\\sqrt{x}</code>, <code>\\overline{z}</code>, accents (<code>\\hat{x}</code>, <code>\\bar{x}</code>,
+    <li><code>\\frac{a}{b}</code>, <code>\\binom{n}{k}</code>, <code>\\sqrt{x}</code>, <code>\\overline{z}</code>,
+    <code>\\overrightarrow{AB}</code>, accents (<code>\\hat{x}</code>, <code>\\bar{x}</code>,
     <code>\\vec{v}</code>, <code>\\dot{x}</code>, <code>\\ddot{x}</code>, <code>\\tilde{n}</code>: on each character of
-    what they cover), <code>x^2</code>, <code>x_1</code>,
+    what they cover, but <code>\\vec</code> over two or more letters is one arrow, <code>\\vec{AB}</code>), <code>x^2</code>, <code>x_1</code>,
     <code>x^{n+1}</code>, and both scripts at once, stacked (<code>x_1^2</code>, in either order).</li>
     <li>Braces as groups: <code>{a+b}^2</code>.</li>
     <li>Symbols: <ul class="keys">{{SYMBOLS}}</ul></li>

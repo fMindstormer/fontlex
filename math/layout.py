@@ -8,6 +8,8 @@ A line is ordinary text in which a small subset of LaTeX is laid out:
     \\sqrt{X}       a square root         x_a  x_{..}   a subscript
     \\overline{X}   a bar over X          x_a^b  x^b_a  stacked scripts
     \\hat{X} ...    an accent (ACCENTS) on each character of X
+    \\overrightarrow{X}  one arrow over X, as \\vec over two or more
+                   letters is (\\vec{AB})
     {X}            a group
     \\alpha ...     a symbol (SYMBOLS)
 
@@ -78,13 +80,12 @@ SYMBOLS = {
 # Accents: the command and its code. An accent is drawn over each character
 # of its argument (the innermost accent, where they nest).
 ACCENTS = {"hat": "h", "bar": "b", "vec": "v", "dot": "d", "ddot": "e", "tilde": "t"}
-COMMANDS = ("frac", "binom", "sqrt", "overline") + tuple(ACCENTS)
-FRACS = ("frac", "binom")      # two parts, one over the other
 # One arrow over all of X: an overline raised by its head's half-height,
-# ending in a head (arrow_head). Only the relaxed notation makes it, for
-# vec over two or more letters (relaxed.wide_vec); LaTeX's \vec stays on
-# each character.
+# ending in a head (arrow_head). \\vec over two or more letters and nothing
+# else is one too (wide_vecs), in the relaxed notation as well (relaxed.wide_vec).
 WIDE_ARROW = "overrightarrow"
+COMMANDS = ("frac", "binom", "sqrt", "overline") + tuple(ACCENTS) + (WIDE_ARROW,)
+FRACS = ("frac", "binom")      # two parts, one over the other
 
 
 def is_frac(n):
@@ -193,7 +194,29 @@ def lex(line):
         kind = ch if ch in "{}^_ " else "char"
         out.append((kind, i, i + 1, ch))
         i += 1
+    return wide_vecs(out)
+
+
+def wide_vecs(toks):
+    """\\vec{AB}, over two or more letters and nothing else, becomes a wide
+    arrow, as the font reads it: from the characters, before braces are
+    counted. (A longer run than MAX_CHARS can't be laid out anyway, and the
+    font's rules stop there.)"""
+    out = list(toks)
+    for i, (kind, start, end, value) in enumerate(toks):
+        if kind == "cmd" and value == "vec" and i + 1 < len(toks) and toks[i + 1][0] == "{":
+            j = i + 2
+            while j < len(toks) and toks[j][0] == "char" and is_letter(toks[j][3]):
+                j += 1
+            if 2 <= j - i - 2 <= MAX_CHARS and j < len(toks) and toks[j][0] == "}":
+                out[i] = (kind, start, end, WIDE_ARROW)
     return out
+
+
+def is_letter(ch):
+    """A letter the font has: an ASCII one, or a Greek one that a symbol
+    (SYMBOLS) also gives."""
+    return ch.isalpha() and (ch.isascii() or ch in SYMBOLS.values())
 
 
 def give_up(toks, line):

@@ -109,14 +109,17 @@ def restore_space(v):
 
 # A command's backslash and the kind of its letters: \frac, \binom (K),
 # \sqrt, and H for \overline and the accents, whose letters say which it is.
-HEADS = {"frac": "F", "binom": "K", "sqrt": "R", "overline": "H", **{a: "H" for a in L.ACCENTS}}
-HEAD_KINDS = ("F", "K", "R", "H")
-LETTERS = {"frac": "Lf", "binom": "Lk", "sqrt": "Ls", "overline": "Lo", **{a: "L" + c for a, c in L.ACCENTS.items()}}
-# A wide arrow's letters (the relaxed notation's vec over two or more
-# letters, layout.WIDE_ARROW): front.py gives the name's last one this
-# kind, which opens an overline with a head (frame Qa).
+# A wide arrow's letters (layout.WIDE_ARROW: \\overrightarrow, and \\vec over
+# two or more letters, whose letters the font gives this kind instead; in
+# the relaxed notation front.py gives it the name's last one). The last
+# letter's kind opens an overline with a head (frame Qa).
 WIDE = "Lw"
-LETTER_KINDS = tuple(LETTERS.values()) + (WIDE,)
+HEADS = {"frac": "F", "binom": "K", "sqrt": "R", "overline": "H", **{a: "H" for a in L.ACCENTS},
+         L.WIDE_ARROW: "H"}
+HEAD_KINDS = ("F", "K", "R", "H")
+LETTERS = {"frac": "Lf", "binom": "Lk", "sqrt": "Ls", "overline": "Lo", **{a: "L" + c for a, c in L.ACCENTS.items()},
+           L.WIDE_ARROW: WIDE}
+LETTER_KINDS = tuple(LETTERS.values())
 ACCENT_FRAMES = {"A" + c for c in L.ACCENTS.values()}     # an accent's braces: a group, but for the accent
 TAGS = set(HEAD_KINDS) | set(LETTER_KINDS) | {"Y"}
 

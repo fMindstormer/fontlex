@@ -19,10 +19,14 @@ plain text, `(a+b)/(c+d)` or `x^2`, and leaves ordinary text alone: see
   text, one over superscripts, one over fractions) and an overbar.
 - `\overline{z}`, a bar over its contents at the height a root's overbar
   would have.
+- `\overrightarrow{AB}`, one arrow over its contents: an overline ending in
+  a head, raised so the head clears them.
 - Accents: `\hat{x}`, `\bar{x}`, `\vec{v}`, `\dot{x}`, `\ddot{x}` and
   `\tilde{n}`, each placed over its character by the character's own
   height. An accent goes on every character of what it covers: `\hat{xy}`
-  is x̂ŷ, not one wide hat. Where accents nest, the inner one wins.
+  is x̂ŷ, not one wide hat. Where accents nest, the inner one wins. The
+  exception is `\vec` over two or more letters and nothing else, one arrow
+  over them all, as `\overrightarrow`: `\vec{AB}`.
 - `x^2`, `x_1` and `x^{n+1}`, and both scripts at once, stacked over each
   other (`x_1^2` or `x^2_1`).
 - Braces as groups: `{a+b}^2`.
@@ -70,14 +74,15 @@ Typing a formula into a text box key by key ends with the same pixels as
 setting the text at once, in all of these browsers but WebKit, which
 wasn't tried.
 
-The font has 63,358 glyphs, 1,635 substitution lookups (about 1,230 of
-them nested lookups shared by every pass, in 2,816 subtables) and 309
-positioning lookups. It is 8.8 MB as TrueType and 0.98 MB as WOFF2. The
+The font has 64,916 glyphs, 1,674 substitution lookups (about 1,260 of
+them nested lookups shared by every pass, in 2,905 subtables) and 309
+positioning lookups. It is 9.1 MB as TrueType and 1.0 MB as WOFF2. The
 accents take about 12,600 of the glyphs: each character, in each size and
 in and out of a fraction, with each accent. `\binom` takes about 2,700:
 the passes' values for a binomial's own tokens, which differ from a
-fraction's. That leaves about 2,200 glyph ids of OpenType's 65,535, so
-Fontlex Math is near the limit of what it can add. Shaping takes about 0.3 ms per
+fraction's. The wide arrow takes about 1,550. That leaves about 600 glyph
+ids of OpenType's 65,535, so Fontlex Math is at the limit of what it can
+add. Shaping takes about 0.3 ms per
 character in HarfBuzz (12 ms for a 40-character line).
 
 ## How it works

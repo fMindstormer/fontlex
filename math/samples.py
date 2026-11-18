@@ -20,10 +20,15 @@ def formula(rng, depth=0):
         elif depth < 4 and r < 0.2:
             out.append("\\sqrt{" + formula(rng, depth + 1) + "}")
         elif depth < 4 and r < 0.24:
-            out.append("\\overline{" + formula(rng, depth + 1) + "}")
+            cmd = L.WIDE_ARROW if rng.random() < 0.3 else "overline"
+            out.append(f"\\{cmd}{{" + formula(rng, depth + 1) + "}")
         elif depth < 4 and r < 0.28:
             accent = rng.choice(sorted(L.ACCENTS))
-            out.append(f"\\{accent}{{" + (rng.choice(ATOMS) if rng.random() < 0.6 else formula(rng, depth + 1)) + "}")
+            if accent == "vec" and rng.random() < 0.4:
+                arg = rng.choice(["AB", "PQ", "xy", "ABC", "uv"])      # one wide arrow
+            else:
+                arg = rng.choice(ATOMS) if rng.random() < 0.6 else formula(rng, depth + 1)
+            out.append(f"\\{accent}{{" + arg + "}")
         elif depth < 4 and r < 0.4:
             base = rng.choice(ATOMS)
             scripts = rng.sample(["^", "_"], rng.randint(1, 2))
@@ -91,6 +96,15 @@ EDGES = [
     "\\binom{\\binom{\\binom{a}{b}}{c}}{d}", "\\sqrt{\\binom{n}{k}}", "\\overline{\\binom{n}{k}}",
     "\\hat{\\binom{n}{k}}", "x^{\\binom{n}{2}}", "\\binom{n}{k}^2", "\\binom{n}{k}\\binom{a}{b}",
     "\\binom{x^2}{y_1}", "\\binom{" + "n" * 30 + "}{k}",
+    "\\vec{AB}", "\\vec{ABC}", "\\vec{AB}^2", "\\vec{AB}_1", "x_{\\vec{AB}}", "\\frac{1}{\\vec{AB}}",
+    "\\frac{\\vec{AB}}{\\vec{CD}}", "\\sqrt{\\vec{PQ}}", "\\vec{ab}+\\vec{bc}", "\\hat{\\vec{AB}}", "\\vec{AB",
+    "\\vec{A B}", "\\vec{A1}", "\\vec{AB}C", "\\vec{x^2}", "\\vec{\\alpha\\beta}", "\\vec{αβ}", "\\vec {AB}",
+    "\\vec{" + "A" * 24 + "}", "\\vec{" + "A" * 25 + "}", "\\vec{{AB}}", "\\vec{\\vec{AB}}", "{{{{\\vec{AB}}}}}",
+    "\\overrightarrow{AB}", "\\overrightarrow{x}", "\\overrightarrow{x+1}", "\\overrightarrow{}",
+    "\\overrightarrow{AB", "\\overrightarrow", "\\overright{AB}", "\\overrightarrows{AB}",
+    "\\overrightarrow{\\frac{a}{b}}", "\\overrightarrow{x^2}", "\\sqrt{\\overrightarrow{x}}",
+    "\\overrightarrow{\\overrightarrow{\\overrightarrow{x}}}", "\\overline{\\overrightarrow{AB}}",
+    "\\overrightarrow{\\binom{n}{k}}", "\\hat{\\overrightarrow{xy}}", "\\overrightarrow{\\hat{x}y}",
 ]
 
 

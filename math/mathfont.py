@@ -928,6 +928,11 @@ def commands(font):
     to_hid = font.pl.nested({g: hid for g in letters})
     letter_of = {name: font.pl.nested({cmap[ord(c)]: font.char_glyph(("g", c, P.LETTERS[name])) for c in name})
                  for name in L.COMMANDS}
+    # \\vec{AB}: over two or more letters and nothing else, a wide arrow's
+    # letters (layout.wide_vecs)
+    alpha = {cmap[ord(c)] for c in font.chars if L.is_letter(c)}
+    wide = font.pl.nested({cmap[ord(c)]: font.char_glyph(("g", c, P.WIDE)) for c in "vec"})
+    lb, rb = {cmap[ord("{")]}, {cmap[ord("}")]}
     names = list(L.COMMANDS) + list(L.SYMBOLS)
     rules = []
     bs = cmap[ord("\\")]
@@ -941,6 +946,9 @@ def commands(font):
             letter = to_hid
         first = font.pl.nested({bs: head})
         rules.append(([], seq, [letters], []))                  # a longer name: not this command
+        if name == "vec":
+            for n in range(L.MAX_CHARS, 1, -1):
+                rules.append(([], seq, [lb] + [alpha] * n + [rb], [(0, first)] + [(k, wide) for k in range(1, 4)]))
         rules.append(([], seq, [], [(0, first)] + [(k, letter) for k in range(1, len(seq))]))
     font.pl.add(fb.lookup(6, [font.pl.chain_rule(*r) for r in rules]))
 
@@ -961,6 +969,8 @@ def initial(font):
         add(("g", "\\", head), (head,))
         for c in name:
             add(("g", c, P.LETTERS[name]), (P.LETTERS[name],))
+    for c in "vec":                     # \\vec{AB}'s (commands)
+        add(("g", c, P.WIDE), (P.WIDE,))
     for name, ch in L.SYMBOLS.items():
         add(("g", ch, f"Y{1 + len(name)}"), ("Y", 1 + len(name)))
     mapping = {}
