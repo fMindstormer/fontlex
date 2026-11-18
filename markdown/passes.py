@@ -53,6 +53,8 @@ class Pipeline:
         # How outputs are compared when grouping inputs into classes: glyphs
         # whose outputs differ only in this key's terms share rules.
         self.key = lambda o: self.kind_of(o) or o
+        self.bins = []        # [mapping, lookup index]: merged()'s lookups, shared by every pass
+        self.seq_bins = []    # the same for multiple substitutions
 
     # glyphs -------------------------------------------------------------
 
@@ -119,24 +121,30 @@ class Pipeline:
         """A single substitution for contextual rules to call."""
         return self.single(mapping, top=False)
 
-    def merged(self, mappings):
-        """Nested single substitutions for the named mappings, as few as
-        possible: mappings that never send one glyph to two places share one
-        (first fit, largest first). Returns {name: lookup index}."""
-        bins = []    # [mapping, names]
+    def merged(self, mappings, multiple=False):
+        """Nested single substitutions for the named mappings (multiple ones,
+        of Seq outputs, with `multiple`), as few as possible: mappings that
+        never send one glyph to two places share one (first fit, largest
+        first), with any earlier pass's too. Each is called only on glyphs
+        of its own mapping, so what the rest of a shared lookup does never
+        shows; fewer lookups leave more room under the 16-bit offsets
+        (fontbuild.build_gsub). Returns {name: lookup index}."""
+        out = {}
+        bins = self.seq_bins if multiple else self.bins
         for name, m in sorted(mappings.items(), key=lambda kv: -len(kv[1])):
+            m = {g: tuple(o) for g, o in m.items()} if multiple else m
             for b in bins:
                 if all(b[0].get(g, o) == o for g, o in m.items()):
                     b[0].update(m)
-                    b[1].append(name)
+                    st = self.lookups[b[1]].SubTable[0]
+                    st.mapping.update({g: list(o) for g, o in m.items()} if multiple
+                                      else {g: o for g, o in m.items() if g != o})
+                    out[name] = b[1]
                     break
             else:
-                bins.append([dict(m), [name]])
-        out = {}
-        for m, names in bins:
-            idx = self.nested(m)
-            for name in names:
-                out[name] = idx
+                out[name] = (self.add(fb.lookup(2, [fb.multiple(m)]), top=False) if multiple
+                             else self.nested(m))
+                bins.append([dict(m), out[name]])
         return out
 
     def gsub(self):
@@ -163,6 +171,42 @@ class Pipeline:
             r.SequenceIndex, r.LookupListIndex = pos, idx
             st.SubstLookupRecord.append(r)
         st.SubstCount = len(st.SubstLookupRecord)
+        return st
+
+    def class_rules(self, back_classes, input_classes, rules):
+        """A format 2 chaining subtable: many rules in one, where format 3
+        takes a subtable each. Classes are {glyph: class} (none: class 0);
+        rules is {first input class: [(backtrack classes in text order,
+        classes of the inputs after the first, records)]}, each list tried
+        in order, and the subtable covers the glyphs of those first classes."""
+        st = ot.ChainContextSubst()
+        st.Format = 2
+        st.Coverage = self.coverage({g for g, c in input_classes.items() if c in rules})
+        st.BacktrackClassDef = self._classdef(back_classes)
+        st.InputClassDef = self._classdef(input_classes)
+        st.LookAheadClassDef = self._classdef({})
+        st.ChainSubClassSet = []
+        for c in range(max(rules) + 1):
+            if c not in rules:
+                st.ChainSubClassSet.append(None)
+                continue
+            cs = ot.ChainSubClassSet()
+            cs.ChainSubClassRule = []
+            for back, inp, records in rules[c]:
+                r = ot.ChainSubClassRule()
+                r.Backtrack, r.BacktrackGlyphCount = list(reversed(back)), len(back)
+                r.Input, r.InputGlyphCount = list(inp), len(inp) + 1
+                r.LookAhead, r.LookAheadGlyphCount = [], 0
+                r.SubstLookupRecord = []
+                for pos, idx in records:
+                    rec = ot.SubstLookupRecord()
+                    rec.SequenceIndex, rec.LookupListIndex = pos, idx
+                    r.SubstLookupRecord.append(rec)
+                r.SubstCount = len(r.SubstLookupRecord)
+                cs.ChainSubClassRule.append(r)
+            cs.ChainSubClassRuleCount = len(cs.ChainSubClassRule)
+            st.ChainSubClassSet.append(cs)
+        st.ChainSubClassSetCount = len(st.ChainSubClassSet)
         return st
 
     def chain(self, rules, sees=None):
@@ -264,8 +308,7 @@ class Pipeline:
             targets.setdefault(self._tkey(o), {})[g] = o
         seqs = {k: m for k, m in targets.items() if isinstance(k, tuple) and k[:1] == ("seq",)}
         target_lookup = self.merged({k: m for k, m in targets.items() if k not in seqs})
-        for k, m in seqs.items():
-            target_lookup[k] = self.add(fb.lookup(2, [fb.multiple(m)]), top=False)
+        target_lookup.update(self.merged(seqs, multiple=True))
         st = ot.ChainContextSubst()
         st.Format = 2
         st.Coverage = self.coverage(input_class)

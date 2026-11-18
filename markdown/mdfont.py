@@ -979,30 +979,36 @@ class MarkdownFont:
             for g in unsettled:
                 _, n, o, c, r = kind[g][:5]
                 groups.setdefault((cc[g], o, n % 3, r >= 2), set()).add(g)
-            match, settle = [], []
+            # One class-based subtable per group of closers. A settled glyph
+            # starts only match rules and an unsettled one only its own
+            # group's settle rules, so trying the groups in turn tries each
+            # glyph's rules in the order one subtable per rule would.
+            self._round_rules = []
+            P_T, P_F, OTHER_C, CLOSE = 1, 2, 3, 4          # input classes
+            BEFORE, OTHER_B = 1, 2                        # backtrack classes
             for (base, _, _, r2), closers in sorted(groups.items(), key=str):
                 probe = next(iter(closers))
                 elig = {g for g in settled if _eligible(cc[g], kind[g], base, kind[probe])}
                 other = settled - elig
                 tilde = self.char(base) == "~"
-                for j in range(SEARCH + 1):
-                    for o2 in (True, False):
-                        part = {g for g in elig if (kind[g][4] >= 2) == o2}
-                        if part:
-                            u = 2 if r2 and o2 else 1
-                            # A `~` pair is whole: strikethrough if both have
-                            # the same length, else both stay text.
-                            first, last = ((("open", u), ("close", u)) if not tilde or o2 == r2
-                                           else ("kill", "kill"))
-                            match.append(([], [part] + [other] * j + [closers], [],
-                                          [(0, nest[first])]
-                                          + [(t, nest["discard"]) for t in range(1, j + 1)]
-                                          + [(j + 1, nest[last])]))
-                for t in range(SEARCH + 1):
-                    settle.append(([unsettled | elig] + [other] * t, [closers], [], []))
-                settle.append(([other] * (SEARCH + 1), [closers], [], []))
-                settle.append(([], [closers], [], [(0, nest["settle"])]))
-            self._round_rules = [pl.chain_rule(*r) for r in match + settle]
+                rules = {}
+                inputs = dict.fromkeys(other, OTHER_C) | dict.fromkeys(closers, CLOSE)
+                for o2, c in ((True, P_T), (False, P_F)):
+                    part = {g for g in elig if (kind[g][4] >= 2) == o2}
+                    if not part:
+                        continue
+                    inputs |= dict.fromkeys(part, c)
+                    u = 2 if r2 and o2 else 1
+                    # A `~` pair is whole: strikethrough if both have the
+                    # same length, else both stay text.
+                    first, last = (("open", u), ("close", u)) if not tilde or o2 == r2 else ("kill", "kill")
+                    rules[c] = [([], [OTHER_C] * j + [CLOSE],
+                                 [(0, nest[first])] + [(t, nest["discard"]) for t in range(1, j + 1)]
+                                 + [(j + 1, nest[last])]) for j in range(SEARCH + 1)]
+                rules[CLOSE] = ([([BEFORE] + [OTHER_B] * t, [], []) for t in range(SEARCH + 1)]
+                                + [([OTHER_B] * (SEARCH + 1), [], []), ([], [], [(0, nest["settle"])])])
+                back = dict.fromkeys(unsettled | elig, BEFORE) | dict.fromkeys(other, OTHER_B)
+                self._round_rules.append(pl.class_rules(back, inputs, rules))
             self._pending = settled | unsettled
         out = []
         ms = pl.mark_set(self._pending | set(barriers))
