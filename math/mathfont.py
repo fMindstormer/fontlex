@@ -1184,13 +1184,17 @@ def gpos(font):
     flow_bases = [g for g, v in finals.items()
                   if (v[0] in ("glyph", "radical") and v[3] == "b") or v[0] in ("root", "qbase", "fendbase")]
     ys = by_kind["y"]
+    fend_marks = set(by_kind["dx@fend"])    # placed, not attached: below
     rules = []
     for g, v in sorted(ys.items()):
-        single = lookup(1, [otl.buildSinglePosSubtable({x: otl.buildValue({"YPlacement": v[1]}) for x in flow_bases}, b.ids)],
+        single = lookup(1, [otl.buildSinglePosSubtable({x: otl.buildValue({"YPlacement": v[1]})
+                                                        for x in flow_bases + sorted(fend_marks)}, b.ids)],
                         nested=True)
         rules.append(chain_pos([set(flow_bases)], [{g}], [(0, single)], font))
+        if fend_marks:          # a fraction's end's mark follows its base's height
+            rules.append(chain_pos([fend_marks], [], [(0, single)], font, behind=[{g}]))
     if rules:
-        lookup(8, rules, 0, set(ys) | set(flow_bases))
+        lookup(8, rules, 0, set(ys) | set(flow_bases) | fend_marks)
     # advances
     adv = {g: otl.buildValue({"XAdvance": v[1] * L.UNIT}) for g, v in by_kind["adv"].items()}
     adv.update({g: otl.buildValue({"XAdvance": 2 * v[1] * L.UNIT}) for g, v in by_kind["fendbase"].items()})
@@ -1208,21 +1212,26 @@ def gpos(font):
         rules.append(chain_pos([fendbases], [gs], [(0, single)], font))
     if rules:
         lookup(8, rules, 0, set(by_kind["dx@fend"]) | fendbases)
+    # A fraction's end's mark, unattached: DirectWrite attaches a mark only to
+    # a base that starts its cluster, and an inserted closer's base doesn't.
+    # The pen is past the base, 2*wN + 2*pad + 4 + 2*p 30s on from it, and the
+    # mark goes 2 + 2*wN + (p + 2*pad + 1 if p else pad) 30s on from it.
+    place = {}
+    for g, v in by_kind["dx@fend"].items():
+        p = v[2] if len(v) > 2 else 0
+        place[g] = otl.buildValue({"XPlacement": -(1 + p if p else 2 + v[1]) * L.UNIT})
+    if place:
+        lookup(1, [otl.buildSinglePosSubtable(place, b.ids)])
     # marks on bases
     marks, bases = {}, {}
     for g, v in by_kind["dx@root"].items():
         marks[g] = (0, anchor(-v[1] * L.UNIT, 0))
-    for g, v in by_kind["dx@fend"].items():
-        p = v[2] if len(v) > 2 else 0
-        marks[g] = (1, anchor(-(p + 2 * v[1] + 1 if p else v[1]) * L.UNIT, 0))
     for g, v in by_kind["at@base"].items():
-        marks[g] = (2, anchor(0, 0))
+        marks[g] = (1, anchor(0, 0))
     for g in by_kind["root"]:
         bases[g] = {0: anchor(0, 0)}
-    for g, v in by_kind["fendbase"].items():
-        bases[g] = {1: anchor((2 + 2 * v[1]) * L.UNIT, 0)}
     for g in by_kind["qbase"]:
-        bases[g] = {2: anchor(0, 0)}
+        bases[g] = {1: anchor(0, 0)}
     if marks and bases:
         lookup(4, [otl.buildMarkBasePosSubtable(marks, bases, b.ids)])
     # chains
@@ -1261,15 +1270,17 @@ def gpos(font):
     return t, sets
 
 
-def chain_pos(back, inputs, records, font, ahead=None):
+def chain_pos(back, inputs, records, font, ahead=None, behind=()):
     """A format 3 chaining positioning rule. With back given as the input
-    and inputs as the lookahead, as gpos() calls it."""
+    and inputs as the lookahead, as gpos() calls it; behind, the backtrack
+    (nearest first)."""
     st = ot.ChainContextPos()
     st.Format = 3
-    st.BacktrackCoverage = []
+    st.BacktrackCoverage = [font.pl.coverage(x) for x in behind]
     st.InputCoverage = [font.pl.coverage(back[0])]
     st.LookAheadCoverage = [font.pl.coverage(x) for x in inputs]
-    st.BacktrackGlyphCount, st.InputGlyphCount, st.LookAheadGlyphCount = 0, 1, len(st.LookAheadCoverage)
+    st.BacktrackGlyphCount, st.InputGlyphCount, st.LookAheadGlyphCount = \
+        len(st.BacktrackCoverage), 1, len(st.LookAheadCoverage)
     st.PosLookupRecord = []
     for pos, idx in records:
         r = ot.PosLookupRecord()
