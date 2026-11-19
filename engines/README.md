@@ -34,7 +34,7 @@ lookups have them wrapped, and so break in DirectWrite:
 |---|---|---|
 | Fontlex Math | none (19, not wrapped since November 2026) | 438 of 439 lines the same (327 of 345 differed with them wrapped); the other, `\vec{αβ}`, mixes Greek and Latin letters in a construct (script runs, below) |
 | Fontlex Relaxed Math | none (51, not wrapped since November 2026) | 372 of 387 lines the same (142 with them wrapped, 337 before the font placed a fraction's end, below); the others mix Greek and Latin letters in a construct (script runs, below) |
-| Fontlex Markdown (both editions) | 60 | not measured: DirectWrite took over 60 seconds on one line, `>\t\tfoo`, and the check stopped |
+| Fontlex Markdown (both editions) | none (59, not wrapped since November 2026) | 438 of 447 spec examples, all 23 GFM ones, 914 of 916 README lines and 279 of 292 random lines the same (with them wrapped, it took over 60 seconds on one line, `>\t\tfoo`); what differs is below |
 | Fontlex English, French | none (1, not wrapped since November 2026) | 99.4% and 99.9% of words in context right (59% and 65% with it wrapped); every line of the English READMEs, and 15 of the 16 French sample lines; what differs is below |
 | Fontlex Python, JavaScript | none (1, not wrapped) | right, apart from script runs (below) |
 | Fontlex German, German Syllables | none | every random and transition case right; one hand-written case each differs, not yet looked at |
@@ -67,17 +67,40 @@ build checks that it didn't. A right-to-left pass maps every pair of a
 value and a state, and most passes tell few of their values apart (the
 slash's `right_step` sees 1,160 values and needs 20 kinds of them), so the
 compiler now runs such a pass on those kinds (`keyed_rtl` in
-`math/mathfont.py`), which brings Relaxed Math's to 40 KB. Markdown's come
+`math/mathfont.py`), which brings Relaxed Math's to 40 KB. Markdown's came
 to 548 KB, 85% of it from two passes over glyphs that hold a character and
-its state at once; there is no other glyph for the state to go on.
-They also need room. HarfBuzz's packer, which saves these fonts, keeps a
+its state at once, so there was no other glyph for the state to go on. Now
+such a pass puts a companion mark after each glyph it reads, one for each
+kind of glyph the pass tells apart, runs on those, and ligates each back
+into its glyph (`rtl_keyed` in `markdown/passes.py`). With the
+link-destination passes minimized first (1,459 states to 172), Markdown's
+come to 39 KB. They also need room. HarfBuzz's packer, which saves these fonts, keeps a
 lookup out of an extension lookup only while 8 bytes for every Extension
 subtable, and the unwrapped subtables, come to under 64 KB. Markdown had
 9,242 subtables, 74 KB of such records, so none fitted, however small.
 Class-based rules for the emphasis rounds (a subtable per group of
 closers, not per rule) and nested substitutions shared across passes
 bring that to 3,844 (Markdown Sans: 10,341 to 4,943), and about 40 KB of
-reverse chaining lookups now fit.
+reverse chaining lookups now fit: all 59 of Markdown's stay out, and the
+build checks that they do.
+
+What still differs in Markdown:
+
+- **A tab is a run of its own.** DirectWrite's script analysis gives a tab
+  its own run, as a text layout does for tab stops, so nothing a pass
+  learns crosses it: a tab-indented code block, `#\tFoo`, `*\t*\t*`. 15
+  of the 29 lines that differ in Fontlex Markdown have a tab, 12 mix Greek
+  or Cyrillic letters into a construct (script runs, below).
+- **It counts a rule's substitution positions after the earlier ones
+  apply.** A rule that matches an opener, a run between and a closer
+  substitutes at three positions; once the run between is discarded, it
+  leaves the sequence the lookup sees, and DirectWrite's third position
+  fell past the closer (`*foo**bar*`). HarfBuzz keeps the positions it
+  matched. The emphasis rounds now substitute the closer first.
+- An entity in a link title (`[a](url &quot;tit&quot;)`) has the same
+  glyphs, but DirectWrite gives the visible one the next character's
+  cluster. One random line with an accent on a `*` differs, not yet
+  looked at.
 
 Two things still differ in English and French, not yet looked at:
 

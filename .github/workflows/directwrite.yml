@@ -46,6 +46,7 @@ jobs:
           python engines/first_difference.py build/Fontlex-Markdown.ttf directwrite "*foo**bar*"
           python engines/first_difference.py build/Fontlex-Markdown.ttf directwrite '[a](url &quot;tit&quot;)'
           python engines/first_difference.py build/Fontlex-Markdown.ttf directwrite $'\tbar'
+          python engines/first_difference.py build/Fontlex-Markdown.ttf directwrite $'http://---a@http://~***;1.*\u0301](<x>)*'
       - name: Every font, in DirectWrite
         continue-on-error: true
         timeout-minutes: 30
