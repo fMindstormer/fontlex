@@ -1028,9 +1028,12 @@ class MarkdownFont:
                     # A `~` pair is whole: strikethrough if both have the
                     # same length, else both stay text.
                     first, last = (("open", u), ("close", u)) if not tilde or o2 == r2 else ("kill", "kill")
+                    # The closer's substitution first: DirectWrite counts a
+                    # record's position after the ones before it apply, and a
+                    # discarded run leaves the sequence the lookup sees.
                     rules[c] = [([], [OTHER_C] * j + [CLOSE],
-                                 [(0, nest[first])] + [(t, nest["discard"]) for t in range(1, j + 1)]
-                                 + [(j + 1, nest[last])]) for j in range(SEARCH + 1)]
+                                 [(j + 1, nest[last])] + [(t, nest["discard"]) for t in range(j, 0, -1)]
+                                 + [(0, nest[first])]) for j in range(SEARCH + 1)]
                 rules[CLOSE] = ([([BEFORE] + [OTHER_B] * t, [], []) for t in range(SEARCH + 1)]
                                 + [([OTHER_B] * (SEARCH + 1), [], []), ([], [], [(0, nest["settle"])])])
                 back = dict.fromkeys(unsettled | elig, BEFORE) | dict.fromkeys(other, OTHER_B)
