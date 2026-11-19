@@ -97,10 +97,11 @@ What still differs in Markdown:
   leaves the sequence the lookup sees, and DirectWrite's third position
   fell past the closer (`*foo**bar*`). HarfBuzz keeps the positions it
   matched. The emphasis rounds now substitute the closer first.
-- An entity in a link title (`[a](url &quot;tit&quot;)`) has the same
-  glyphs, but DirectWrite gives the visible one the next character's
-  cluster. One random line with an accent on a `*` differs, not yet
-  looked at.
+- The last two have the same glyphs and positions, in other clusters. In
+  an entity in a link title (`[a](url &quot;tit&quot;)`), DirectWrite
+  gives the visible glyph the next character's cluster; in a random line
+  with a combining accent after a hidden `*`, it puts the accent in the
+  `*`'s cluster, so the check reads the `*` as the accent's italic text.
 
 Two things still differ in English and French, not yet looked at:
 
