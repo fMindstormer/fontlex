@@ -12,9 +12,10 @@ one block go to one block on every character. Such a partition runs the
 machine as two passes. The front runs it on blocks and writes, at each
 character, the block of its right neighbor; the back reads that and finds
 the state within the block, so it needs as many states as the largest
-block. The script finds every such partition of the one-pass link-tail
-machine (split.py's, 364 states) as the closures of pairs of states, and
-builds the cheapest cascade (fewest states in all).
+block. The search closes pair-generated partitions under joins, within
+explicit limits, and reports whether it enumerated every partition. The
+selected cascade is checked for equivalence on all finite input words
+before a font is built. --max-partitions and --max-joins bound the search.
 
 slots: a pass records its state in a variant of each character, so a pass
 of s states over a characters needs up to s*a glyphs. Instead, a multiple
@@ -44,12 +45,12 @@ import random
 import string
 import sys
 import time
-from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import split  # noqa: E402  (also puts the project and markdown/ on the path)
+from machines import Machine, decompose, require_equivalent, search_partitions  # noqa: E402
 
 BASE = split.BASE
 LOOKUP_SUBTABLES = 6552    # a lookup's subtables, behind 16-bit offsets at 10 bytes each
@@ -57,58 +58,26 @@ LOOKUP_SUBTABLES = 6552    # a lookup's subtables, behind 16-bit offsets at 10 b
 
 # serial decomposition -----------------------------------------------------
 
-def closure(table, s, t):
-    """The finest partition with the substitution property that puts s and t
-    in one block, as a block number per state."""
-    parent = list(range(len(table)))
-
-    def find(x):
-        while parent[x] != x:
-            parent[x] = parent[parent[x]]
-            x = parent[x]
-        return x
-    todo = [(s, t)]
-    while todo:
-        a, b = (find(x) for x in todo.pop())
-        if a != b:
-            parent[b] = a
-            # A block's representative stands for all of it: every member's
-            # successors were merged with the representative's when it joined.
-            todo.extend(zip(table[a], table[b]))
-    number = {}
-    return tuple(number.setdefault(find(x), len(number)) for x in range(len(table)))
+def sp_partitions(table, workers=1, **limits):
+    """Search result, including completeness; not just principal partitions."""
+    return search_partitions(table, workers=workers, **limits)
 
 
-def _closures(table, firsts):
-    found = set()
-    for s in firsts:
-        for t in range(s + 1, len(table)):
-            lab = closure(table, s, t)
-            if max(lab) > 0:
-                found.add(lab)
-    return found
-
-
-def sp_partitions(table, workers):
-    """Every nontrivial pair closure, cheapest cascade first: fewest states
-    in front and back together (blocks plus the largest block)."""
-    shares = [range(i, len(table), workers) for i in range(workers)]
-    found = set()
-    with ProcessPoolExecutor(workers) as ex:
-        for part in ex.map(_closures, [table] * workers, shares):
-            found |= part
-
-    def cost(lab):
-        sizes = {}
-        for blk in lab:
-            sizes[blk] = sizes.get(blk, 0) + 1
-        return (len(sizes) + max(sizes.values()), len(sizes), lab)
-    return sorted(found, key=cost)
+def annotation_machine(inst, p):
+    """The old trigger-answer workload as a synchronous annotation machine."""
+    trig = inst.alphabet.index(inst.trigger)
+    return Machine(inst.alphabet, p.table,
+                   [[str(answer) if c == trig and answer is not None else None
+                     for c in range(len(inst.alphabet))] for answer in p.answer])
 
 
 def build_serial(inst, p, lab):
     """The font for machine p run as front (on lab's blocks) and back; the
     trigger ends up as `_answer<a>` as in split.build()."""
+    machine = annotation_machine(inst, p)
+    model = decompose(machine, lab)
+    require_equivalent(machine, model)
+    lab = model.partition
     import fontbuild as fb
     import passes
     b = fb.FontBuilder(str(BASE))
@@ -116,13 +85,12 @@ def build_serial(inst, p, lab):
     pl = passes.Pipeline(b)
     char = {cmap[ord(ch)]: ch for ch in inst.alphabet}
     index = {ch: i for i, ch in enumerate(inst.alphabet)}
-    trig_c = index[inst.trigger]
     members = {}
     for s, blk in enumerate(lab):
         members.setdefault(blk, []).append(s)
     local = {s: members[lab[s]].index(s) for s in range(len(lab))}
     b0, i0 = lab[0], local[0]
-    front = {lab[s]: {c: lab[t] for c, t in enumerate(row)} for s, row in enumerate(p.table)}
+    front = model.front
     marks = {g: pl.var(g, ("x",)) for g in char}
     pl.single(marks)
 
@@ -140,9 +108,10 @@ def build_serial(inst, p, lab):
         bn = kind[1][1] if len(kind) > 1 else b0
         if idx >= len(members[bn]):
             return passes.IMPOSSIBLE
-        q, c = members[bn][idx], index[ch]
-        ans = p.answer[q] if c == trig_c else None
-        ni = local[p.table[q][c]]
+        c = index[ch]
+        ni, label = model.back[idx][bn][c]
+        # Keep the historical glyph naming and answer types for the demo.
+        ans = p.answer[members[bn][idx]] if label is not None else None
         return ("x",) + ((ans,) if ans is not None else ()) + (("s", ni),), ni
     pl.begin_temp()
     bout, bstates = pl.rtl({g: (char[pl.base_of(g)], pl.kind_of(g)) for g in sorted(tape, key=pl.gid)}, bstep, i0)
@@ -488,13 +457,19 @@ def serial(args, shapers):
     k = len(inst.machines)
     p = split.group_pass(inst.machines, inst.answers, tuple(range(k)), inst.alphabet.index(inst.trigger))
     t0 = time.perf_counter()
-    parts = sp_partitions(p.table, args.workers)
-    print(f"link tails: one pass of {len(p.table)} states; {len(parts)} partitions with the substitution "
-          f"property, found in {time.perf_counter() - t0:.0f} s")
+    result = sp_partitions(p.table, args.workers, max_partitions=args.max_partitions,
+                           max_pairs=args.max_pairs, max_joins=args.max_joins)
+    parts = result.partitions
+    print(f"link tails: one pass of {len(p.table)} states; {len(parts)} compatible partitions "
+          f"in {time.perf_counter() - t0:.0f} s; {result.reason}")
+    print(f"state cost: {'optimal in the partition architecture' if result.optimal else 'best found'}; "
+          f"lower bound {result.lower_bound}")
     for lab in parts[:3]:
         sizes = [lab.count(x) for x in set(lab)]
         print(f"  {len(sizes)} blocks, the largest of {max(sizes)}: front and back {len(sizes) + max(sizes)} states")
     texts = split.lines(inst, args.lines)
+    proof = require_equivalent(annotation_machine(inst, p), decompose(annotation_machine(inst, p), parts[0]))
+    print(f"equivalence: all finite input words, {proof.visited} reachable product states")
     rows, fonts = [], {}
     (data, built, gsub), (fs, bs) = build_serial(inst, p, parts[0])
     label = f"cascade, {fs} + {bs}"
@@ -575,9 +550,12 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--shaper", action="append", choices=["harfbuzz", "coretext"])
     ap.add_argument("--lines", type=int, default=2000, help="random lines to check and time (default 2000)")
-    ap.add_argument("--workers", type=int, default=os.cpu_count() or 1)
+    ap.add_argument("--workers", type=int, default=min(4, os.cpu_count() or 1))
     sub = ap.add_subparsers(dest="command", required=True)
-    sub.add_parser("serial")
+    serial_parser = sub.add_parser("serial")
+    serial_parser.add_argument("--max-partitions", type=int, default=2000)
+    serial_parser.add_argument("--max-pairs", type=int, default=100000)
+    serial_parser.add_argument("--max-joins", type=int, default=20000)
     sp = sub.add_parser("slots")
     sp.add_argument("instance", choices=sorted(split.INSTANCES))
     sp = sub.add_parser("ruler")
