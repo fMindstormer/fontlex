@@ -155,26 +155,32 @@ class MarkdownFont:
         return out, states
 
     def strip_state(self, outputs):
-        """Map the outputs of a pass to their kinds without the pass's state."""
+        """Map the outputs of a pass to their kinds without the pass's state;
+        returns the mapping."""
         strip = {o: self.pl.var(o, self.pl.kind_of(o)[:-1]) if self.pl.kind_of(o)[:-1] else self.pl.base_of(o)
                  for o in set(outputs)}
         self.pl.single(strip)
         self.replace(strip.items())
+        return strip
 
-    def temporary(self, direction, inputs, step, init, keyed=False):
+    def temporary(self, direction, inputs, step, init, keyed=False, minimize=False):
         """A pass whose outputs (kind + ("s", state)) are stripped right after
         it, so they can be pool glyphs shared with every other such pass.
         With `keyed`, a right-to-left one runs on companion marks instead
-        (passes.rtl_keyed): far smaller reverse chaining lookups."""
+        (passes.rtl_keyed): far smaller reverse chaining lookups. With
+        `minimize`, equivalent states are one (passes.minimized). Returns
+        {(glyph, state): what it ends as}, and the states, except `keyed`."""
         if keyed:
             assert direction == "rtl"
             self.alive = (self.alive - set(inputs)) | self.pl.rtl_keyed(inputs, step, init)
             return
+        if minimize:
+            step, init = self.pl.minimized(inputs, step, init)
         self.pl.begin_temp()
         out, states = self.transduce(direction, inputs, step, init)
-        self.strip_state(out.values())
+        strip = self.strip_state(out.values())
         self.pl.end_temp()
-        return out, states
+        return {k: strip[o] for k, o in out.items()}, states
 
     # right to left ------------------------------------------------------
 
@@ -236,7 +242,7 @@ class MarkdownFont:
                 new = auto.back(R, ch)
                 if kind[1]:
                     new = auto.back(new, htmlauto.NONASCII)
-                out = kind[:2] + (found_k(kind) | {name},) if ch == "<" and "<" in R else kind
+                out = kind[:2] + (_noted(found_k(kind), name),) if ch == "<" and "<" in R else kind
                 return None if not new and out == kind else (out + (("s", new),), new)
             self.temporary("rtl", {g: (self.char(g), pl.kind_of(g))
                                    for g in self.kinded(lambda k: k[0] == "hx")}, back, frozenset(), keyed=True)
@@ -273,7 +279,8 @@ class MarkdownFont:
         letters = of(set(htmlauto.LETTER))
         scheme = of(set(htmlauto.ALNUM) | set("+.-"))
         colon = {g for g in hx if self.char(g) == ":" and pl.kind_of(g)[2:] == (("uri", True),)}
-        more = {g: pl.var(lt, pl.kind_of(g)[:2] + (pl.kind_of(g)[2] | {"uri"},)) for g in of({"<"})}
+        more = {g: pl.var(lt, pl.kind_of(g)[:2] + (_noted(pl.kind_of(g)[2], "uri"),)) for g in of({"<"})}
+        more = {g: m for g, m in more.items() if m != g}
         self.reverse([(more, (), [letters] + [scheme] * (k - 1) + [colon]) for k in range(2, 33)])
         # The `:` notes go back to plain `:` with the rest of the ("hx", ...) glyphs.
 
@@ -834,15 +841,33 @@ class MarkdownFont:
     def main_scan(self):
         """Code spans, brackets and link destinations, left to right. The
         state is (mode, open brackets); every character it reads becomes
-        ("m", role, state), except `*`/`_`, which gain the state when outside
-        code spans and destinations and become ("m", "dead", state) inside."""
+        ("m", role, after), except `*`/`_`, which gain `after` when outside
+        code spans and destinations and become ("m", "dead", after) inside.
+        `after` is what later passes read of the state the character leaves:
+        the mode's letter, and whether nothing is open (`clear`)."""
         pl = self.pl
         inputs = {g: (self.char(g), pl.kind_of(g)) for g in self.kinded(
             lambda k: k[0] in ("bt", "dl", "tl", "tk", "br", "img", "amp") or k[:2] == ("bs", "escaping")
             or k[:1] == ("bp",) and k[1] in DEAD_LINES)}
-        out, _ = self.transduce("ltr", inputs, _url_step, ("N", 0))
+
+        def step(state, sym):
+            r = _url_step(state, sym)
+            if r is passes.IMPOSSIBLE:
+                return r
+            kind, ns = r
+            ue = kind[-1:] == (("ue",),)       # (a space that ends a candidate URL keeps that last)
+            core = kind[:-1] if ue else kind
+            assert core[-1] == ns, (kind, ns)
+            after = (ns[0] if isinstance(ns[0], str) else ns[0][0], ns in (("N", 0), ("U", 0)))
+            return core[:-1] + (after,) + kind[len(core):] + (("s", ns),), ns
+        out, _ = self.temporary("ltr", inputs, step, ("N", 0), minimize=True)
         self.scanned = set(out.values())
-        self.scan_clear = {o for (g, st), o in out.items() if _url_step(st, inputs[g])[1] in (("N", 0), ("U", 0))}
+        self.scan_clear = {o for o in self.scanned if self._scan_after(o)[1]}
+
+    def _scan_after(self, g):
+        """main_scan's `after` in an output."""
+        k = self.pl.kind_of(g)
+        return k[-2] if k[-1:] == (("ue",),) else k[-1]
 
     def url_live(self):
         """A candidate URL is a link where main_scan is outside everything
@@ -949,28 +974,39 @@ class MarkdownFont:
             pl.single(done)
         self.alive = (self.alive - self.kinded(lambda k: k[0] == "park")) | \
             {pl.var(g, ("done",) + pl.kind_of(g)[1:2] + pl.kind_of(g)[5:7]) for g in reps}
-        # Every character of a run learns its role.
-        runs = self.kinded(lambda k: k[0] in ("done", "fol"))
+        # Every character of a run learns its role from its place in the run
+        # and what the run's first character matched, i places before it:
+        # a rule for each place and match reads it there. The followers go
+        # first, while their first characters still say what they matched.
+        dones = self.kinded(lambda k: k[0] == "done")
+        fols = self.kinded(lambda k: k[0] == "fol")
 
-        def dist(state, kind):
-            if kind[0] == "done":
-                _, n, closes, opens = kind
-                ns = (n, closes, opens, 0)
-            elif state is None:
-                return ("dd", ("lit",), None), None
-            else:
-                ns = state[:3] + (kind[1],)
-            return ("dd", _role(ns[3], ns[0], ns[1], ns[2]), ns), ns
-        def dist_char(state, sym):
-            ch, kind = sym
-            r = dist(state, kind)
-            return r if ch != "~" or r[0][1] == ("lit",) else (("dd", r[0][1] + ("~",), r[0][2]), r[1])
-        out, _ = self.transduce("ltr", {g: (self.char(g), pl.kind_of(g)[:-1] if pl.kind_of(g)[0] == "fol"
-                                            else pl.kind_of(g)) for g in runs}, dist_char, None)
-        # Only the role matters from here on.
-        roles = {o: pl.var(o, ("dr", pl.kind_of(o)[1])) for o in set(out.values())}
-        pl.single(roles)
-        self.replace(roles.items())
+        def role_kind(tilde, role):
+            return ("dr", role + ("~",) if tilde and role != ("lit",) else role)
+        matched = sorted({pl.kind_of(g)[2:4] for g in dones}, key=repr)      # (closes, opens)
+        place = {g: pl.kind_of(g)[1:3] + (self.char(g) == "~",) for g in fols}    # (i, n, a `~`?)
+        groups = sorted(set(place.values()))
+
+        def role_of(grp, m):        # m: an index into matched, or None (no run before: text)
+            i, n, tilde = grp
+            return role_kind(tilde, _role(i, n, *matched[m]) if m is not None else ("lit",))
+        subst = {}
+        for g in fols:
+            for m in list(range(len(matched))) + [None]:
+                k = role_of(place[g], m)
+                subst.setdefault(k, {})[g] = pl.var(g, k)
+        lk = pl.merged(subst)
+        any_ = len(matched) + 1
+        rules = {c: [([m + 1] + [any_] * (grp[0] - 1), [], [(0, lk[role_of(grp, m)])]) for m in range(len(matched))]
+                 + [([], [], [(0, lk[role_of(grp, None)])])] for c, grp in enumerate(groups, 1)}
+        fol_class = {g: groups.index(place[g]) + 1 for g in fols}
+        outs = {o for m in subst.values() for o in m.values()}
+        back = dict.fromkeys(fols | outs, any_) | {g: matched.index(pl.kind_of(g)[2:4]) + 1 for g in dones}
+        ms = pl.mark_set(dones | fols | outs)
+        pl.add(fb.lookup(6, [pl.class_rules(back, fol_class, rules)], passes.SKELETON, ms))
+        first = {g: pl.var(g, role_kind(self.char(g) == "~", _role(0, *pl.kind_of(g)[1:4]))) for g in dones}
+        pl.single(first)
+        self.alive = (self.alive - dones - fols) | outs | set(first.values())
 
     def universe(self):
         """Every state a run's first character can reach while matching."""
@@ -1047,52 +1083,86 @@ class MarkdownFont:
 
     def style(self):
         """The em, strong, link, image and strikethrough state after every
-        delimiter character and bracket marker, left to right."""
+        delimiter character and bracket marker, left to right. Each changes
+        on its own, so each has a pass (link and image, with whether a bare
+        URL's start was the mark just before; strikethrough, over the `~`s
+        alone, which an image's text never gets from its own; em; strong)
+        that adds to the marks whether it is on: a glyph records each state
+        alone, not every combination. The last leaves what the paint reads:
+        ("ds" or "dsx", shown) or ("bm", role), then whether em, strong,
+        link, image (and for a `~`, strikethrough) are on; ("bp", "atx")."""
         pl = self.pl
         marks = self.kinded(lambda k: k[0] == "dr" or (k[0] == "B" and k[1] in (
             "link-open", "img-open", "L", "Lm", "img-close"))
             or (k[0] == "m" and k[1] in ("auto-start", "auto-end", "html-end")) or k[:2] == ("bp", "atx")
             or k in (("um", "live"), ("ue",), ("ue", "after")) or k[-1:] == (("ue",),))
+        clamp = lambda n: max(0, min(MAX_DEPTH, n))
 
-        def step(st, kind):
-            em, strong, link, image, strike, url = st
-            if kind == ("um", "live"):          # a bare URL: a link up to its end marker, the next mark
-                ns = (em, strong, min(link + 1, 2), image, strike, True)
-                return ("bm", "url-start") + ns, ns
+        def what(kind):
+            """("dr", role), ("bp",) or ("bm", role)."""
+            if kind == ("um", "live"):
+                return ("bm", "url-start")
             if kind[:1] == ("ue",) or kind[-1:] == (("ue",),):
-                ns = (em, strong, link - 1 if url else link, image, strike, False)
-                role = "url-end" if kind == ("ue",) else "url-end-after" if kind[:1] == ("ue",) else "url-end-space"
-                return ("bm", role) + ns, ns
-            if kind[0] == "bp":                 # a heading's text is strong throughout
-                ns = (em, max(strong, 1), link, image, strike, False)
-                return ("bp", "atx") + ns, ns
-            if kind[0] == "dr":
-                role = kind[1]
-                tilde = role[-1] == "~"
-                if role[0] in "oc" and role[2]:
-                    d = 1 if role[0] == "o" else -1
-                    if tilde:                   # (an image's text is never struck by its own `~`s)
-                        strike = strike if image else max(0, min(MAX_DEPTH, strike + d))
-                    elif role[1] == 1:
-                        em = max(0, min(MAX_DEPTH, em + d))
-                    else:
-                        strong = max(0, min(MAX_DEPTH, strong + d))
-                ns = (em, strong, link, image, strike, False)
-                return ("dsx" if tilde else "ds", role[0] != "lit") + ns, ns
-            r = kind[1]
-            if r in ("link-open", "auto-start"):
-                link = min(link + 1, 2)      # an autolink in link text is the deepest
-            elif r in ("L", "Lm", "auto-end"):
-                link = max(link - 1, 0)
-            elif r == "html-end":
-                pass
-            elif r == "img-open":
-                image = min(image + 1, 2)
+                return ("bm", "url-end" if kind == ("ue",) else "url-end-after" if kind[:1] == ("ue",) else "url-end-space")
+            if kind[0] == "bp":
+                return ("bp",)
+            return kind[:2] if kind[0] == "dr" else ("bm", kind[1])
+
+        def links(st, kind):        # (marks are then ("sty", what, link, image, strike, em))
+            link, image, url = st
+            w = what(kind)
+            if kind == ("um", "live"):          # a bare URL: a link up to its end marker, the next mark
+                link, url = min(link + 1, 2), True
+            elif w[0] == "bm" and w[1].startswith("url-end"):
+                link, url = link - 1 if url else link, False
+            elif w[0] == "bm":
+                r, url = w[1], False
+                if r in ("link-open", "auto-start"):
+                    link = min(link + 1, 2)      # an autolink in link text is the deepest
+                elif r in ("L", "Lm", "auto-end"):
+                    link = max(link - 1, 0)
+                elif r == "img-open":
+                    image = min(image + 1, 2)
+                elif r == "img-close":
+                    image = max(image - 1, 0)
             else:
-                image = max(image - 1, 0)
-            ns = (em, strong, link, image, strike, False)
-            return ("bm", r) + ns, ns
-        self.transduce("ltr", {g: pl.kind_of(g) for g in marks}, step, (0, 0, 0, 0, 0, False))
+                url = False
+            ns = (link, image, url)
+            return ("sty", w, link > 0, image > 0, None, None, ("s", ns)), ns
+        self.temporary("ltr", {g: pl.kind_of(g) for g in marks}, links, (0, 0, False))
+
+        def delta(role, tilde=False, unit=None):
+            """What a delimiter does to a depth: +1 opening, -1 closing (one of
+            `~`s, or of emphasis of `unit`), else 0."""
+            if role[0] not in ("o", "c") or not role[2] or (role[-1] == "~") != tilde \
+                    or unit is not None and (role[1] == 1) != (unit == 1):
+                return 0
+            return 1 if role[0] == "o" else -1
+
+        def strike(st, kind):       # (an image's text is never struck by its own `~`s)
+            ns = st if kind[3] else clamp(st + delta(kind[1][1], tilde=True))
+            return kind[:4] + (ns > 0, None, ("s", ns)), ns
+        self.temporary("ltr", {g: pl.kind_of(g) for g in self.kinded(
+            lambda k: k[0] == "sty" and k[1][0] == "dr" and k[1][1][-1] == "~")}, strike, 0)
+
+        def em(st, kind):
+            ns = clamp(st + delta(kind[1][1], unit=1)) if kind[1][0] == "dr" else st
+            return kind[:5] + (ns > 0, ("s", ns)), ns
+        self.temporary("ltr", {g: pl.kind_of(g) for g in self.kinded(
+            lambda k: k[0] == "sty" and k[1][0] != "bp")}, em, 0)
+
+        def strong(st, kind):       # a heading's text is strong throughout
+            _, w, lk, im, sk, e = kind
+            if w[0] == "bp":
+                return ("bp", "atx", ("s", max(st, 1))), max(st, 1)
+            ns = clamp(st + delta(w[1], unit=2)) if w[0] == "dr" else st
+            if w[0] == "bm":
+                return ("bm", w[1], e, ns > 0, lk, im, ("s", ns)), ns
+            role = w[1]
+            if role[-1] == "~":
+                return ("dsx", role[0] != "lit", e, ns > 0, lk, im, sk, ("s", ns)), ns
+            return ("ds", role[0] != "lit", e, ns > 0, lk, im, ("s", ns)), ns
+        self.temporary("ltr", {g: pl.kind_of(g) for g in self.kinded(lambda k: k[0] == "sty")}, strong, 0)
 
     def entities(self):
         """Entity and numeric character references, after everything that
@@ -1132,13 +1202,13 @@ class MarkdownFont:
         for ref, value in sorted(refs.items(), key=lambda rv: -len(rv[0])):
             L = ot.Ligature()
             L.Component = [g_of(c) for c in ref[1:]]
-            L.LigGlyph = pl.var(g_of(value), ("ent",))
+            L.LigGlyph = g_of(value)
             L.CompCount = len(L.Component) + 1
             lig.ligatures.setdefault(keyed[key(ref)], []).append(L)
         pl.add(fb.lookup(4, [lig], 0, ms))
         # A `&` that starts no reference goes back to being an `&`.
         pl.single({g: self.g["&"] for g in keyed.values()})
-        self.alive |= {pl.var(g_of(v), ("ent",)) for v in set(refs.values())} | {self.g["&"]}
+        self.alive |= {g_of(v) for v in set(refs.values())} | {self.g["&"]}
 
     def emails(self):
         """GFM's email autolinks, found as cmark-gfm finds them in plain text
@@ -1444,6 +1514,18 @@ class MarkdownFont:
         rules.append((spaces, lk))
         pl.chain([([on], [set(gs)], [], [(0, lk)]) for gs, lk in rules])
         self.alive |= on
+
+
+def _noted(found, name):
+    """The kinds of raw HTML and autolink a `<` has found, with `name`, as
+    far as html_validity's choice reads them: the first of htmlauto.KINDS,
+    and whether that one's whole-line kind (LINE_KINDS) is too. The passes
+    run in that order, so a kind found later never comes first."""
+    order = [n for n, _ in htmlauto.KINDS]
+    first = next((n for n in order if n in found), None)
+    if name in order:
+        return found if first else found | {name}
+    return found | {name} if first is not None and first + "7" == name else found
 
 
 def _paint_step(state, g, k, hid, shown, html_end):

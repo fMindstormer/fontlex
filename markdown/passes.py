@@ -272,6 +272,45 @@ class Pipeline:
                 raise ValueError(f"output {self.info.get(o, o)} records two states: {records[o]}, {ns}")
         return states, index, out, records
 
+    def minimized(self, inputs, step, init):
+        """step and init over classes of equivalent states, for a pass whose
+        outputs (kind + ("s", state)) lose the state right after: states
+        that leave every input as the same glyph without it, now and from
+        then on, are one (Moore's refinement), so the outputs record a class
+        and fewer of them are needed. A pair the pass never meets counts as
+        one that leaves the glyph as it is."""
+        states, _, out, _ = self._explore(inputs, step, init, make=lambda g, kind: (self.base_of(g), kind))
+        gs = sorted(inputs, key=self.gid)
+
+        def fin(g, s):
+            if (g, s) not in out:
+                return g
+            base, kind = out[(g, s)][0]
+            return base, kind[:-1]
+
+        def nxt(g, s):
+            return out[(g, s)][1] if (g, s) in out else init
+        part = {s: tuple(fin(g, s) for g in gs) for s in states}
+        count = len(set(part.values()))
+        while True:
+            ids = {}
+            part = {s: ids.setdefault((part[s], tuple(part[nxt(g, s)] for g in gs)), len(ids)) for s in states}
+            if len(ids) == count:
+                break
+            count = len(ids)
+        rep = {}
+        for s in states:
+            rep.setdefault(part[s], s)
+
+        def step_c(c, sym):
+            r = step(rep[c], sym)
+            if r is None or r is IMPOSSIBLE:
+                return r
+            kind, ns = r
+            assert isinstance(kind, tuple) and kind[-1] == ("s", ns), kind
+            return kind[:-1] + (("s", part[ns]),), part[ns]
+        return step_c, part[init]
+
     def _tkey(self, o):
         """How outputs group into the substitutions a pass calls: by self.key,
         and sequences by their last glyph."""
