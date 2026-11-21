@@ -52,8 +52,8 @@ inputs.
 
 | Resource | What it limits | Limit | Fontlex Markdown uses |
 |---|---|---|---|
-| Glyph ids | states: a pass with *s* states over *a* letters needs up to *s*·*a* variants | 65,535 | 55,762 (85%) |
-| Lookup headers | passes: every lookup's header lies within 16-bit offsets of the LookupList | 4,681 lookups of one filtered subtable (*measured*) | 916 lookups, 18% of the window |
+| Glyph ids | states: a pass with *s* states over *a* letters needs up to *s*·*a* variants | 65,535 | 38,781 (59%) |
+| Lookup headers | passes: every lookup's header lies within 16-bit offsets of the LookupList | 4,681 lookups of one filtered subtable (*measured*) | 839 lookups, 17% of the window |
 | Engine work | passes × run length | HarfBuzz: about 4,096 glyph operations per character | about 0.15 ms a line |
 
 **Glyphs are the scarce resource, passes the cheap one.** The 65,535 glyph
@@ -77,7 +77,7 @@ count is 16-bit, but the LookupList reaches each lookup's header through a
 can share a header, which is why `depth.py` packs 16,000 identical rounds
 but only 4,681 distinct ones (*measured*; fontTools stops with "all lookups
 are already Extension lookups"). The Sans edition of Fontlex Markdown uses
-28% of the window. The 24-bit glyph ids and offsets proposed for a future
+27% of the window. The 24-bit glyph ids and offsets proposed for a future
 OpenType would lift both this budget and the glyph budget.
 
 **Engines bound the work.** HarfBuzz charges about one operation per glyph
@@ -523,8 +523,8 @@ the document is printed.
 
 ### 5. Cost scales with passes, not with what you write
 
-Every pass visits the whole run, in every engine. Fontlex Markdown's 218
-top-level lookups (916 in all) shape a line in about 0.15 ms in HarfBuzz,
+Every pass visits the whole run, in every engine. Fontlex Markdown's 226
+top-level lookups (839 in all) shape a line in about 0.15 ms in HarfBuzz,
 half as long as before `rtl_keyed`. The depth font at depth 1,000 takes 12 ms in
 HarfBuzz and 40 ms in Core Text. That is fine for a line, but it grows with
 paragraph length, because the run is the paragraph. Font programs belong in

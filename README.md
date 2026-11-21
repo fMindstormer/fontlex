@@ -153,8 +153,8 @@ closer right after it. Matched pairs leave the view, so the next round
 matches the next level out. One pass that kept a stack of three openers
 would need about 14,000 states, on copies of every character; six rounds
 need a few states each. Link destinations, which one pass would read with
-364 states, are eight passes of 6 to 35. The whole font is 218 lookups (916
-counting nested ones) and uses 55,762 of OpenType's 65,535 glyph ids.
+364 states, are eight passes of 6 to 35. The whole font is 226 lookups (839
+counting nested ones) and uses 38,781 of OpenType's 65,535 glyph ids.
 Within its bounds it renders every one-line CommonMark spec example, and
 10,723 lines of real documents, exactly as GitHub does.
 
@@ -384,10 +384,10 @@ page byte for byte, so `git status` afterwards shows nothing.
   search the ways to cut a machine into passes for small machines. Larger
   ones, like Markdown's raw HTML, need a heuristic.
 - **Fewer glyphs per state.** Almost all variants belong to states that any
-  character can enter, and each such state costs a full copy of the font's
-  characters. Keeping state on empty glyphs of its own makes the cost a sum
-  instead of a product, at a price in time; for Fontlex Markdown that price
-  is unmeasured.
+  character can enter. Moving state onto glyphs of its own (companion marks,
+  a pass per independent counter) took Fontlex Markdown from 63,367 glyphs to
+  38,781 and made it faster. The largest share left is the main scan's: its
+  497 states, for code spans, brackets and destinations, don't split.
 - **More engines.** Native Windows apps shape text with DirectWrite, which
   ignores reverse chaining lookups inside extension lookups, so the fonts
   keep theirs out: Fontlex Math is right there; Relaxed Math, Markdown,

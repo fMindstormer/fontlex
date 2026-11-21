@@ -61,9 +61,9 @@ where the two disagree with each other or with the spec (cmark-gfm's core
 follows an older CommonMark; commonmark.js counts a no-break space as
 whitespace inside HTML tags).
 
-Both editions give exactly these results. The font has 55,762 glyphs (of
-OpenType's 65,535) and is 678 KB as WOFF2; the proportional edition has
-46,736 and is 696 KB.
+Both editions give exactly these results. The font has 38,781 glyphs (of
+OpenType's 65,535) and is 548 KB as WOFF2; the proportional edition has
+30,613 and is 566 KB.
 
 ## The proportional edition
 
@@ -148,8 +148,8 @@ inline rules change direction once: 43 passes right to left, then 22 left
 to right, with lookups among them that set passes up and tidy up after.
 
 GitHub's extensions cost more changes of direction, though none is needed in
-principle; they buy glyphs. The whole font runs 218 lookups (59 right to
-left, 30 left to right, 129 plain substitutions and fixed rules) with seven
+principle; they buy glyphs. The whole font runs 226 lookups (59 right to
+left, 33 left to right, 134 plain substitutions and fixed rules) with seven
 changes of direction:
 
 | Direction | Lookups | What for |
@@ -161,12 +161,12 @@ changes of direction:
 | Right to left | 1 | each URL's trailing punctuation |
 | Left to right | 23 | URLs' ends (counting parentheses), the scan, links, emphasis |
 | Right to left | 1 | email addresses, whose local part must be followed by `@` and a domain |
-| Left to right | 5 | the style, references, the paint, strikethrough |
+| Left to right | 8 | the style (a pass for each of its four counts), references, the paint, strikethrough |
 
 Moving the URL and email passes into the first right-to-left block would
-save the changes of direction, but there each pass's states multiply the
-variants of every glyph the later passes read, and the font is 2,168 glyphs
-short of OpenType's limit as it is.
+save the changes of direction, but there each pass's states would multiply
+the variants of every glyph the later passes read, and the font has 26,754
+glyph ids to spare.
 
 And no number of passes is exact on everything: matching `*a *b *c d* e* f*`
 means counting, which no composition of finite-state passes can do. So the
