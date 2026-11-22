@@ -36,7 +36,7 @@ lookups have them wrapped, and so break in DirectWrite:
 | Fontlex Relaxed Math | none (51, not wrapped since November 2026) | 372 of 387 lines the same (142 with them wrapped, 337 before the font placed a fraction's end, below); the others mix Greek and Latin letters in a construct (script runs, below) |
 | Fontlex Markdown (both editions) | none (59, not wrapped since November 2026) | 438 of 447 spec examples, all 23 GFM ones, 914 of 916 README lines and 279 of 292 random lines the same (with them wrapped, it took over 60 seconds on one line, `>\t\tfoo`); what differs is below |
 | Fontlex English, French | none (1, not wrapped since November 2026) | 99.4% and 99.9% of words in context right (59% and 65% with it wrapped); every line of the English READMEs, and 15 of the 16 French sample lines; what differs is below |
-| Fontlex Python, JavaScript | none (1, not wrapped) | right, apart from script runs (below) |
+| Fontlex Python, JavaScript | none (1, not wrapped) | right, apart from script runs (below) and the line of letters with combining marks in the next row |
 | Fontlex German, German Syllables, English Syllables | none | every random and transition case right; one hand-written case each, letters with combining marks (`q́ = "x̣" + j̈`), gets other clusters, not yet looked at |
 
 **It attaches a mark only to a base glyph that starts its cluster.** In
