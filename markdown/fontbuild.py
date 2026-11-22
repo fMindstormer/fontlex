@@ -10,13 +10,16 @@ with another family's outlines (import_by_char): a monospaced one, for a
 proportional base.
 """
 
+import bisect
 import copy
 import math
+from collections import defaultdict
 from fontTools.colorLib.builder import buildCOLR, buildCPAL
 from fontTools.pens.recordingPen import DecomposingRecordingPen
 from fontTools.pens.transformPen import TransformPen
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.ttLib import TTFont, newTable
+from fontTools.ttLib.reorderGlyphs import reorderGlyphs
 from fontTools.ttLib.tables import otTables as ot
 from fontTools.ttLib.tables import ttProgram
 from fontTools.ttLib.tables._g_l_y_f import Glyph, GlyphComponent
@@ -391,6 +394,7 @@ class FontBuilder:
                     fr.Feature.FeatureParams.UINameID = font["name"].addName(fr.Feature.ui_name, minNameID=255)
                 if hasattr(fr.Feature, "ui_name"):
                     del fr.Feature.ui_name
+        spread_aliases(font)
         return font
 
 
@@ -407,6 +411,182 @@ def _context_coverage(gsub):
             if kind in (5, 6) and st.Format in (1, 2):
                 covered |= set(st.Coverage.glyphs)
     return covered
+
+
+# HarfBuzz 12.3.1 to 14.5.x (harfbuzz/harfbuzz#6320, fixed by #6321 in
+# 14.6.0) caches whether a format 2 context subtable covers a glyph in an
+# hb_cache_t<14, 1, 8> and stores a glyph id of 32768 or more without
+# checking its range: it lands in the slot, and with the tag, of that id
+# minus 32768. The lower glyph then reads the higher one's answer, for as
+# long as no other glyph takes the slot; and the cache lasts as long as the
+# face. Two glyphs ALIAS apart are safe when every such subtable that can
+# be asked about both covers both or neither. spread_aliases() swaps
+# glyphs until every pair is.
+ALIAS = 32768
+SPREAD = True        # theory/hbcache.py turns it off: it wants glyphs where it puts them
+_RULES = {"SubRuleSet": "SubRule", "SubClassSet": "SubClassRule", "ChainSubRuleSet": "ChainSubRule",
+          "ChainSubClassSet": "ChainSubClassRule", "PosRuleSet": "PosRule", "PosClassSet": "PosClassRule",
+          "ChainPosRuleSet": "ChainPosRule", "ChainPosClassSet": "ChainPosClassRule"}
+
+
+def _context2(font):
+    """(lookup, format 2 context or chain context subtable, nested) in GSUB
+    and GPOS; nested: a context rule applies the lookup."""
+    for tag, ext, kinds in (("GSUB", 7, (5, 6)), ("GPOS", 9, (7, 8))):
+        if tag not in font:
+            continue
+        lookups = font[tag].table.LookupList.Lookup
+        subs = [(lk, st.ExtSubTable if lk.LookupType == ext else st,
+                 st.ExtensionLookupType if lk.LookupType == ext else lk.LookupType)
+                for lk in lookups for st in lk.SubTable]
+        nested = set()
+        for lk, st, kind in subs:
+            if kind not in kinds:
+                continue
+            records = [getattr(st, "SubstLookupRecord", None) or getattr(st, "PosLookupRecord", None) or []]
+            for sets, rules in _RULES.items():
+                for rs in getattr(st, sets, None) or []:
+                    for rule in (getattr(rs, rules, None) or []) if rs else []:
+                        records.append(getattr(rule, "SubstLookupRecord", None)
+                                       or getattr(rule, "PosLookupRecord", None) or [])
+            nested |= {rec.LookupListIndex for recs in records for rec in recs}
+        nested = {id(lookups[i]) for i in nested}
+        for lk, st, kind in subs:
+            if kind in kinds and st.Format == 2:
+                yield lk, st, id(lk) in nested
+
+
+def _alias_signatures(font):
+    """glyph -> (the subtables that can be asked about it, those of them
+    that cover it), as bit masks over _context2's subtables. A lookup is
+    asked about the glyphs its flags don't skip; one a rule applies, about
+    any glyph (HarfBuzz checks no flags there)."""
+    gdef = font["GDEF"].table
+    cls = gdef.GlyphClassDef.classDefs if gdef.GlyphClassDef else {}
+    msd = getattr(gdef, "MarkGlyphSetsDef", None)
+    sets = [set(c.glyphs) for c in msd.Coverage] if msd else []
+    acd = getattr(gdef, "MarkAttachClassDef", None)
+    attach = acd.classDefs if acd else {}
+    groups = defaultdict(list)          # (flags, mark set), or None for nested -> subtables
+    for lk, st, nested in _context2(font):
+        flag = lk.LookupFlag & 0xFF1E
+        groups[None if nested else (flag, lk.MarkFilteringSet if flag & 0x10 else None)].append(st)
+
+    def sees(key, g):
+        if key is None:
+            return True
+        flag, ms = key
+        c = cls.get(g, 0)
+        if c == 1:
+            return not flag & 0x2
+        if c == 2:
+            return not flag & 0x4
+        if c == 3:
+            if flag & 0x8:
+                return False
+            if flag & 0x10:
+                return g in sets[ms]
+            if flag & 0xFF00:
+                return attach.get(g, 0) == flag >> 8
+        return True                     # unclassified: no flag skips it
+    bit, mask, cover = 0, {}, defaultdict(int)
+    for key, subtables in groups.items():
+        mask[key] = 0
+        for st in subtables:
+            mask[key] |= 1 << bit
+            for g in st.Coverage.glyphs:
+                cover[g] |= 1 << bit
+            bit += 1
+    asked, out = {}, {}
+    for g in font.getGlyphOrder():
+        seen = tuple(sees(k, g) for k in groups)
+        if seen not in asked:
+            asked[seen] = sum(m for m, s in zip(mask.values(), seen) if s)
+        out[g] = (asked[seen], cover[g] & asked[seen])
+    return out
+
+
+def _spread(order, sig, fixed):
+    """`order` with glyphs swapped until the glyphs at i and i + ALIAS are
+    compatible for every i: each bad pair gives one of its glyphs for the
+    nearest one that fits there, from a position without a partner if any
+    (singles), else from one whose partner the given glyph fits beside.
+    Glyphs at positions where fixed(p) stay."""
+    o, n = list(order), len(order)
+
+    def partner(p):
+        q = p + ALIAS if p < ALIAS else p - ALIAS
+        return q if q < n else None
+    sigs = sorted(set(sig.values()))
+    ok = [[not (a[0] & b[0] & (a[1] ^ b[1])) for b in sigs] for a in sigs]
+    index = {s: i for i, s in enumerate(sigs)}
+    at = [index[sig[g]] for g in o]
+    singles, paired = defaultdict(list), defaultdict(list)     # signature -> sorted positions
+    for p in range(n):
+        if not fixed(p):
+            (singles if partner(p) is None else paired)[at[p]].append(p)
+
+    def where(p):
+        return (singles if partner(p) is None else paired)[at[p]]
+
+    def swap(p, r):
+        for x in (p, r):
+            lst = where(x)
+            del lst[bisect.bisect_left(lst, x)]
+        o[p], o[r], at[p], at[r] = o[r], o[p], at[r], at[p]
+        for x in (p, r):
+            bisect.insort(where(x), x)
+
+    def nearest(lst, p, test, limit=64):
+        """The position in sorted `lst` nearest p that passes test(r, p),
+        trying at most `limit`."""
+        k = bisect.bisect_left(lst, p)
+        lo, hi = k - 1, k
+        for _ in range(limit):
+            if lo < 0 and hi >= len(lst):
+                break
+            if hi >= len(lst) or (lo >= 0 and p - lst[lo] <= lst[hi] - p):
+                r, lo = lst[lo], lo - 1
+            else:
+                r, hi = lst[hi], hi + 1
+            if test(r, p):
+                return r
+        return None
+    for i in range(n - ALIAS):
+        j = i + ALIAS
+        if ok[at[i]][at[j]]:
+            continue
+        best = None
+        for pool, test in ((singles, lambda r, p: True),
+                           (paired, lambda r, p: r not in (i, j) and ok[at[partner(r)]][at[p]])):
+            for p, q in ((j, i), (i, j)):                   # give p, keep q
+                if fixed(p):
+                    continue
+                for s, fits in enumerate(ok[at[q]]):
+                    r = nearest(pool[s], p, test) if fits else None
+                    if r is not None and (best is None or abs(r - p) < best[0]):
+                        best = (abs(r - p), p, r)
+            if best:
+                break
+        if best is None:
+            raise ValueError(f"spread_aliases: nothing fits beside {o[i]} and {o[j]}")
+        swap(best[1], best[2])
+    return o
+
+
+def spread_aliases(font):
+    """Reorder a finished font's glyphs so that no two glyph ids ALIAS apart
+    can be confused (above), keeping .notdef and BAD_WINDOW (where
+    _clear_bad_window put glyphs that no context subtable covers). Returns
+    how many glyphs moved."""
+    order = font.getGlyphOrder()
+    if not SPREAD or len(order) <= ALIAS:
+        return 0
+    new = _spread(order, _alias_signatures(font), lambda p: p == 0 or p in BAD_WINDOW)
+    moved = sum(a != b for a, b in zip(order, new))
+    if moved:
+        reorderGlyphs(font, new)    # sorts the coverage tables, and what follows their order
+    return moved
 
 
 def lookup(lookup_type, subtables, flag=0, mark_set=None):
