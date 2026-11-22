@@ -242,16 +242,16 @@ on held-out text, and the reading markers on treebanks. The English and
 French hints have not been reviewed by fluent speakers yet; their review
 sheets are ready.
 
-**It found an engine bug.** Compiled fonts reach places hand-drawn fonts
+**It found engine bugs.** Compiled fonts reach places hand-drawn fonts
 don't. The proportional Markdown font failed only in HarfBuzz, on lines
-like `<a>x`. HarfBuzz 12.3.1 and later never matched glyph ids 32,512 to
-32,767 in format 2 context rules, because of a flaw in a new coverage
-cache. It was bisected to one commit and reported
-([harfbuzz/harfbuzz#6418](https://github.com/harfbuzz/harfbuzz/issues/6418)),
-and the fix was merged the same day
-([#6419](https://github.com/harfbuzz/harfbuzz/pull/6419)) and released in
-HarfBuzz 15.0.0. Until browsers ship it, Fontlex's builds pad such glyphs
-out of the window.
+like `<a>x`: HarfBuzz 12.3.1 and later never matched glyph ids 32,512 to
+32,767 in format 2 context rules, because of a new coverage cache. It was
+bisected, reported and fixed in a day
+([harfbuzz/harfbuzz#6418](https://github.com/harfbuzz/harfbuzz/issues/6418),
+[#6419](https://github.com/harfbuzz/harfbuzz/pull/6419); HarfBuzz 15.0.0).
+Before 14.6.0 the same cache also mixed up glyph ids 32,768 apart: Chrome
+158 drew 32 of the relaxed math font's 388 test lines wrong. Fontlex's builds
+pad glyphs out of the window, and order them so no such pair is mixed up.
 
 ## Prior art, and where this stands
 

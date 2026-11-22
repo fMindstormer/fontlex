@@ -62,7 +62,7 @@ follows an older CommonMark; commonmark.js counts a no-break space as
 whitespace inside HTML tags).
 
 Both editions give exactly these results. The font has 38,781 glyphs (of
-OpenType's 65,535) and is 548 KB as WOFF2; the proportional edition has
+OpenType's 65,535) and is 551 KB as WOFF2; the proportional edition has
 30,613 and is 566 KB.
 
 ## The proportional edition
@@ -82,17 +82,17 @@ boxes, bars and rules are a figure wide.
 Three things only showed up with the second base font:
 
 - **HarfBuzz 12.3.1 to 14.6.0 never matches a glyph with id 32,512 to 32,767
-  in a context lookup of format 2** (harfbuzz/harfbuzz#6418, fixed by
-  #6419 in HarfBuzz 15.0.0). Its
-  per-subtable coverage cache
+  in a context lookup of format 2** (harfbuzz/harfbuzz#6418, fixed by #6419
+  in HarfBuzz 15.0.0). Its per-subtable coverage cache
   (`hb_cache_t<14, 1, 8>`) stores 7 bits per byte and starts each byte as
   0xFF, but checks for an empty slot only when the stored bits fill the
-  byte; and it stores only ids below 16,384. So an id whose bits above the
-  lowest 8 are 127 reads an empty slot as a hit, saying "not covered". The
-  mono edition had no such glyph by chance; the proportional one had six,
-  one of them the `>` that ends raw HTML. `fontbuild.py` now inserts empty
-  glyphs before the first such glyph, moving it and every later glyph past
-  the window (244 glyphs here).
+  byte. So an id whose bits above the lowest 8 are 127 reads an empty slot
+  as a hit, saying "not covered". The mono edition had no such glyph by
+  chance; the proportional one had six, one of them the `>` that ends raw
+  HTML. `fontbuild.py` now inserts empty glyphs before the first such glyph,
+  moving it and every later glyph past the window (244 glyphs here). Before
+  14.6.0 the cache also put glyph ids 32,768 apart in one slot (#6320), so
+  `fontbuild.py` orders glyphs so that no rule can mix up such a pair.
 - Noto Sans gives Devanagari different GPOS features from other scripts, and
   then Core Text shapes each script as its own run, which restarts the
   passes at every change between Latin, Greek and Cyrillic. The scripts'
