@@ -2,7 +2,7 @@
 """Pack the Relaxed Math demo for a release:
 build/fontlex-relaxed-math-demo-<version>.zip.
 
-    python math/package_demo.py 0.4.0
+    python math/package_demo.py 0.5.0
 
 The zip holds the demo page (math/relaxed.html, which carries the font and
 its styles inside, so it opens from disk with no server: browsers won't load
@@ -54,7 +54,7 @@ Serve Fontlex-RelaxedMath.woff2 and relaxed-math.css together, link the
 stylesheet, and give a text box the class relaxed-math. (Browsers won't
 load a font file for a page opened from disk, which is why index.html
 carries its own copy.) Fontlex-RelaxedMath.ttf is the same font for desktop
-apps that use HarfBuzz or Core Text.
+apps, which shape text with HarfBuzz, Core Text or DirectWrite.
 
 What it typesets
 ----------------
@@ -74,9 +74,9 @@ Limits
   most 24 characters in a construct that isn't inside another.
 - A space inside a construct leaves it as its characters: (a+b)/2 is
   typeset, (a + b)/2 isn't.
-- Chrome and Firefox shape Greek and Latin letters as separate runs, so a
-  construct that mixes them, like e^(iπ), stays as its characters there.
-  Safari lays it out.
+- Chrome, Firefox and native Windows apps shape Greek and Latin letters as
+  separate runs, so a construct that mixes them, like e^(iπ), stays as its
+  characters there. Safari lays it out.
 - A part is a whole word: 2/3x is 2 over 3x, and x^2y is x squared, then y.
   A number over a number is always a fraction, so 7/8 bit and a date like
   6/14 are typeset too.
@@ -93,8 +93,10 @@ other 25 mix Greek and Latin). Firefox 158, with HarfBuzz 14.5.0, draws 36
 more differently. Before accents, in Chrome 155, 348 of 349 lines were the
 same, with the same exception, and in Safari's WebKit 322 of 323, the last
 1 pixel apart.
-Native Windows apps (DirectWrite) don't lay it out: DirectWrite ignores a
-kind of lookup the font relies on (engines/README.md in the repository).
+In native Windows apps, which shape text with DirectWrite, 372 of the 387
+lines checked come out as in HarfBuzz; the others mix Greek and Latin
+letters inside a construct, as in Chrome (engines/README.md in the
+repository).
 
 Built from commit {commit}.
 
