@@ -93,6 +93,7 @@ class Font:
         self.keyed = False       # right-to-left passes on their values' keys (keyed_rtl)
         self.free = []
         self.freed = 0
+        self.shown = {}          # a reused glyph's name -> the name of what it draws (reuse)
 
     # glyphs ------------------------------------------------------------------
 
@@ -168,10 +169,29 @@ class Font:
         key = ("fin", v)
         if key in self.names:
             return self.names[key]
-        name = self.make_final(v)
+        name = self.reuse(self.make_final(v))
         self.names[key] = name
         self.anchor[name] = v
         return name
+
+    def reuse(self, name):
+        """A final glyph just made that is a mark with no advance takes the
+        id of a track glyph no token holds any more (recycle): the glyph
+        was never shown, and a mark it stays, so the lookups that ran while
+        it held a value and the ones after it can't tell its two lives
+        apart. It keeps the dead glyph's name, which the lookups made so far
+        use, until the font is written (named)."""
+        b = self.b
+        if not (self.recycling and self.free and b.order[-1] == name and b.classes.get(name) == 3
+                and b.metrics[name][0] == 0):
+            return name
+        slot = self.free.pop()
+        assert b.classes[slot] == 3 and b.metrics[slot][0] == 0 and b.glyphs[slot].numberOfContours == 0
+        b.order.pop()
+        del b.ids[name], b.classes[name]
+        b.glyphs[slot], b.metrics[slot] = b.glyphs.pop(name), b.metrics.pop(name)
+        self.shown[slot] = name
+        return slot
 
     def accent(self, code):
         """An accent's glyph (ACCENT_SHAPES), centered on x = 0 with its
@@ -853,13 +873,17 @@ def split(font, back_cd, ahead_cd, rules, extra, flag, sees):
     temp = {}
     for g, os in many.items():
         for h in range((len(os) + MANY - 1) // MANY):
-            temp[(g, h)] = font.temp_mark()
+            # dead track glyphs, where the font recycles them: the second
+            # step leaves none of these in the text
+            temp[(g, h)] = font.free.pop() if font.recycling and font.free else font.temp_mark()
     group = {(g, o): temp[(g, i // MANY)] for g, os in many.items() for i, o in enumerate(os)}
     first = [(b, a, {g: group.get((g, o), o) for g, o in m.items()}) for b, a, m in rules]
     second = [(b, a, {group[(g, o)]: o for g, o in m.items() if g in many}) for b, a, m in rules]
     font.chain(back_cd, ahead_cd, first + ([extra] if extra else []), flag, sees)
     ctx = set(back_cd) | set(ahead_cd)
     font.chain(back_cd, ahead_cd, [r for r in second if r[2]], flag, ctx | set(temp.values()))
+    if font.recycling:
+        font.free.extend(temp.values())
 
 
 def compile_context(font, p, J, SP):
@@ -1345,8 +1369,9 @@ def build(base=BASE, verbose=False, relaxed=False):
 
 def build_font(font, verbose=False, relaxed=False):
     """relaxed: the relaxed notation's font (relaxed.py, front.py)."""
+    font.recycling = True
     if relaxed:
-        font.recycling = font.keyed = True
+        font.keyed = True
         relaxed_commands(font)
         J, SP = relaxed_initial(font)
         prog = front.front() + P.program(relaxed=True)
@@ -1410,7 +1435,22 @@ def finish(font, gsub, gp, gp_sets, family="Fontlex Math"):
     post.extraNames, post.mapping = [], {}
     import fontlex
     fontlex.set_family_name(f, family)
-    return f
+    return named(f, font.shown)
+
+
+def named(f, shown):
+    """The font with each reused glyph (Font.reuse) named for what it
+    draws, as verify.py reads it. Tables refer to glyphs by id, so only the
+    names change: the font is written and read back with the new glyph
+    order, and only `post` is compiled again."""
+    if not shown:
+        return f
+    data = io.BytesIO()
+    f.save(data)
+    data.seek(0)
+    g = TTFont(data, recalcTimestamp=False)      # tables are read when used: the rest are copied
+    g.setGlyphOrder([shown.get(n, n) for n in g.getGlyphOrder()])
+    return g
 
 
 def tuples(x):
@@ -1469,7 +1509,7 @@ def main():
         f = build_font(font, verbose=True, relaxed=args.relaxed)
         if args.sidecar:
             json.dump({"gsub_sets": font.pl.first_set + len(font.pl.mark_sets),
-                       "finals": sorted([name, d] for name, d in font.anchor.items())},
+                       "finals": sorted([font.shown.get(name, name), d] for name, d in font.anchor.items())},
                       open(args.out + ".json", "w"))
     plain = fb.reverse_chaining(f)[0]
     f.save(args.out)
