@@ -76,16 +76,18 @@ Typing a formula into a text box key by key ends with the same pixels as
 setting the text at once, in all of these browsers but WebKit, which
 wasn't tried.
 
-The font has 64,916 glyphs, 1,674 substitution lookups (about 1,260 of
-them nested lookups shared by every pass, in 2,905 subtables) and 310
-positioning lookups. It is 9.1 MB as TrueType and 1.0 MB as WOFF2. The
-accents take about 12,600 of the glyphs: each character, in each size and
-in and out of a fraction, with each accent. `\binom` takes about 2,700:
-the passes' values for a binomial's own tokens, which differ from a
-fraction's. The wide arrow takes about 1,550. That leaves about 600 glyph
-ids of OpenType's 65,535, so Fontlex Math is at the limit of what it can
-add. Shaping takes about 0.3 ms per
-character in HarfBuzz (12 ms for a 40-character line).
+The font has 39,939 glyphs, 2,029 substitution lookups (about 1,620 of
+them nested lookups shared by every pass, in 3,209 subtables) and 310
+positioning lookups. It is 9.0 MB as TrueType and 1.1 MB as WOFF2. Most
+glyphs hold a value on a track for a while, and a glyph id goes on to
+another use once no token can hold its value (`Font.recycle`): a later
+value, a two-step pass's go-between (below), or, at the end, a glyph
+drawn as a mark with no advance, such as a character in a fraction
+(`Font.reuse`). Every glyph is a mark through all of it, so no lookup can
+tell one use from another. Without that the font had 64,916 glyphs, 600
+short of OpenType's 65,535; now it has room for about 25,500 more.
+Shaping takes about 0.3 ms per character in HarfBuzz (12 ms for a
+40-character line).
 
 ## How it works
 
@@ -292,9 +294,10 @@ By screenshot, as for Fontlex Math:
   160 (HarfBuzz 14.6.0) and later draw them as HarfBuzz does, so CI checks
   Firefox 160.
 
-The font has 61,886 glyphs, 2,151 substitution lookups (1,584 of them
-nested, in 3,186 subtables) and 302 positioning lookups. It is 11.0 MB as
-TrueType and 1.5 MB as WOFF2. Its right-to-left passes run on the few kinds
+The font has 50,400 glyphs (61,886 before its drawn marks and two-step
+passes reused glyph ids, as Fontlex Math's do), 2,183 substitution lookups
+(1,616 of them nested, in 3,223 subtables) and 302 positioning lookups. It
+is 11.3 MB as TrueType and 1.5 MB as WOFF2. Its right-to-left passes run on the few kinds
 of value each tells apart (`keyed_rtl` in `mathfont.py`), so their reverse
 chaining lookups come to 40 KB, not 386 KB, and stay out of extension
 lookups, which DirectWrite ignores them inside. Shaping takes 0.34 ms per character in
