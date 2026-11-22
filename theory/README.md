@@ -441,37 +441,37 @@ lexers), so every glyph can be checked in every engine. That makes each
 compiled font a large differential test. The proportional edition of
 Fontlex Markdown failed in HarfBuzz, and only there, on lines like `<a>x`.
 
-*Measured*: HarfBuzz from 12.3.1 (released 2026-01-20) through
-14.6.0 never matches a glyph with id **32,512 to 32,767** in a context or
-chain context subtable of format 2; formats 1 and 3 are fine, and 12.3.0
-is too. The cause is HarfBuzz commit a78994395, which enlarged the format 2
-coverage cache to `hb_cache_t<14, 1, 8>`. That cache stores 7 bits per byte
-and starts each byte at 0xFF.
-Its empty-slot check applies only when the stored bits fill the byte, and it
-stores only ids below 16,384. So an id whose high byte is 127 reads an empty
-slot as a cached "not covered". `hbcache.py` shows it with seven one-rule
-fonts: ids 32,511 and 32,768 work, and 32,512 to 32,767 don't. Chrome 155,
-the current stable release, draws "aaa" where it should draw "BBB" (Core
-Text gets all seven right).
+*Measured*: HarfBuzz 12.3.1 (2026-01-20) to 14.6.0 never matches a glyph
+with id **32,512 to 32,767** in a context or chain context subtable of
+format 2; formats 1 and 3 are fine, and so is 12.3.0. Commit a78994395 had
+enlarged that coverage cache to `hb_cache_t<14, 1, 8>`: 7 bits per byte,
+each starting at 0xFF, with an empty-slot check only when the stored bits
+fill the byte. So an id whose high byte is 127 reads an empty slot as a
+cached "not covered". `hbcache.py` shows it with one-rule fonts: ids 32,511
+and 32,768 work, 32,512 to 32,767 don't. Chrome 155, the current stable
+release, draws "aaa" for "BBB" (Core Text gets all seven right).
 
-Exposure:
-- Hand-made large fonts mostly escape. Noto Sans CJK (65,535 glyphs) writes
-  all 281 of its chain contexts as format 3, and none of the 15 fonts on
-  this Mac with more than 32,512 glyphs puts a context-covered glyph in the
-  window.
-- Compiled fonts are exposed. Class-based rules compile to format 2, and a
-  compiler's state variants fill the glyph space. The Sans edition had six
-  glyphs there, one of them the `>` that ends raw HTML.
+Exposure: hand-made large fonts mostly escape. Noto Sans CJK (65,535
+glyphs) writes all 281 of its chain contexts as format 3, and none of the
+15 fonts on this Mac with more than 32,512 glyphs puts a context-covered
+glyph in the window. Compiled fonts are exposed: class-based rules compile
+to format 2, and a compiler's state variants fill the glyph space. The Sans
+edition had six glyphs there, one of them the `>` that ends raw HTML.
 
-`fontbuild.py` now inserts padding glyphs to move such glyphs past the
-window. The bug was reported upstream as
-[harfbuzz/harfbuzz#6418](https://github.com/harfbuzz/harfbuzz/issues/6418)
-and fixed in HarfBuzz main on 2026-10-20 by
+`fontbuild.py` pads such glyphs past the window. Reported upstream as
+[harfbuzz/harfbuzz#6418](https://github.com/harfbuzz/harfbuzz/issues/6418),
+the bug was fixed in HarfBuzz main on 2026-10-20 by
 [#6419](https://github.com/harfbuzz/harfbuzz/pull/6419) (commit b98ffb1,
 which checks the key's range on reads as well as writes), released in 15.0.0
 on 2026-10-22. *Measured*: built from 15.0.0, HarfBuzz draws "BBB" for all
-seven of `hbcache.py`'s fonts; built from the fix's parent, "aaa" for the
-three in the window. The padding stays while browsers ship older releases.
+seven; built from the fix's parent, "aaa" for the three in the window.
+Before 14.6.0 the cache also stored ids of 32,768 and up unchecked, in the
+slot and under the tag of the id 32,768 lower, whose glyph then reads the
+other's answer while the face lives (#6320, fixed by #6321; `hbcache.py`'s
+last two fonts). *Measured*: Fontlex Relaxed Math 0.5.0 drew 32 of 388 test
+lines wrong in Chrome 158, and 1,565 of 5,087 `math/verify.py` lines in its
+HarfBuzz. `fontbuild.py` now orders glyphs so no rule can mix up such a pair.
+The padding and the order stay while browsers ship older releases.
 
 The general point: an engine's fast paths are tuned on fonts that people
 draw, and compiled fonts are far out of that distribution. They hit glyph-id

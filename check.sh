@@ -188,7 +188,7 @@ if wants theory; then
     "$PY" theory/cascade.py --lines 300 $shapers serial
     "$PY" theory/cascade.py --lines 300 $shapers ruler 80 - 10
     "$PY" theory/cascade.py --lines 300 $shapers iban
-    echo "== theory: HarfBuzz's coverage cache (ids 32512-32767 read aaa in HarfBuzz 12.3.1 to 14.6.0)"
+    echo "== theory: HarfBuzz's coverage cache (ids 32512-32767 read aaa in HarfBuzz 12.3.1 to 14.6.0, ids 32768 apart ba before 14.6.0)"
     "$PY" theory/hbcache.py
 fi
 

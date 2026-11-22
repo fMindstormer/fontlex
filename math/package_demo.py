@@ -89,10 +89,11 @@ Tested
 in HarfBuzz 14.6.0 (the shaper in Chrome, Edge and Firefox) and Core Text
 (Safari, macOS): all the same. In Chromium 139 and Firefox 160 on Linux and
 on Windows, 363 of 388 lines draw the same pixels as HarfBuzz's layout (the
-other 25 mix Greek and Latin). Firefox 158, with HarfBuzz 14.5.0, draws 36
-more differently. Before accents, in Chrome 155, 348 of 349 lines were the
-same, with the same exception, and in Safari's WebKit 322 of 323, the last
-1 pixel apart.
+other 25 mix Greek and Latin); in Chrome 158, all but one of those, 1 pixel
+apart. Chrome 158's HarfBuzz (14.5, as in Firefox 158) mixes up glyph ids
+32,768 apart, fixed in 14.6.0, and the font's glyphs are ordered around it.
+Before accents, in Chrome 155, 348 of 349 lines were the same, with the same
+exception, and in Safari's WebKit 322 of 323, the last 1 pixel apart.
 In native Windows apps, which shape text with DirectWrite, 372 of the 387
 lines checked come out as in HarfBuzz; the others mix Greek and Latin
 letters inside a construct, as in Chrome (engines/README.md in the

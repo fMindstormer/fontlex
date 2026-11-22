@@ -1435,6 +1435,7 @@ def finish(font, gsub, gp, gp_sets, family="Fontlex Math"):
     post.extraNames, post.mapping = [], {}
     import fontlex
     fontlex.set_family_name(f, family)
+    fb.spread_aliases(f)       # before named(): the order is by the working names
     return named(f, font.shown)
 
 

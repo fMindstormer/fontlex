@@ -71,6 +71,7 @@ with 2 px of tolerance at 100 px per em, where the layout's smallest step
   all of them (`browsers.py`, run by CI's Browsers workflow), and on 435 of
   the 436 lines it checks now; the other, `\vec{αβ}`, mixes Greek and Latin
   letters inside a construct, which these browsers shape as two runs.
+- **Chrome 158:** the same as Chromium 139, 435 of 436.
 
 Typing a formula into a text box key by key ends with the same pixels as
 setting the text at once, in all of these browsers but WebKit, which
@@ -78,7 +79,7 @@ wasn't tried.
 
 The font has 39,939 glyphs, 2,029 substitution lookups (about 1,620 of
 them nested lookups shared by every pass, in 3,209 subtables) and 310
-positioning lookups. It is 9.0 MB as TrueType and 1.1 MB as WOFF2. Most
+positioning lookups. It is 8.8 MB as TrueType and 1.1 MB as WOFF2. Most
 glyphs hold a value on a track for a while, and a glyph id goes on to
 another use once no token can hold its value (`Font.recycle`): a later
 value, a two-step pass's go-between (below), or, at the end, a glyph
@@ -290,14 +291,19 @@ By screenshot, as for Fontlex Math:
 - **Chromium 139 and Firefox 160, on Linux and on Windows:** 363 of 388.
   The other 25 mix Greek and Latin letters inside a construct. Typing key
   by key ends as setting the text at once does.
-- **Firefox 158:** 36 more lines differ. Its HarfBuzz is 14.5.0; Firefox
-  160 (HarfBuzz 14.6.0) and later draw them as HarfBuzz does, so CI checks
+- **Chrome 158 and Firefox 158:** their HarfBuzz (14.5) mixes up glyph ids
+  32,768 apart in a coverage cache, fixed in 14.6.0, and 0.5.0's font drew
+  32 and 36 more lines wrong there (1,565 of 5,087 `verify.py` lines in
+  Chrome 158's HarfBuzz). The glyphs are now ordered around it
+  ([theory/README.md](../theory/README.md)): Chrome 158 draws 362 of 388 as
+  Chromium 139 does, and one more 1 pixel apart; in its HarfBuzz, every
+  `verify.py` line is right. Firefox 158 wasn't rechecked; CI checks
   Firefox 160.
 
 The font has 50,400 glyphs (61,886 before its drawn marks and two-step
 passes reused glyph ids, as Fontlex Math's do), 2,183 substitution lookups
 (1,616 of them nested, in 3,223 subtables) and 302 positioning lookups. It
-is 11.3 MB as TrueType and 1.5 MB as WOFF2. Its right-to-left passes run on the few kinds
+is 11.5 MB as TrueType and 1.6 MB as WOFF2. Its right-to-left passes run on the few kinds
 of value each tells apart (`keyed_rtl` in `mathfont.py`), so their reverse
 chaining lookups come to 40 KB, not 386 KB, and stay out of extension
 lookups, which DirectWrite ignores them inside. Shaping takes 0.34 ms per character in

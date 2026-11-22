@@ -16,6 +16,7 @@ import bounds  # noqa: E402
 import cm_block  # noqa: E402
 import gfm  # noqa: E402
 import cm_inline as cm  # noqa: E402
+import fontbuild  # noqa: E402
 import htmlauto  # noqa: E402
 import mdfont  # noqa: E402
 import tails  # noqa: E402
@@ -216,6 +217,30 @@ class AlgorithmTest(unittest.TestCase):
         self.assertIn("more than 3 open brackets", bounds.exceeds("[[[[a](b)"))
         self.assertIn("two `@` in one email-like word", bounds.exceeds("a@b.c@d.ef"))
         self.assertEqual(bounds.exceeds("see www.a.com/b_(c). and x@y.org"), set())
+
+
+class GlyphOrderTest(unittest.TestCase):
+    def test_spread(self):
+        """fontbuild._spread leaves no pair ALIAS apart that a subtable seeing
+        both covers just one of, and moves no fixed glyph (here with
+        ALIAS = 64 and random signatures over two subtables)."""
+        rnd = random.Random(7)
+        saved, fontbuild.ALIAS = fontbuild.ALIAS, 64
+        try:
+            for n in (64, 80, 100, 120):
+                order = [f"g{i}" for i in range(n)]
+                sig = {}
+                for g in order:
+                    seen = 1 | (2 if rnd.random() < 0.5 else 0)
+                    sig[g] = (seen, rnd.getrandbits(2) & seen)
+                new = fontbuild._spread(order, sig, lambda p: p in (0, 5))
+                self.assertEqual(sorted(new), sorted(order))
+                self.assertEqual((new[0], new[5]), (order[0], order[5]))
+                for i in range(n - 64):
+                    a, b = sig[new[i]], sig[new[i + 64]]
+                    self.assertFalse(a[0] & b[0] & (a[1] ^ b[1]), (n, i))
+        finally:
+            fontbuild.ALIAS = saved
 
 
 if __name__ == "__main__":
