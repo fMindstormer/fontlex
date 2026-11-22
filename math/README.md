@@ -51,7 +51,7 @@ font unit.
 
 | Lines | Count | HarfBuzz 14.6.0 | Core Text (macOS 27) |
 |---|---:|---:|---:|
-| Edge cases (`samples.EDGES`: incomplete and broken input) | 100 | 100% | 100% |
+| Edge cases (`samples.EDGES`: incomplete and broken input) | 139 | 100% | 100% |
 | Random formulas, some mistyped | 20,000 | 100% | 100% |
 
 The passes themselves, run in Python by `program.py`, match the model on
