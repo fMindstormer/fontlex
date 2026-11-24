@@ -35,7 +35,7 @@ code { font: .92em ui-monospace, monospace; }
 ul, ol { padding-left: 1.2rem; } li { margin: .25rem 0; }
 main { max-width: 66rem; }
 .nav { margin: 0 0 .75rem; }
-textarea#code { min-height: 46.7rem; white-space: pre; overflow-x: auto; font-size: 1.6rem; line-height: 2.7; }
+textarea#code { min-height: 46.7rem; white-space: pre; word-break: keep-all; overflow-x: auto; font-size: 1.6rem; line-height: 2.7; }
 .try { display: grid; gap: 1rem 1.5rem; align-items: start; }
 @media (min-width: 62rem) { .try { grid-template-columns: minmax(0, 1fr) 15rem; } .tips { order: 2; } }
 .try .editor { min-width: 0; }
@@ -134,8 +134,8 @@ and/or, w/o, km/h, C/C++, 10/23/2026</textarea>
     where they belong, but take no room of their own.</li>
     <li><b>Where it's checked.</b> HarfBuzz (the shaper in Chrome and Firefox) and Core Text (Safari, macOS)
     against a model of the notation. By screenshot, Chrome and Safari's WebKit on macOS, and Chromium and Firefox
-    on Linux and Windows. Native Windows apps, which shape with DirectWrite,
-    don't lay it out: DirectWrite ignores a kind of lookup the font relies on (<a href="https://github.com/fMindstormer/fontlex/blob/main/engines/README.md">details</a>).</li>
+    on Linux and Windows. Native Windows apps, which shape with DirectWrite, lay out 372 of the 387 lines checked
+    as HarfBuzz does; the others mix Greek and Latin letters inside a construct (<a href="https://github.com/fMindstormer/fontlex/blob/main/engines/README.md">details</a>).</li>
   </ul>
 
   <h2>How it works</h2>

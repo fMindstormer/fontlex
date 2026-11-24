@@ -30,6 +30,7 @@ CSS = """/* Fontlex Relaxed Math on your own page. Serve this file with the WOFF
 textarea.relaxed-math {
   font: 1.6rem/2.7 "Fontlex Relaxed Math", ui-monospace, monospace;
   white-space: pre;
+  word-break: keep-all;  /* else WebKit measures a line in pieces, as wide as each alone */
 }
 """
 
@@ -93,7 +94,7 @@ other 25 mix Greek and Latin); in Chrome 158, all but one of those, 1 pixel
 apart. Chrome 158's HarfBuzz (14.5, as in Firefox 158) mixes up glyph ids
 32,768 apart, fixed in 14.6.0, and the font's glyphs are ordered around it.
 Before accents, in Chrome 155, 348 of 349 lines were the same, with the same
-exception, and in Safari's WebKit 322 of 323, the last 1 pixel apart.
+exception. In Safari's WebKit all 388 are the same, Greek ones included.
 In native Windows apps, which shape text with DirectWrite, 372 of the 387
 lines checked come out as in HarfBuzz; the others mix Greek and Latin
 letters inside a construct, as in Chrome (engines/README.md in the

@@ -2,19 +2,20 @@
 """Check a math font in real browsers, by screenshot.
 
     python math/browsers.py pages OUT [--relaxed] [--n 300]
-    node math/browsers.mjs OUT chromium|firefox
-    python math/browsers.py compare OUT chromium|firefox
+    node math/browsers.mjs OUT chromium|firefox|webkit
+    python math/browsers.py compare OUT chromium|firefox|webkit
 
 `pages` writes pages that draw each line twice in one place: as text in the
 font, and as the font's outlines placed where HarfBuzz places them (an SVG).
 browsers.mjs screenshots each page showing one, then the other, and types
 lines into the demo page key by key and sets the same lines at once.
 `compare` then finds, for each line, pixels that differ by more than 2 px (at
-100 px per em; the layout's smallest step is 3 px), and whether typing ended
-where setting the text did. It exits with status 1 on a difference, apart
-from lines that mix Greek and Latin letters: Chrome and Firefox shape those in
-separate runs, so a construct across them stays as its characters (a known
-limit).
+100 px per em; the layout's smallest step is 3 px), whether the browser laid
+the line out as wide as HarfBuzz's advances (the caret and whatever follows
+go by that width), and whether typing ended where setting the text did. It
+exits with status 1 on a difference, apart from lines that mix Greek and
+Latin letters: Chrome and Firefox shape those in separate runs, so a
+construct across them stays as its characters (a known limit).
 The fonts come from build/; the outlines need only HarfBuzz, so the check
 runs wherever a browser does.
 """
@@ -90,7 +91,7 @@ def pages(args):
         page.write_text(f"""<!doctype html><meta charset=utf-8><style>
 @font-face{{font-family:M;src:url(data:font/woff2;base64,{woff2})}}
 body{{margin:0;background:#fff;position:relative;height:{len(meta) * ROW}px}}
-.t{{position:absolute;left:20px;font:{PX}px M;white-space:pre;color:#000}}
+.t{{position:absolute;left:20px;font:{PX}px M;white-space:pre;word-break:keep-all;color:#000}}
 .b{{display:inline-block;width:0;height:0}}
 .r{{position:absolute;left:0;overflow:visible}}
 body.text .r, body.ref .t{{visibility:hidden}}</style><body>{''.join(rows)}
@@ -124,14 +125,18 @@ def compare(args):
         too_light = ImageChops.subtract(spread(b, ImageChops.darker), a, 1.0, -128)
         return ImageChops.lighter(too_dark, too_light).point(lambda v: 255 if v else 0)
 
-    total, bad = 0, []
-    for pg in index["pages"]:
+    path = out / f"widths.{args.browser}.json"
+    widths = json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+    total, bad, wide = 0, [], []
+    for pn, pg in enumerate(index["pages"]):
         text, ref = (Image.open(pg["page"].replace(".html", f".{args.browser}.{c}.png")).convert("L")
                      for c in ("text", "ref"))
         w, h = min(text.width, ref.width), min(text.height, ref.height)
         text, ref = text.crop((0, 0, w, h)), ref.crop((0, 0, w, h))
         diff = ImageChops.lighter(missing(text, ref), missing(ref, text))
-        for row in pg["rows"]:
+        for rn, row in enumerate(pg["rows"]):
+            if widths and abs(off := widths[pn][rn] - row["width"] * index["px"] / 1000) >= 1:
+                wide.append((round(off), row["line"]))
             box = (0, row["top"], min(w, int(row["width"] * index["px"] / 1000) + 80), row["top"] + index["row"])
             n = diff.crop(box).histogram()[255]
             total += 1
@@ -143,12 +148,27 @@ def compare(args):
                 pair.paste(ref.crop(box), (0, index["row"]))
                 (out / "diffs").mkdir(exist_ok=True)
                 pair.save(out / "diffs" / f"{args.browser}-{len(bad)}.png")
-    known = [b for b in bad if any("Ͱ" <= ch <= "Ͽ" for ch in b[1])]
+    def greek(line):
+        return any("Ͱ" <= ch <= "Ͽ" for ch in line)
+
+    known = [b for b in bad if greek(b[1])]
     unknown = [b for b in bad if b not in known]
     print(f"{args.browser}: {total} lines, {total - len(bad)} the same as HarfBuzz's layout; "
           f"{len(known)} differ that mix Greek and Latin (a known limit in Chrome and Firefox), {len(unknown)} other")
     for diff, line in sorted(bad, reverse=True)[:15]:
         print(f"   {diff:7} px  {line!r}")
+    if widths:
+        # WebKit measures a line word by word (even with word-break: keep-all), so where the
+        # font reads across a space, the width it lays the line out at isn't what it draws
+        spaced = [w for w in wide if not greek(w[1]) and args.browser == "webkit" and " " in w[1].strip()]
+        odd = [w for w in wide if not greek(w[1]) and w not in spaced]
+        unknown += odd
+        print(f"{args.browser}: {total - len(wide)} lines laid out as wide as HarfBuzz's advances; "
+              f"of the others, {len(wide) - len(spaced) - len(odd)} mix Greek and Latin, "
+              + (f"{len(spaced)} have a space inside (WebKit measures words apart), " if args.browser == "webkit" else "")
+              + f"{len(odd)} other")
+        for off, line in sorted(odd, key=lambda w: -abs(w[0]))[:15]:
+            print(f"   {off:+7} px  {line!r}")
     # the text box without its outer 16 px: the frame's rounded corners and the resize grip are
     # repainted now and then (as on Windows when the demo flips font-kerning); the text starts inside
     shots = {}

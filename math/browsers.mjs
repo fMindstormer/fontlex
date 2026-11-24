@@ -1,13 +1,15 @@
-// Screenshots for math/browsers.py: node math/browsers.mjs OUT chromium|firefox
+// Screenshots for math/browsers.py: node math/browsers.mjs OUT chromium|firefox|webkit
 //
 // For each page browsers.py wrote, a full-page screenshot showing the text, and
-// one showing HarfBuzz's outlines. Then the demo page's text box twice: with
-// lines typed key by key, and with the same lines set at once (Chrome has kept
-// stale shaping while typing before; the demos work around it).
-// Chromium runs through playwright-core (CHROMIUM=path), Firefox through
-// puppeteer-core over WebDriver BiDi (FIREFOX=path), as extension/test_extension.mjs does.
+// one showing HarfBuzz's outlines, and the width the browser lays each line out
+// at (widths.KIND.json). Then the demo page's text box twice: with lines typed
+// key by key, and with the same lines set at once (Chrome has kept stale
+// shaping while typing before; the demos work around it).
+// Chromium and WebKit run through playwright-core (CHROMIUM=path; WebKit is
+// Playwright's own build, or WEBKIT=path), Firefox through puppeteer-core over
+// WebDriver BiDi (FIREFOX=path), as extension/test_extension.mjs does.
 import { createRequire } from "module";
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { pathToFileURL } from "url";
 
@@ -21,12 +23,14 @@ async function launch() {
     return { close: () => browser.close(), version: () => browser.version(),
              async page(width, height) { const p = await browser.newPage(); await p.setViewport({ width, height }); return p; } };
   }
-  const browser = await require("playwright-core").chromium.launch({ executablePath: process.env.CHROMIUM });
+  const engine = require("playwright-core")[kind === "webkit" ? "webkit" : "chromium"];
+  const browser = await engine.launch({ executablePath: kind === "webkit" ? process.env.WEBKIT : process.env.CHROMIUM });
   return { close: () => browser.close(), version: () => browser.version(), page: (width, height) => browser.newPage({ viewport: { width, height } }) };
 }
 
 const settle = (p) => p.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
 const browser = await launch();
+const widths = [];
 for (const pg of index.pages) {
   const width = Math.ceil(Math.max(...pg.rows.map((r) => r.width)) * index.px / 1000) + 80;
   const p = await browser.page(width, 400);
@@ -34,6 +38,7 @@ for (const pg of index.pages) {
   await p.evaluate(() => document.fonts.ready);
   await p.evaluate(() => align());
   await settle(p);
+  widths.push(await p.evaluate(() => [...document.querySelectorAll(".t")].map((t) => t.getBoundingClientRect().width)));
   for (const cls of ["text", "ref"]) {
     await p.evaluate((c) => { document.body.className = c; }, cls);
     await settle(p);
@@ -41,6 +46,7 @@ for (const pg of index.pages) {
   }
   await p.close();
 }
+writeFileSync(join(out, `widths.${kind}.json`), JSON.stringify(widths));
 for (const mode of ["typed", "fresh", "kerning"]) {
   const p = await browser.page(1000, 1400);
   await p.goto(pathToFileURL(index.demo).href);
