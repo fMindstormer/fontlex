@@ -1512,9 +1512,9 @@ def main():
             json.dump({"gsub_sets": font.pl.first_set + len(font.pl.mark_sets),
                        "finals": sorted([font.shown.get(name, name), d] for name, d in font.anchor.items())},
                       open(args.out + ".json", "w"))
-    plain = fb.reverse_chaining(f)[0]
     f.save(args.out)
-    if fb.reverse_chaining(TTFont(args.out, lazy=True))[0] < plain:
+    # (counted in the saved file: named() has saved the font once already, so f may hold wrapped ones too)
+    if fb.reverse_chaining(TTFont(args.out, lazy=True))[1]:
         sys.exit(f"{args.out}: saving put reverse chaining lookups inside Extension ones, which DirectWrite skips")
     f.flavor = "woff2"
     f.save(os.path.splitext(args.out)[0] + ".woff2")

@@ -83,6 +83,7 @@ EDGES = [
     "\\frac{\\frac{\\frac{a}{b}}{c}}{d}", "\\frac{\\frac{a}{b}}{\\frac{c}{d}}", "x^{y^{z^{w}}}",
     "\\sqrt{\\sqrt{\\sqrt{x}}}", "\\sqrt{\\sqrt{\\sqrt{\\sqrt{x}}}}", "\\alpha\\beta", "\\alphabet",
     "\\frac{" + "a" * 30 + "}{b}", "\\sqrt{" + "x" * 40 + "}", "x^" + "\\alpha",
+    "x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}", "\\sqrt{" + "x" * 23 + "}", "\\sqrt{" + "x" * 24 + "}",    # 30, 30, 31
     "\\frac{a}{b}\\frac{c}{d}", "x_1^2_3^4", "x^1_2^3", "a_{b_{c_{d}}}", "\\frac{a^{b}}{c_{d}}",
     "\\over", "\\overline", "\\overline{}", "\\overline{x", "\\overline x", "\\overlinex{a}", "\\overline{x^2}",
     "\\overline{\\overline{\\overline{x}}}", "\\overline{\\overline{\\overline{\\overline{x}}}}",

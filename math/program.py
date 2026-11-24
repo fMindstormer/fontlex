@@ -28,6 +28,7 @@ simulate(line) runs the passes in Python; mathfont.py compiles them.
 """
 
 import layout as L
+import relaxed as R
 
 TRACKS = ("S", "A", "B", "C")
 ORDER = ("G",) + TRACKS            # a token's glyphs, in the order they follow each other
@@ -303,8 +304,9 @@ def relaxed_check_b_input(s, virtual):
     return ("v",)
 
 
-def check_b_step(count, v):
-    """Characters since a construct outside all others began."""
+def check_b_step(count, v, limit=L.MAX_CHARS):
+    """Characters since a construct outside all others began, up to one
+    past the notation's limit."""
     k = v[0]
     if k == "vstart":
         count = 0 if v[1] == 0 else count
@@ -318,9 +320,9 @@ def check_b_step(count, v):
         count = 0 if v[1] == 0 else count + v[2]
     elif k == "sp":
         count = 0 if v[1] == 0 else count + 1
-    count = min(count, L.MAX_CHARS + 1)
+    count = min(count, limit + 1)
     if k in ("C", "vC"):
-        return ("C", v[1] == 1 and count > L.MAX_CHARS), count
+        return ("C", v[1] == 1 and count > limit), count
     return (v if k == "sp" else ("x",)), count
 
 
@@ -966,14 +968,19 @@ def high_input(a, c):
     return a
 
 
-def high_step(hi, v):
+def high_for(limit):
+    """HIGH for a notation whose constructs hold at most `limit` characters."""
+    return (limit + 1) * WIDTH[0] // BASE + 1
+
+
+def high_step(hi, v, high=HIGH):
     k = v[0]
     if k == "r":
         return ("x",), 0
     if k == "d":
-        return ("x",), max(-HIGH, min(HIGH, hi + v[1]))
+        return ("x",), max(-high, min(high, hi + v[1]))
     _, tag, lo, delta, ok, keep = v
-    used = max(-HIGH, min(HIGH, hi + delta)) if ok else 0
+    used = max(-high, min(high, hi + delta)) if ok else 0
     return (tag, used * BASE + lo if ok else 0), (used if keep else 0)
 
 
@@ -1017,10 +1024,11 @@ def merge_count(level, kind):
     return fn
 
 
-def counter(level, kind):
+def counter(level, kind, high=HIGH):
     """The passes of one counter (see frac_step, sqrt_step and pair_step,
-    which they compute)."""
+    which they compute), its high digit kept within `high`."""
     ops = counter_op(kind)
+    step = high_step if high == HIGH else (lambda h, v: high_step(h, v, high))
     P = [Derive("A", ["S"], lambda a, s: ("s", s), keys=[width_key]),
          Derive("A", ["B"], lambda a, b, f=width_input(level, kind): f(None, a[1], b), keys=[result_key])]
     if kind != "pair":
@@ -1031,7 +1039,7 @@ def counter(level, kind):
           Map("A", lambda v: low_input(ops(v))),
           LTR("A", low_step, ("out", 0), view=width_view), strip("A"),
           Derive("A", ["C"], high_input),
-          LTR("A", high_step, 0, view=width_view), strip("A"),
+          LTR("A", step, 0, view=width_view), strip("A"),
           Derive("B", ["A", "C"], merge_count(level, kind)),
           Map("A", lambda v: BLANK), Map("C", lambda v: BLANK)]
     return P
@@ -1249,7 +1257,8 @@ def program(relaxed=False):
           (Derive("B", ["S", "G"], lambda b, s, g: relaxed_check_b_input(s, g), spaces=True,
                   keys=[None, is_virtual]) if relaxed else
            Derive("B", ["S"], lambda b, s: check_b_input(s), spaces=True)),
-          LTR("B", check_b_step, 0, spaces=True), strip("B", spaces=True),
+          LTR("B", (lambda c, v: check_b_step(c, v, R.MAX_CHARS)) if relaxed else check_b_step, 0, spaces=True),
+          strip("B", spaces=True),
           Derive("S", ["A", "B"], merge_checks), Map("S", restore_space, spaces=True),
           Map("A", lambda v: BLANK), Map("B", lambda v: BLANK)]
     for level in range(1, L.MAX_DEPTH + 1):
@@ -1274,9 +1283,10 @@ def program(relaxed=False):
     if relaxed:
         P.append(Derive("S", ["G"], mark_virtual, keys=[is_virtual]))
     P += [Map(tr, lambda v: BLANK) for tr in "ABC"]
+    high = high_for(R.MAX_CHARS) if relaxed else HIGH
     for level in range(L.MAX_DEPTH, 0, -1):
         for kind in ("frac", "sqrt", "pair"):
-            P += counter(level, kind)
+            P += counter(level, kind, high)
         P += pads(level)
     for level in range(L.MAX_DEPTH, 0, -1):
         P += [Derive("C", ["S"], numerator_flag(level)),

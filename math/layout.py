@@ -58,7 +58,7 @@ PAREN = (240, 180, 120)        # a binomial's parenthesis: its box's width
 
 MAX_DEPTH = 3       # constructs inside constructs
 MAX_FRACTIONS = 2   # fractions (and binomials) inside fractions
-MAX_CHARS = 24      # characters in a construct that isn't inside another
+MAX_CHARS = 30      # characters in a construct that isn't inside another
 BRACE_LIMIT = MAX_DEPTH + 1   # braces open at once
 
 SYMBOLS = {
@@ -335,18 +335,20 @@ def parse(toks):
     return out
 
 
-def validate(items, toks, depth=0, fractions=0):
-    """Mark which constructs are laid out (see the module docstring)."""
+def validate(items, toks, depth=0, fractions=0, chars=None):
+    """Mark which constructs are laid out (see the module docstring);
+    `chars` is the limit on a construct outside all others (MAX_CHARS)."""
+    chars = MAX_CHARS if chars is None else chars
     for it in items:
         if not isinstance(it, Node):
             continue
         d, f = depth + 1, fractions + is_frac(it)
         has_space = any(toks[t][0] == " " for t in region(it, toks))
         last = toks[it.end][2] if it.end is not None else toks[-1][2]
-        long = depth == 0 and last - toks[it.start][1] > MAX_CHARS
+        long = depth == 0 and last - toks[it.start][1] > chars
         it.ok = it.complete and not has_space and d <= MAX_DEPTH and f <= MAX_FRACTIONS and not long
         for part in it.parts:
-            validate(part, toks, d, f)
+            validate(part, toks, d, f, chars)
 
 
 def region(node, toks):

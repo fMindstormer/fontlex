@@ -20,6 +20,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent))
 import layout as L  # noqa: E402
+import relaxed as R  # noqa: E402
 import samples  # noqa: E402
 import test_fontlex  # noqa: E402
 import verify  # noqa: E402
@@ -344,7 +345,7 @@ def main():
         "SAMPLE": html.escape(sample),
         "FRONT": f"{len(front.front()) if args.relaxed else 0:,}",
         "SYMBOLS": symbols,
-        "DEPTH": str(L.MAX_DEPTH), "FRACTIONS": str(L.MAX_FRACTIONS), "CHARS": str(L.MAX_CHARS),
+        "DEPTH": str(L.MAX_DEPTH), "FRACTIONS": str(L.MAX_FRACTIONS), "CHARS": str(R.MAX_CHARS if args.relaxed else L.MAX_CHARS),
         "PASSES": f"{len(program.program()):,}",
         "GLYPHS": f"{len(font.getGlyphOrder()):,}",
         "LOOKUPS": f"{len(font['GSUB'].table.LookupList.Lookup):,} substitution and "

@@ -39,9 +39,9 @@ Ordinary text must stay ordinary, so the rules are narrow:
   underscore: 1_000_000, 1.09_01 and T_U_INT stay text.
 - sqrt and the accents' names count after no letter, digit, point or
   "_": asqrt(x) and np.dot(x) stay text.
-- A space inside a construct, or past layout.py's limits on depth and
-  length, leaves it as its characters (as in layout.py: WebKit gives a
-  space's glyphs a space's width).
+- A space inside a construct, or past layout.py's limits on depth, or
+  MAX_CHARS here on length, leaves it as its characters (as in layout.py:
+  WebKit gives a space's glyphs a space's width).
 - Parentheses nest at most BRACE_LIMIT deep: one opened past that, and the
   rest of the line, is text, as an unmatched parenthesis is.
 
@@ -56,6 +56,10 @@ OPERATORS = set("+-=<>*·×÷±≤≥≠→⇒")
 EDGES = OPERATORS | set(".,;:!?[]{}()~\"'`")    # what may touch a fraction
 ACCENTS = tuple(L.ACCENTS)
 COMMANDS = ("sqrt",) + ACCENTS
+# Characters in a construct outside all others: fewer than LaTeX's, which
+# spends more of them on the same formula. 30 would cost 6,000 glyphs and
+# push some reverse chaining lookups into extension ones (mathfont.main).
+MAX_CHARS = 24
 
 
 def lex(line):
@@ -428,7 +432,7 @@ class Layout(L.Layout):
         p = Parser(line)
         self.line, self.toks = line, p.toks
         self.items = p.seq(0, len(p.toks) - 1)
-        L.validate(self.items, self.toks)
+        L.validate(self.items, self.toks, chars=MAX_CHARS)
         self.ink = []
 
 

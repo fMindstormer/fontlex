@@ -34,11 +34,12 @@ plain text, `(a+b)/(c+d)` or `x^2`, and leaves ordinary text alone: see
   `\to`, `\infty` and `\sum`: the list is `SYMBOLS` in `layout.py`.
 
 Constructs nest 3 deep, with at most 2 fractions (or binomials) inside one
-another and at most 24 characters in a construct that isn't inside
-another. Text inside a fraction or a script is set smaller, in three
-sizes. Anything incomplete (`\frac{a}{`), or past those limits, stays as
-its characters until it isn't, so a formula appears as you finish typing
-it. A space inside a construct also leaves it as characters: WebKit gives
+another and at most 30 characters in a construct that isn't inside
+another: the quadratic formula's `\frac{-b\pm\sqrt{b^2-4ac}}{2a}` is 30.
+Text inside a fraction or a script is set smaller, in three sizes.
+Anything incomplete (`\frac{a}{`), or past those limits, stays as its
+characters until it isn't, so a formula appears as you finish typing it.
+A space inside a construct also leaves it as characters: WebKit gives
 every glyph of a space character a space's width, which would break the
 layout. Spaces between formulas are fine. Each line is read on its own.
 
@@ -51,7 +52,7 @@ font unit.
 
 | Lines | Count | HarfBuzz 14.6.0 | Core Text (macOS 27) |
 |---|---:|---:|---:|
-| Edge cases (`samples.EDGES`: incomplete and broken input) | 139 | 100% | 100% |
+| Edge cases (`samples.EDGES`: incomplete and broken input, the limits) | 142 | 100% | 100% |
 | Random formulas, some mistyped | 20,000 | 100% | 100% |
 
 The passes themselves, run in Python by `program.py`, match the model on
@@ -63,38 +64,39 @@ places them. Two screenshots, one with each, are compared pixel by pixel
 with 2 px of tolerance at 100 px per em, where the layout's smallest step
 (30 units) is 3 px. `browsers.py` also checks that the browser lays each
 line out as wide as HarfBuzz's advances: the caret and whatever follows go
-by that width. Results on its 436 lines:
+by that width. Results on its 439 lines:
 
 - **Chromium 139 and Firefox 160, on Linux and on Windows** (CI's Browsers
-  workflow), **and Chrome 158:** 435 of 436. The other, `\vec{αβ}`, mixes
+  workflow), **and Chrome 158:** 438 of 439. The other, `\vec{αβ}`, mixes
   Greek and Latin letters inside a construct, which these browsers shape
   as two runs.
-- **WebKit (macOS 27):** 435 of 436 drawn the same in Playwright's build
-  of WebKit 27.2, Greek letters included. The other is an empty
-  `\overrightarrow{}`, an arrowhead that takes no room, which WebKit
-  doesn't draw. Safari's WebKit draws 433: it also left unpainted the end
-  of a line with a space inside and the tops of
-  `\binom{\binom{a}{b}}{c}`'s outer parentheses. With `word-break:
+- **WebKit (macOS 27):** 438 of 439 drawn the same, in Safari's WebKit
+  and in Playwright's build of WebKit 27.2, Greek letters included. The
+  other is an empty `\overrightarrow{}`, an arrowhead that takes no room,
+  which WebKit doesn't draw. With the lines placed otherwise, Safari's
+  WebKit once left unpainted the end of a line with a space inside and the
+  tops of `\binom{\binom{a}{b}}{c}`'s outer parentheses. With `word-break:
   keep-all` every line is as wide as drawn but 9 with a space inside and
-  `\vec{αβ}`; without it, 202 aren't (see the limits below).
+  `\vec{αβ}`; without it, 203 aren't (see the limits below).
 - **Chrome 155:** the same on the 340 lines checked before `\overline`, the
   accents and `\binom`.
 
 Typing a formula into a text box key by key ends with the same pixels as
 setting the text at once, in all of these browsers (WebKit: Playwright's).
 
-The font has 39,939 glyphs, 2,029 substitution lookups (about 1,620 of
-them nested lookups shared by every pass, in 3,209 subtables) and 310
-positioning lookups. It is 8.8 MB as TrueType and 1.1 MB as WOFF2. Most
+The font has 45,763 glyphs, 2,413 substitution lookups (2,000 of them
+nested lookups shared by every pass, in 3,727 subtables) and 374
+positioning lookups. It is 11.4 MB as TrueType and 1.3 MB as WOFF2. Most
 glyphs hold a value on a track for a while, and a glyph id goes on to
 another use once no token can hold its value (`Font.recycle`): a later
 value, a two-step pass's go-between (below), or, at the end, a glyph
 drawn as a mark with no advance, such as a character in a fraction
 (`Font.reuse`). Every glyph is a mark through all of it, so no lookup can
-tell one use from another. Without that the font had 64,916 glyphs, 600
-short of OpenType's 65,535; now it has room for about 25,500 more.
-Shaping takes about 0.3 ms per character in HarfBuzz (12 ms for a
-40-character line).
+tell one use from another. Without that the font had 64,916 glyphs with
+constructs of 24 characters, 600 short of OpenType's 65,535; with it,
+39,939, and the room went to 30. Shaping takes about 0.24 ms per
+character in HarfBuzz (9 ms for a 40-character line), a third more than
+with 24.
 
 ## How it works
 
@@ -182,8 +184,12 @@ Browsers workflow runs it in Chromium and Firefox on Linux and Windows:
 
 ## Known limits
 
-- The limits above. More depth, more fractions or longer constructs would
-  mean more passes and more glyphs, and the lookup list is the budget.
+- The limits above. More depth, more fractions or longer constructs mean
+  more passes and more glyphs. 30 characters took 5,800 glyphs more than
+  24 did, 36 took 12,200 and 40 took 15,200, with a TrueType file twice
+  the size; at 32, neither HarfBuzz's nor fontTools' table packer could
+  lay out the substitution table. A third fraction inside two would
+  hardly fit anyway: `\frac{\frac{\frac{a}{b}}{c}}{d}` is 31 characters.
 - In a fraction, the caret stays at the fraction's start while its glyphs
   are drawn where they belong, since they take no room of their own.
   Selecting part of a fraction highlights nothing visible.
@@ -329,7 +335,12 @@ HarfBuzz.
 
 ### Its limits
 
-- Fontlex Math's limits, and its caret and selection behavior.
+- Fontlex Math's limits, and its caret and selection behavior, but at
+  most 24 characters in a construct that isn't inside another, not 30.
+  The notation says the same in fewer (the quadratic formula's
+  `(-b+-sqrt(b^2-4ac))/(2a)` is 24), and 30 would take 6,000 more glyphs
+  and push 4 reverse chaining lookups into extension ones, where
+  DirectWrite ignores them.
 - A space inside a construct leaves it as its characters: `(a + b)/2`
   stays text, `(a+b)/2` doesn't.
 - `a/b` on its own stays text (as `w/o` does); `(a)/(b)` or `x = a/b`
