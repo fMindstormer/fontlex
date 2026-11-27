@@ -5,11 +5,14 @@ GSUB features on, searched by bisection.
 
     python engines/first_difference.py FONT.ttf directwrite TEXT
 
+The text may spell characters as \\uXXXX (`research\\uFE00`).
+
 The copies patch the features' lookup counts in the font's bytes, so each
 is made at once; a feature's lookup indices must be in increasing order,
 as they are in the Fontlex fonts.
 """
 
+import re
 import struct
 import sys
 from pathlib import Path
@@ -64,6 +67,7 @@ def shaped(shaper_class, data, text):
 
 def main():
     path, other, text = sys.argv[1:4]
+    text = re.sub(r"\\u([0-9A-Fa-f]{4})", lambda m: chr(int(m[1], 16)), text)
     data = Path(path).read_bytes()
     feats = features(data)
     top = max(max(ix) for _, ix in feats) + 1

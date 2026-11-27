@@ -8,6 +8,8 @@ stressed vowel bold in the accent color, reduced vowels in a muted blue,
 silent letters pale. Other text is drawn as the base font draws it. A word is
 letters, with apostrophes between letters (`don't`). The passes:
 
+0. A letter and a reading marker after it, which cmap 14 makes one glyph
+   (marked_letters), back to the two glyphs.
 1. Right to left: each word's last letter becomes its "final" variant.
 2. Left to right: each word's first letter becomes an "initial" variant that
    also records the second letter (or "initial and final", for a one-letter
@@ -79,6 +81,34 @@ def read_lexicon(directory):
     return (read_table(d / "words.tsv", 2), read_table(d / "homographs.tsv", 3), read_table(d / "cues.tsv", 2))
 
 
+def marked_letters(b, chars, marker):
+    """A glyph for each letter followed by each reading marker, given by a
+    variation sequence (cmap format 14), and what the first lookup splits
+    each into: the letter and the marker's glyph. DirectWrite drops a
+    variation selector before GSUB, even one the cmap maps, unless the font
+    has a sequence for it (engines/README.md); HarfBuzz and Core Text use a
+    sequence too, so every engine's lookups get the letter and the marker."""
+    from fontTools.ttLib.tables._c_m_a_p import CmapSubtable
+    cmap = b.font.getBestCmap()
+    split, uvs = {}, {}
+    for kind, ch in MARKERS.items():
+        n = ord(ch) - 0xFE00 + 1             # variation selector n
+        for c in chars:
+            g = cmap.get(ord(c))
+            if g is None:
+                continue
+            v = f"{g}.vs{n}"
+            if v not in split:
+                split[v] = [g, marker[kind]]
+                b.composite(v, [(g, 0, 0)], b.advance(g))
+            uvs.setdefault(ord(ch), []).append((ord(c), v))
+    t = CmapSubtable.newSubtable(14)
+    t.platformID, t.platEncID, t.language = 0, 5, 0xFF
+    t.cmap, t.uvsDict = {}, uvs
+    b.font["cmap"].tables.append(t)
+    return split
+
+
 def record(index, lookup_index):
     r = ot.SubstLookupRecord()
     r.SequenceIndex, r.LookupListIndex = index, lookup_index
@@ -139,6 +169,7 @@ class EnglishFont:
             self.marker[kind] = f"uni{ord(ch):04X}"
             b.add_base_glyph(self.marker[kind], ord(ch), 0)
         self.plain = sorted(self.letter, key=b.gid)
+        self.split = marked_letters(b, LETTERS + LETTERS.upper(), self.marker)
         self.forms = ["F", "IF"] + [f"I{y}" for y in SECOND] + [f for fs in CUE_FORMS.values() for f in fs]
         self.form = {}                   # (glyph, form) -> variant
         self.hinted = {}                 # (glyph, hint) -> hinted glyph
@@ -187,6 +218,8 @@ class EnglishFont:
 
         letters, finals = self.plain, self.all_forms("F")
         any_form = letters + self.all_forms(*self.forms)
+        # 0. A letter and a reading marker, one glyph by cmap 14, back to two.
+        add(fb.lookup(2, [fb.multiple(self.split)]))
         # 1. Final letters, right to left: a letter followed by a letter (or
         # an apostrophe and a letter) stays; any other becomes final.
         subtables = []

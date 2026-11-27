@@ -14,21 +14,27 @@ reading's hints:
 
 - **A marker beats a cue.** *the record*`U+FE01` is reCORD.
 - **Put one only right after a pair word,** as `annotate.py` does. After
-  another word that ends a word, it does nothing. Elsewhere the engines
-  differ: HarfBuzz (Chrome, Firefox) looks past a marker it doesn't match,
-  and Core Text (Safari) treats it as a break. So *les*`U+FE00` *amis*
-  keeps its liaison in HarfBuzz and loses it in Core Text.
+  another word, it changes nothing in that word, but a rule that reads
+  past the word stops at it: *les*`U+FE00` *amis* loses its liaison, in
+  HarfBuzz (Chrome, Firefox), Core Text (Safari) and DirectWrite (Windows
+  apps) alike. After a space, HarfBuzz looks past it and the others drop
+  it, so *les* `U+FE00`*amis* keeps its liaison.
 - **Other fonts don't show them.** Variation selectors are
   default-ignorable characters: they have no width and draw nothing.
   They survive copy and paste.
 - **How the font reads them.** The fonts map both characters to empty,
   zero-width glyphs, and pass 4 (pairs) tries a rule for the marker before
-  the rules for cue words.
+  the rules for cue words. Each letter followed by a marker is also a
+  variation sequence in the cmap (format 14), for a glyph of its own that
+  the first lookup splits back into the letter and the marker's glyph:
+  DirectWrite drops a variation selector the font has no sequence for
+  before the lookups run, so without them it never saw a marker
+  ([engines/](../engines/README.md)).
 
 The meaning of the first and second selector is this project's own
 convention, not a Unicode standard. Unicode registers variation sequences
 only for particular base characters, and a letter followed by U+FE00 isn't
-one of them. Text marked this way is meant for these fonts.
+one of them, though the fonts list it. Text marked this way is meant for these fonts.
 
 ## Marking text with a tagger
 

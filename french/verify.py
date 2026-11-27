@@ -37,6 +37,7 @@ from frfont import HINT_SETS, HINTS, MARKERS  # noqa: E402
 LETTERS = frfont.LETTERS + frfont.LETTERS.upper() + "Ÿ"
 WORD = re.compile(f"[{LETTERS}]+")
 READING = {ch: kind for kind, ch in MARKERS.items()}
+MARKER_GLYPHS = {f"uni{ord(ch):04X}" for ch in MARKERS.values()}   # in a letter's cluster after cmap 14
 Lexicon = frfont.Lexicon
 
 
@@ -105,7 +106,7 @@ class View:
         out = ["." if c in READING else "?" for c in text]       # a marker draws nothing
         for gid, cluster, *_ in self.shaper.shape(text)[0]:
             name = self.order[gid] if gid is not None else ""    # None: drawn by a fallback font
-            if text[cluster] in READING:
+            if text[cluster] in READING or name in MARKER_GLYPHS:
                 continue
             if ".h" in name:
                 out[cluster] = name[name.index(".h") + 2]
