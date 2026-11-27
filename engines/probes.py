@@ -92,7 +92,8 @@ DEFAULT_POS = """
     feature ss01 { sub z by Z; } ss01;"""
 
 # Probes with options: the features asked for; `only`, to pass DirectWrite
-# just those, not the defaults with them (dwshape --only); `positions`, to
+# just those, not the defaults with them (dwshape --only); `layout`, to lay
+# the text out with IDWriteTextLayout (dwshape --layout); `positions`, to
 # compare positions too; `selector`, U+FE00 (variation selector 1, the
 # Fontlex noun marker) mapped to an empty glyph; `uvs`, b + U+FE00 mapped to
 # B in a cmap format 14 subtable.
@@ -100,10 +101,16 @@ OPTION_PROBES = {
     "default substitutions, beside a stylistic set": (
         "abcdegh", DEFAULT_SUBS, {"features": ("ss01",), "only": True}),
     "default substitutions, with the defaults passed too": ("abcdegh", DEFAULT_SUBS, {"features": ("ss01",)}),
+    "default substitutions, beside a stylistic set, in a text layout": (
+        "abcdegh", DEFAULT_SUBS, {"features": ("ss01",), "only": True, "layout": True}),
     "default positioning, beside a stylistic set": (
         "Tox\u0301\u0300", DEFAULT_POS, {"features": ("ss01",), "positions": True, "only": True}),
     "default positioning, with the defaults passed too": (
         "Tox\u0301\u0300", DEFAULT_POS, {"features": ("ss01",), "positions": True}),
+    "default positioning, beside a stylistic set, in a text layout": (
+        "Tox\u0301\u0300", DEFAULT_POS, {"features": ("ss01",), "positions": True, "only": True, "layout": True}),
+    "the same, no features, in a text layout": (
+        "Tox\u0301\u0300", DEFAULT_POS, {"positions": True, "layout": True}),
     "a variation selector in a context rule": ("ab\uFE00", """
         feature calt { sub b' uniFE00 by B; } calt;""", {"selector": True}),
     "a variation selector as lookahead, past a letter": ("ab\uFE00", """
@@ -179,7 +186,7 @@ def main():
 
         def glyphs(shaper):
             out = []
-            only = {"only": True} if opts.get("only") and shaper is T.DirectWrite else {}
+            only = {k: True for k in ("only", "layout") if opts.get(k)} if shaper is T.DirectWrite else {}
             for g, _, x, y in shaper(data, features=features, **only).shape(text)[0]:
                 name = order[g] if g is not None else "None"
                 out.append(f"{name}@{x:.0f},{y:.0f}" if opts.get("positions") else name)

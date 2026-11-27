@@ -41,8 +41,8 @@ jobs:
         run: |
           python engines/compare.py build/Fontlex-English.ttf directwrite --features ss01 --only "a research"
           python engines/compare.py build/Fontlex-English.ttf directwrite --features ss01 "a research"
-          python engines/compare.py build/Fontlex-English.ttf directwrite 'research\uFE00' 'can research\uFE00.' 'a research\uFE01.'
-          python engines/compare.py build/Fontlex-French.ttf directwrite 'elle sens\uFE00.'
+          python engines/compare.py build/Fontlex-English.ttf directwrite 'can research\uFE00.' 'a research\uFE01.'
+          python engines/compare.py build/Fontlex-French.ttf directwrite 'elle sens\uFE00.' 'les\uFE00 amis' 'les \uFE00amis'
           python engines/first_difference.py build/Fontlex-English.ttf directwrite 'can research\uFE00.'
           python engines/first_difference.py build/Fontlex-French.ttf directwrite 'elle sens\uFE00.'
       - name: The first lookup where DirectWrite parts from HarfBuzz

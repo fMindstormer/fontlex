@@ -10,6 +10,8 @@ vowel, is bold green, with a green tie under the space or hyphen. Other text
 is drawn as the base font draws it. A word is letters; an apostrophe or a
 hyphen ends one (`l'homme`, `peut-être`). The passes:
 
+0. A letter and a reading marker after it, which cmap 14 makes one glyph
+   (enfont.marked_letters), back to the two glyphs.
 1. Right to left: each word's last letter becomes its "final" variant.
 2. Left to right: each word's first letter becomes an "initial" variant that
    also records the second letter (or "initial and final", for a one-letter
@@ -50,7 +52,7 @@ sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE.parent / "markdown"))
 sys.path.insert(0, str(HERE.parent / "english"))
 import fontbuild as fb  # noqa: E402
-from enfont import HINT_SETS, MARKERS, context_subtables, coverage, read_table, record  # noqa: E402
+from enfont import HINT_SETS, MARKERS, context_subtables, coverage, marked_letters, read_table, record  # noqa: E402
 
 LETTERS = "abcdefghijklmnopqrstuvwxyzàâæçéèêëîïôœùûüÿ"
 LINKS_TO = set("aeiouyàâæéèêëîïôœùûüÿh")       # a liaison links to a vowel, or an h muet
@@ -122,6 +124,7 @@ class FrenchFont:
             self.marker[kind] = f"uni{ord(ch):04X}"
             b.add_base_glyph(self.marker[kind], ord(ch), 0)
         self.plain = sorted(self.letter, key=b.gid)
+        self.split = marked_letters(b, LETTERS + LETTERS.upper(), self.marker)
         self.form = {}                   # (glyph, form) -> variant
         self.hinted = {}                 # (glyph, hint) -> hinted glyph
         for g in self.plain:
@@ -205,6 +208,8 @@ class FrenchFont:
         letters = self.plain
         finals = self.forms_of(letters, "F")
         any_form = letters + list(self.form.values())
+        # 0. A letter and a reading marker, one glyph by cmap 14, back to two.
+        add(fb.lookup(2, [fb.multiple(self.split)]))
         # 1. Final letters, right to left: a letter followed by a letter stays;
         # any other becomes final.
         subtables = []

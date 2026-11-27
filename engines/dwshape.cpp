@@ -1,7 +1,7 @@
 // Shape text with DirectWrite, the shaper behind Windows' own text APIs, for
 // the Fontlex checks (test_fontlex.DirectWrite).
 //
-//     dwshape FONT.ttf [--only] [FEATURE ...]
+//     dwshape FONT.ttf [--layout] [--only] [FEATURE ...]
 //
 // Reads one line per text from stdin, the text's UTF-8 bytes in hex, and
 // writes one line per text: the advance width, then for each glyph its id,
@@ -9,15 +9,17 @@
 // Like an app, it splits the text into script runs first and shapes each run
 // on its own (IDWriteTextAnalyzer::AnalyzeScript, GetGlyphs,
 // GetGlyphPlacements). A FEATURE is a tag such as ss01, or tag=value
-// (ss01=0 turns it off). DirectWrite applies its default features (calt,
-// kern, mark and the rest) only to a run it is passed no features for, so,
-// as an app must, dwshape passes the defaults along with the FEATUREs;
-// --only passes just the FEATUREs.
+// (ss01=0 turns it off). Passed any features, DirectWrite leaves out its
+// discretionary defaults (calt, liga, clig, kern), so, as an app must,
+// dwshape passes HarfBuzz's defaults along with the FEATUREs; --only passes
+// just the FEATUREs. --layout lays the text out with IDWriteTextLayout
+// instead, the features set with SetTypography, and reads the glyph runs it
+// draws.
 //
 // Build (Visual Studio's x64 tools): cl /nologo /std:c++20 /O2 /EHsc /utf-8 dwshape.cpp dwrite.lib
 
 #include <windows.h>
-#include <dwrite.h>
+#include <dwrite_3.h>
 
 #include <algorithm>
 #include <cstdio>
@@ -91,6 +93,60 @@ struct Sink : IDWriteTextAnalysisSink {
     HRESULT STDMETHODCALLTYPE SetNumberSubstitution(UINT32, UINT32, IDWriteNumberSubstitution *) override { return S_OK; }
 };
 
+// Collects the glyph runs a text layout draws, at one DIP per pixel, unsnapped.
+struct Renderer : IDWriteTextRenderer {
+    std::string out;    // " id index x y" for each glyph
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID id, void **out_) override {
+        if (id == __uuidof(IUnknown) || id == __uuidof(IDWritePixelSnapping) ||
+            id == __uuidof(IDWriteTextRenderer)) {
+            *out_ = this;
+            return S_OK;
+        }
+        *out_ = nullptr;
+        return E_NOINTERFACE;
+    }
+    ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
+    ULONG STDMETHODCALLTYPE Release() override { return 1; }
+    HRESULT STDMETHODCALLTYPE IsPixelSnappingDisabled(void *, BOOL *disabled) override {
+        *disabled = TRUE;
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE GetCurrentTransform(void *, DWRITE_MATRIX *m) override {
+        *m = {1, 0, 0, 1, 0, 0};
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE GetPixelsPerDip(void *, FLOAT *ppd) override {
+        *ppd = 1;
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE DrawGlyphRun(void *, FLOAT x, FLOAT, DWRITE_MEASURING_MODE, const DWRITE_GLYPH_RUN *run,
+                                           const DWRITE_GLYPH_RUN_DESCRIPTION *desc, IUnknown *) override {
+        std::vector<long> first(run->glyphCount, -1);
+        for (long i = long(desc->stringLength) - 1; i >= 0; i--)
+            first[desc->clusterMap[i]] = long(desc->textPosition) + i;
+        char buf[96];
+        for (UINT32 g = 0; g < run->glyphCount; g++) {
+            if (first[g] < 0) first[g] = g ? first[g - 1] : long(desc->textPosition);
+            const DWRITE_GLYPH_OFFSET o = run->glyphOffsets ? run->glyphOffsets[g] : DWRITE_GLYPH_OFFSET{0, 0};
+            std::snprintf(buf, sizeof buf, " %u %ld %.3f %.3f", run->glyphIndices[g], first[g], x + o.advanceOffset,
+                          o.ascenderOffset);
+            out += buf;
+            x += run->glyphAdvances[g];
+        }
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE DrawUnderline(void *, FLOAT, FLOAT, const DWRITE_UNDERLINE *, IUnknown *) override {
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE DrawStrikethrough(void *, FLOAT, FLOAT, const DWRITE_STRIKETHROUGH *, IUnknown *) override {
+        return S_OK;
+    }
+    HRESULT STDMETHODCALLTYPE DrawInlineObject(void *, FLOAT, FLOAT, IDWriteInlineObject *, BOOL, BOOL,
+                                               IUnknown *) override {
+        return S_OK;
+    }
+};
+
 static int fail(const char *what, HRESULT hr) {
     std::printf("ERR %s 0x%08lx\n", what, (unsigned long)hr);
     std::fflush(stdout);
@@ -111,7 +167,7 @@ static std::wstring from_hex(const std::string &hex) {
 
 int wmain(int argc, wchar_t **argv) {
     if (argc < 2) {
-        std::fprintf(stderr, "usage: dwshape FONT.ttf [--only] [FEATURE ...]\n");
+        std::fprintf(stderr, "usage: dwshape FONT.ttf [--layout] [--only] [FEATURE ...]\n");
         return 2;
     }
     IDWriteFactory *factory;
@@ -137,9 +193,16 @@ int wmain(int argc, wchar_t **argv) {
     if (FAILED(hr = factory->CreateTextAnalyzer(&analyzer))) return fail("CreateTextAnalyzer", hr);
 
     std::vector<DWRITE_FONT_FEATURE> features;
+    bool layout = false, only = false;
     int first = 2;
-    const bool only = argc > 2 && wcscmp(argv[2], L"--only") == 0;
-    if (only) first++;
+    for (; first < argc && argv[first][0] == L'-'; first++) {
+        if (wcscmp(argv[first], L"--layout") == 0) layout = true;
+        else if (wcscmp(argv[first], L"--only") == 0) only = true;
+        else {
+            std::fprintf(stderr, "unknown option\n");
+            return 2;
+        }
+    }
     for (int i = first; i < argc; i++) {    // ss01, or ss01=0 to turn one off
         const wchar_t *t = argv[i];
         size_t n = wcslen(t);
@@ -151,23 +214,70 @@ int wmain(int argc, wchar_t **argv) {
         features.push_back({DWRITE_FONT_FEATURE_TAG(DWRITE_MAKE_OPENTYPE_TAG(t[0], t[1], t[2], t[3])), value});
     }
     if (!features.empty() && !only) {
-        // HarfBuzz's defaults for horizontal text, before the ones asked for,
-        // so that one asked for (calt=0) overrides a default
+        // HarfBuzz's defaults for horizontal text, but for those asked for (calt=0)
         static const char DEFAULTS[][5] = {"rvrn", "ccmp", "locl", "rlig", "calt", "clig", "liga",
                                            "rclt", "curs", "kern", "mark", "mkmk", "dist", "abvm", "blwm"};
         std::vector<DWRITE_FONT_FEATURE> all;
-        for (const char *t : DEFAULTS)
-            all.push_back({DWRITE_FONT_FEATURE_TAG(DWRITE_MAKE_OPENTYPE_TAG(t[0], t[1], t[2], t[3])), 1});
+        for (const char *t : DEFAULTS) {
+            auto tag = DWRITE_FONT_FEATURE_TAG(DWRITE_MAKE_OPENTYPE_TAG(t[0], t[1], t[2], t[3]));
+            if (std::none_of(features.begin(), features.end(), [&](auto &f) { return f.nameTag == tag; }))
+                all.push_back({tag, 1});
+        }
         all.insert(all.end(), features.begin(), features.end());
         features = all;
     }
     DWRITE_TYPOGRAPHIC_FEATURES typographic = {features.data(), UINT32(features.size())};
     const DWRITE_TYPOGRAPHIC_FEATURES *typographic_list = &typographic;
 
+    // For --layout: the font as the only family of a collection, its text
+    // format at one DIP per font unit, and the features as a typography.
+    IDWriteTextFormat *format = nullptr;
+    IDWriteTypography *typography = nullptr;
+    if (layout) {
+        IDWriteFactory3 *factory3;
+        IDWriteFontFaceReference *reference;
+        IDWriteFontSetBuilder *builder;
+        IDWriteFontSet *set;
+        IDWriteFontCollection1 *collection;
+        IDWriteFontFamily1 *family;
+        IDWriteLocalizedStrings *names;
+        WCHAR name[256];
+        if (FAILED(hr = factory->QueryInterface(__uuidof(IDWriteFactory3), reinterpret_cast<void **>(&factory3))) ||
+            FAILED(hr = factory3->CreateFontFaceReference(argv[1], nullptr, 0, DWRITE_FONT_SIMULATIONS_NONE,
+                                                          &reference)) ||
+            FAILED(hr = factory3->CreateFontSetBuilder(&builder)) ||
+            FAILED(hr = builder->AddFontFaceReference(reference)) || FAILED(hr = builder->CreateFontSet(&set)) ||
+            FAILED(hr = factory3->CreateFontCollectionFromFontSet(set, &collection)) ||
+            FAILED(hr = collection->GetFontFamily(0, &family)) || FAILED(hr = family->GetFamilyNames(&names)) ||
+            FAILED(hr = names->GetString(0, name, 256)))
+            return fail("font collection", hr);
+        if (FAILED(hr = factory->CreateTextFormat(name, collection, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL,
+                                                  DWRITE_FONT_STRETCH_NORMAL, em, LOCALE, &format)))
+            return fail("CreateTextFormat", hr);
+        format->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
+        if (FAILED(hr = factory->CreateTypography(&typography))) return fail("CreateTypography", hr);
+        for (const DWRITE_FONT_FEATURE &f : features) typography->AddFontFeature(f);
+    }
+
     std::string line;
     while (std::getline(std::cin, line)) {
         if (!line.empty() && line.back() == '\r') line.pop_back();
         std::wstring text = from_hex(line);
+        if (layout) {
+            IDWriteTextLayout *text_layout;
+            if (FAILED(hr = factory->CreateTextLayout(text.data(), UINT32(text.size()), format, 1e7f, 1e6f,
+                                                      &text_layout)))
+                return fail("CreateTextLayout", hr);
+            if (!features.empty()) text_layout->SetTypography(typography, {0, UINT32(text.size())});
+            Renderer renderer;
+            DWRITE_TEXT_METRICS m;
+            if (FAILED(hr = text_layout->Draw(nullptr, &renderer, 0, 0))) return fail("Draw", hr);
+            if (FAILED(hr = text_layout->GetMetrics(&m))) return fail("GetMetrics", hr);
+            text_layout->Release();
+            std::printf("%.3f%s\n", m.widthIncludingTrailingWhitespace, renderer.out.c_str());
+            std::fflush(stdout);
+            continue;
+        }
         Source source(text);
         Sink sink;
         if (!text.empty() && FAILED(hr = analyzer->AnalyzeScript(&source, 0, UINT32(text.size()), &sink)))
