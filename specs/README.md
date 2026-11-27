@@ -189,8 +189,8 @@ which theme's colors dominate the code box's pixels.
   at a tab or a change of script (a Cyrillic string, say), and the count
   starts over there; WebKit counts across scripts. It counts characters, not
   their widths, so it suits monospace fonts.
-- Not checked on Windows (DirectWrite), or in native apps other than through
-  Core Text directly.
+- Native Windows apps (DirectWrite) also start a new run at a change of script,
+  and otherwise color as HarfBuzz does ([engines/README.md](../engines/README.md)).
 
 ## Compiler options
 
