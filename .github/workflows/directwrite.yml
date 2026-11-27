@@ -37,6 +37,14 @@ jobs:
           python engines/compare.py build/Fontlex-Markdown.ttf directwrite 'http://---a@http://~***;1.*́](<x>)*'
       - name: Probes, one mechanism each
         run: python engines/probes.py directwrite
+      - name: English and French, a stylistic set and the reading markers
+        run: |
+          python engines/compare.py build/Fontlex-English.ttf directwrite --features ss01 --only "a research"
+          python engines/compare.py build/Fontlex-English.ttf directwrite --features ss01 "a research"
+          python engines/compare.py build/Fontlex-English.ttf directwrite 'research\uFE00' 'can research\uFE00.' 'a research\uFE01.'
+          python engines/compare.py build/Fontlex-French.ttf directwrite 'elle sens\uFE00.'
+          python engines/first_difference.py build/Fontlex-English.ttf directwrite 'can research\uFE00.'
+          python engines/first_difference.py build/Fontlex-French.ttf directwrite 'elle sens\uFE00.'
       - name: The first lookup where DirectWrite parts from HarfBuzz
         run: |
           python engines/first_difference.py build/Fontlex-Math.ttf directwrite "x^2"

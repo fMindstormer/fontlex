@@ -211,13 +211,14 @@ class CoreText:
 class DirectWrite:
     """DirectWrite, the shaper of Windows' own text APIs, through the helper
     engines/dwshape.cpp (built to build/dwshape.exe, or set DWSHAPE). Like an
-    app, it shapes each script run on its own."""
+    app, it shapes each script run on its own, and passes the default
+    features along with any it is asked for (`only` passes just those)."""
     name = "directwrite"
     improvises_marks = False
     falls_back_clusters = False
     TIMEOUT = 60             # seconds for one text
 
-    def __init__(self, data: bytes, variations: dict[str, float] | None = None, features=()):
+    def __init__(self, data: bytes, variations: dict[str, float] | None = None, features=(), only=False):
         if variations:
             sys.exit("--shaper directwrite doesn't set font variations")
         exe = Path(os.environ.get("DWSHAPE") or Path(__file__).parent / "build" / "dwshape.exe")
@@ -227,7 +228,8 @@ class DirectWrite:
         fd, self.path = tempfile.mkstemp(suffix=".ttf")
         with os.fdopen(fd, "wb") as f:
             f.write(data)
-        self.proc = subprocess.Popen([str(exe), self.path, *features], stdin=subprocess.PIPE,
+        self.proc = subprocess.Popen([str(exe), self.path, *(["--only"] if only else []), *features],
+                                     stdin=subprocess.PIPE,
                                      stdout=subprocess.PIPE, text=True, encoding="ascii")
         # answers come through a thread, so a text DirectWrite takes too long on times out
         self.answers = queue.Queue()

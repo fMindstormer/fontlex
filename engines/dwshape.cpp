@@ -1,15 +1,18 @@
 // Shape text with DirectWrite, the shaper behind Windows' own text APIs, for
 // the Fontlex checks (test_fontlex.DirectWrite).
 //
-//     dwshape FONT.ttf [FEATURE ...]
+//     dwshape FONT.ttf [--only] [FEATURE ...]
 //
 // Reads one line per text from stdin, the text's UTF-8 bytes in hex, and
 // writes one line per text: the advance width, then for each glyph its id,
 // the UTF-16 index of its first character and its x and y, in font units.
 // Like an app, it splits the text into script runs first and shapes each run
 // on its own (IDWriteTextAnalyzer::AnalyzeScript, GetGlyphs,
-// GetGlyphPlacements). The default features (calt, mark and the rest) stay
-// on; FEATURE tags such as ss01 are turned on as well.
+// GetGlyphPlacements). A FEATURE is a tag such as ss01, or tag=value
+// (ss01=0 turns it off). DirectWrite applies its default features (calt,
+// kern, mark and the rest) only to a run it is passed no features for, so,
+// as an app must, dwshape passes the defaults along with the FEATUREs;
+// --only passes just the FEATUREs.
 //
 // Build (Visual Studio's x64 tools): cl /nologo /std:c++20 /O2 /EHsc /utf-8 dwshape.cpp dwrite.lib
 
@@ -108,7 +111,7 @@ static std::wstring from_hex(const std::string &hex) {
 
 int wmain(int argc, wchar_t **argv) {
     if (argc < 2) {
-        std::fprintf(stderr, "usage: dwshape FONT.ttf [FEATURE ...]\n");
+        std::fprintf(stderr, "usage: dwshape FONT.ttf [--only] [FEATURE ...]\n");
         return 2;
     }
     IDWriteFactory *factory;
@@ -134,13 +137,29 @@ int wmain(int argc, wchar_t **argv) {
     if (FAILED(hr = factory->CreateTextAnalyzer(&analyzer))) return fail("CreateTextAnalyzer", hr);
 
     std::vector<DWRITE_FONT_FEATURE> features;
-    for (int i = 2; i < argc; i++) {
+    int first = 2;
+    const bool only = argc > 2 && wcscmp(argv[2], L"--only") == 0;
+    if (only) first++;
+    for (int i = first; i < argc; i++) {    // ss01, or ss01=0 to turn one off
         const wchar_t *t = argv[i];
-        if (wcslen(t) != 4) {
-            std::fprintf(stderr, "a feature tag has 4 letters\n");
+        size_t n = wcslen(t);
+        if (n < 4 || (n > 4 && t[4] != L'=')) {
+            std::fprintf(stderr, "a feature is a 4-letter tag, or a tag=value\n");
             return 2;
         }
-        features.push_back({DWRITE_FONT_FEATURE_TAG(DWRITE_MAKE_OPENTYPE_TAG(t[0], t[1], t[2], t[3])), 1});
+        UINT32 value = n > 5 ? UINT32(_wtoi(t + 5)) : 1;
+        features.push_back({DWRITE_FONT_FEATURE_TAG(DWRITE_MAKE_OPENTYPE_TAG(t[0], t[1], t[2], t[3])), value});
+    }
+    if (!features.empty() && !only) {
+        // HarfBuzz's defaults for horizontal text, before the ones asked for,
+        // so that one asked for (calt=0) overrides a default
+        static const char DEFAULTS[][5] = {"rvrn", "ccmp", "locl", "rlig", "calt", "clig", "liga",
+                                           "rclt", "curs", "kern", "mark", "mkmk", "dist", "abvm", "blwm"};
+        std::vector<DWRITE_FONT_FEATURE> all;
+        for (const char *t : DEFAULTS)
+            all.push_back({DWRITE_FONT_FEATURE_TAG(DWRITE_MAKE_OPENTYPE_TAG(t[0], t[1], t[2], t[3])), 1});
+        all.insert(all.end(), features.begin(), features.end());
+        features = all;
     }
     DWRITE_TYPOGRAPHIC_FEATURES typographic = {features.data(), UINT32(features.size())};
     const DWRITE_TYPOGRAPHIC_FEATURES *typographic_list = &typographic;
