@@ -7,7 +7,9 @@ workflow):
 
 - `dwshape.cpp`, a small helper that shapes text as an app does: it splits a
   line into script runs (`AnalyzeScript`) and shapes each with `GetGlyphs`
-  and `GetGlyphPlacements`, with the default features on.
+  and `GetGlyphPlacements`, with the default features on, and passes them
+  along with any feature it is asked for, as an app must (below; `--only`
+  doesn't, and `--layout` lays the line out with `IDWriteTextLayout`).
   `test_fontlex.DirectWrite` talks to it, so every check that takes
   `--shaper` can run in DirectWrite (`check_directwrite.sh` runs them all).
 - `probes.py`, small fonts that each use one OpenType mechanism the Fontlex
@@ -15,7 +17,8 @@ workflow):
 - `first_difference.py`, which finds the first lookup where an engine parts
   from HarfBuzz on a text: it turns on only the first k lookups by patching
   the font's bytes, and bisects.
-- `compare.py`, a text's glyphs from two shapers, side by side.
+- `compare.py`, a text's glyphs from two shapers, side by side, with
+  features (`--features ss01`) or without.
 
 ## What DirectWrite does differently
 
@@ -35,7 +38,7 @@ lookups have them wrapped, and so break in DirectWrite:
 | Fontlex Math | none (19, not wrapped since November 2026) | 441 of 442 lines the same (327 of 345 differed with them wrapped); the other, `\vec{αβ}`, mixes Greek and Latin letters in a construct (script runs, below) |
 | Fontlex Relaxed Math | none (51, not wrapped since November 2026) | 372 of 387 lines the same (142 with them wrapped, 337 before the font placed a fraction's end, below); the others mix Greek and Latin letters in a construct (script runs, below) |
 | Fontlex Markdown (both editions) | none (59, not wrapped since November 2026) | 438 of 447 spec examples, all 23 GFM ones, 914 of 916 README lines and 279 of 292 random lines the same (with them wrapped, it took over 60 seconds on one line, `>\t\tfoo`); what differs is below |
-| Fontlex English, French | none (1, not wrapped since November 2026) | 99.4% and 99.9% of words in context right (59% and 65% with it wrapped); every line of the English READMEs, and 15 of the 16 French sample lines; what differs is below |
+| Fontlex English, French | none (1, not wrapped since November 2026) | every check right: all 170,817 and 202,190 words in context (59% and 65% with it wrapped), every line of the English READMEs and of the French sample, and every stylistic set, once the app passes the default features with it and the font gives the reading markers variation sequences (below) |
 | Fontlex Python, JavaScript | none (1, not wrapped) | right, apart from script runs (below) and the line of letters with combining marks in the next row |
 | Fontlex German, German Syllables, English Syllables | none | every random and transition case right; one hand-written case each, letters with combining marks (`q́ = "x̣" + j̈`), gets other clusters, not yet looked at |
 
@@ -103,19 +106,45 @@ What still differs in Markdown:
   with a combining accent after a hidden `*`, it puts the accent in the
   `*`'s cluster, so the check reads the `*` as the accent's italic text.
 
-Two things still differ in English and French, not yet looked at:
+What made English and French differ, and no longer does:
 
-- **Noun/verb pairs** (`research`, `project`; `sens`, `président`), whose
-  reading comes from the word before or an invisible marker after: 1,038 of
-  170,817 English words in context and 175 of 202,190 French ones are wrong,
-  and every miss the check prints is one of these words, drawn with the
-  other reading's hints or none. The fonts have 128 and 32 such pairs.
-- **One stylistic set on its own** (one kind of hint off) leaves most texts
-  without their other hints too: 2,427 to 4,154 of 17,213 English texts
-  right, and 2,613 to 11,909 of 20,221 French ones. With every set on,
-  all are right. Wrapping the reverse chaining lookup or not changes none of
-  these numbers. `dwshape.cpp` passes only the set, expecting the default
-  features to stay on, as they do in HarfBuzz; DirectWrite may drop `calt`.
+**Passed any feature, it leaves out the discretionary defaults.** Given
+`ss01` alone, `GetGlyphs` applies `ccmp`, `locl` and `rlig` and
+`GetGlyphPlacements` applies `mark` and `mkmk`, but neither applies `calt`,
+`liga`, `clig` or `kern` (the probes: each default on a letter of its own).
+`IDWriteTextLayout` does the same with a typography of `ss01` alone, and
+applies them all with no typography. HarfBuzz and Core Text keep the
+defaults on. The English and French fonts do all their work in `calt`, so
+one stylistic set on its own (one kind of hint off) left most texts with
+no hints at all: 2,427 to 4,154 of 17,213 English texts right, and 2,613
+to 11,909 of 20,221 French ones; with every set on, which leaves no hints,
+all were. Passed the defaults too, 17,110 to 17,149 and 20,201 to 20,210
+were right, and the rest had reading markers (next). So an app that turns a feature on must pass the defaults it
+wants with it, in `GetGlyphs` and `GetGlyphPlacements` or in
+`SetTypography`: these fonts need `calt` (the hints) and `kern`, and other
+fonts `liga` and `clig` too. `dwshape` now passes HarfBuzz's list of
+defaults for horizontal text with any feature (`DEFAULTS`, which also has
+`rclt`, `curs` and `dist`, not measured), and every set is right: 17,213 of
+17,213 English texts with each, and 20,221 of 20,221 French ones.
+
+**It drops a variation selector the font has no sequence for,** before the
+lookups run, even when the cmap maps it to a glyph: with a rule for `b`
+before U+FE00, `b` + U+FE00 comes out as `b` alone, where HarfBuzz and Core
+Text pass the selector's glyph to the lookups (the probes). The noun and
+verb markers are variation selectors (U+FE00, U+FE01:
+[markers/](../markers/README.md)), so DirectWrite never saw one, and a
+marked pair took its cue's reading or only the hints both readings share:
+1,038 of 170,817 English words in context and 175 of 202,190 French ones
+were wrong, as was the French sample's line with a marker
+(`first_difference.py`: a glyph short before the first lookup). A sequence
+in cmap 14 it applies, as the others do, and it keeps a selector's glyph
+that a lookup makes. So the fonts give each letter followed by a marker a
+sequence, for a glyph of its own, and their first lookup splits that glyph
+back into the letter and the marker's glyph (`marked_letters` in
+`english/enfont.py`: 104 glyphs in English, 168 in French). Every engine's
+lookups now see the marker, and all those words are right in DirectWrite.
+A marker after a letter now ends a context in HarfBuzz too, as it did in
+Core Text: *les*`U+FE00` *amis* has no liaison in any of the three.
 
 ## Running it
 
@@ -126,4 +155,5 @@ cl /nologo /std:c++20 /O2 /EHsc /utf-8 engines\dwshape.cpp dwrite.lib /Fe:build\
 PYTHONUTF8=1 engines/check_directwrite.sh
 python engines/probes.py directwrite
 python engines/first_difference.py build/Fontlex-Math.ttf directwrite "x^2"
+python engines/compare.py build/Fontlex-English.ttf directwrite --features ss01 --only "a research"
 ```

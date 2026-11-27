@@ -9,12 +9,13 @@
 // Like an app, it splits the text into script runs first and shapes each run
 // on its own (IDWriteTextAnalyzer::AnalyzeScript, GetGlyphs,
 // GetGlyphPlacements). A FEATURE is a tag such as ss01, or tag=value
-// (ss01=0 turns it off). Passed any features, DirectWrite leaves out its
-// discretionary defaults (calt, liga, clig, kern), so, as an app must,
-// dwshape passes HarfBuzz's defaults along with the FEATUREs; --only passes
-// just the FEATUREs. --layout lays the text out with IDWriteTextLayout
-// instead, the features set with SetTypography, and reads the glyph runs it
-// draws.
+// (ss01=0 turns it off). Passed any features, DirectWrite leaves out the
+// defaults it applies to text passed none: calt, liga, clig and kern
+// (engines/README.md). So, as an app must, dwshape passes HarfBuzz's
+// defaults along with the FEATUREs; --only passes just the FEATUREs.
+// --layout lays the text out with IDWriteTextLayout instead, the features
+// set with SetTypography (which leaves out the same defaults), and reads
+// the glyph runs it draws.
 //
 // Build (Visual Studio's x64 tools): cl /nologo /std:c++20 /O2 /EHsc /utf-8 dwshape.cpp dwrite.lib
 
@@ -194,16 +195,16 @@ int wmain(int argc, wchar_t **argv) {
 
     std::vector<DWRITE_FONT_FEATURE> features;
     bool layout = false, only = false;
-    int first = 2;
-    for (; first < argc && argv[first][0] == L'-'; first++) {
-        if (wcscmp(argv[first], L"--layout") == 0) layout = true;
-        else if (wcscmp(argv[first], L"--only") == 0) only = true;
+    int arg = 2;
+    for (; arg < argc && argv[arg][0] == L'-'; arg++) {
+        if (wcscmp(argv[arg], L"--layout") == 0) layout = true;
+        else if (wcscmp(argv[arg], L"--only") == 0) only = true;
         else {
             std::fprintf(stderr, "unknown option\n");
             return 2;
         }
     }
-    for (int i = first; i < argc; i++) {    // ss01, or ss01=0 to turn one off
+    for (int i = arg; i < argc; i++) {    // ss01, or ss01=0 to turn one off
         const wchar_t *t = argv[i];
         size_t n = wcslen(t);
         if (n < 4 || (n > 4 && t[4] != L'=')) {

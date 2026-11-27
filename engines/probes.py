@@ -9,7 +9,6 @@ prints whether the engine gives the glyphs HarfBuzz gives.
 """
 
 import io
-import re
 import sys
 from pathlib import Path
 
@@ -179,15 +178,14 @@ def main():
     probes.update({name: (text, fea, 0, opts) for name, (text, fea, opts) in OPTION_PROBES.items()})
     for name, (text, fea, *extra) in probes.items():
         extra_glyphs, opts = (extra[0] if extra else 0), (extra[1] if len(extra) > 1 else {})
-        text = re.sub(r"\\u([0-9A-Fa-f]{4})", lambda m: chr(int(m[1], 16)), text)
         data = build(fea, extra_glyphs, opts.get("selector", False), opts.get("uvs", False))
         order = TTFont(io.BytesIO(data)).getGlyphOrder()
         features = opts.get("features", ())
 
         def glyphs(shaper):
             out = []
-            only = {k: True for k in ("only", "layout") if opts.get(k)} if shaper is T.DirectWrite else {}
-            for g, _, x, y in shaper(data, features=features, **only).shape(text)[0]:
+            how = {k: True for k in ("only", "layout") if opts.get(k)} if shaper is T.DirectWrite else {}
+            for g, _, x, y in shaper(data, features=features, **how).shape(text)[0]:
                 name = order[g] if g is not None else "None"
                 out.append(f"{name}@{x:.0f},{y:.0f}" if opts.get("positions") else name)
             return out

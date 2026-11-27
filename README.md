@@ -390,8 +390,8 @@ page byte for byte, so `git status` afterwards shows nothing.
   497 states, for code spans, brackets and destinations, don't split.
 - **More engines.** Native Windows apps shape text with DirectWrite, which
   ignores reverse chaining lookups inside extension lookups, so the fonts
-  keep theirs out: Fontlex Math is right there; Relaxed Math, Markdown,
-  English and French nearly ([engines/README.md](engines/README.md)). Browsers on Windows use HarfBuzz.
+  keep theirs out: Fontlex Math, English and French are right there (an app
+  that turns a stylistic set on must pass the default features with it); Relaxed Math and Markdown nearly ([engines/README.md](engines/README.md)). Browsers on Windows use HarfBuzz.
 
 ## License
 

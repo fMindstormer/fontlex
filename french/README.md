@@ -32,9 +32,9 @@ Whether the hints are right is a question for fluent speakers ([Review](#review)
 | Width with a marker: each pair as wide as after a cue for the same reading, every 50th other word as wide as without one | 1,262 | 1,262 | 1,262 |
 | The demo's sample (`sample.txt`) | 16 lines | 16 | 16 |
 
-The font has 6,248 glyphs (letters' first-letter variants, as in the English
+The font has 6,416 glyphs (letters' first-letter variants, as in the English
 font, plus "blocking" variants for the first letters of words that block
-liaison) and 26,337 word and compound rules; 240 KB as WOFF2. On the
+liaison) and 26,337 word and compound rules; 242 KB as WOFF2. On the
 sample's lines it shapes in 0.27 ms a line in HarfBuzz and 0.19 ms in Core
 Text, against 0.11 and 0.14 ms for plain Noto Sans (best of five; lines of
 about 120 characters). In WebKit the hints and ties render in both palettes.
@@ -110,7 +110,9 @@ Eight GSUB passes, built by `frfont.py` on Noto Sans and Noto Sans Bold:
 4. A verb/noun pair right before a reading marker (U+FE00 noun or
    adjective, U+FE01 verb; [markers/](../markers/README.md)), or else right
    after a cue and one space, gets that reading's hints. A reading with no hints turns the first letter plain, so pass 7
-   leaves the word alone.
+   leaves the word alone. (A letter and a marker come in as one glyph, a
+   variation sequence in the cmap, which a lookup before pass 1 splits back
+   into two, so DirectWrite sees the marker too.)
 5. A trigger, not after a hyphen unless it is a number, then one space and
    a vowel or h that isn't blocking: the trigger's last letter becomes its
    bold liaison glyph and the space a tie. The next word's first letter can be any variant, hinted or
@@ -127,8 +129,9 @@ English font: `ss01` silent letters, `ss02` schwas, `ss04` nasal vowels,
 `ss05` liaisons with their ties. Each set is one lookup after the eight
 passes, so the other hints don't change. The demo page and the browser
 extension have a switch for each. *Measured*: every tenth `verify.py` text
-(19,889), with each set and with all four, comes out right in HarfBuzz and
-Core Text, and `demo/check_switches.py` sees each switch remove its color,
+(20,221), with each set and with all four, comes out right in HarfBuzz,
+Core Text and DirectWrite (where an app must pass the default features with
+a set: [engines/](../engines/README.md)), and `demo/check_switches.py` sees each switch remove its color,
 and only its color, in WebKit.
 
 Word hints depend only on their word, so they survive soft wrapping, as in

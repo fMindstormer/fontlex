@@ -30,7 +30,7 @@ the next step (*Check the alignments* below).
 | Width with a marker: each pair as wide as after a cue for the same reading, every 50th other word as wide as without one | 1,446 | 1,446 | 1,446 |
 | Lines of this project's English READMEs (`README.md`, `specs/`, `markdown/`, `theory/`) | 1,297 | 1,297 | 1,297 |
 
-The glyph count doesn't depend on the word list (3,412 glyphs, mostly the
+The glyph count doesn't depend on the word list (3,516 glyphs, mostly the
 letters' first-letter variants); the rules do. Before the two-letter keys and
 homographs:
 
@@ -107,7 +107,9 @@ Six GSUB passes, built by `enfont.py` on Noto Sans and Noto Sans Bold:
    *will*, *we*, ... for verbs) mark their last letter as a noun or verb cue.
 4. A noun/verb pair right before a reading marker (U+FE00 noun, U+FE01
    verb; [markers/](../markers/README.md)), or else right after a cue and
-   one space, gets that reading's hints.
+   one space, gets that reading's hints. (A letter and a marker come in as
+   one glyph, a variation sequence in the cmap, which a lookup before
+   pass 1 splits back into two, so DirectWrite sees the marker too.)
 5. Then one context rule per listed word that has hints (25,643 of the
    30,000). Each rule is class-based, so case is ignored, and runs from an
    initial letter to a final one, so it matches whole words only. It applies
@@ -128,8 +130,10 @@ after the six passes that maps its hint's glyphs back to plain letters, so
 the other hints don't change. In CSS it's `font-feature-settings: "ss03"`.
 The font names each set ("No stress hints") for apps that list stylistic
 sets by name. The demo page has a switch for each, and so does the browser
-extension. *Measured*: every tenth `verify.py` text (16,736), with each set
-and with all three, comes out right in HarfBuzz and Core Text, and
+extension. *Measured*: every tenth `verify.py` text (17,213), with each set
+and with all three, comes out right in HarfBuzz, Core Text and DirectWrite
+(where an app must pass the default features with a set:
+[engines/](../engines/README.md)), and
 `demo/check_switches.py` sees each switch remove its color, and only its
 color, in WebKit.
 
