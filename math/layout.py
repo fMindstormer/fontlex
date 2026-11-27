@@ -80,6 +80,15 @@ SYMBOLS = {
 # Accents: the command and its code. An accent is drawn over each character
 # of its argument (the innermost accent, where they nest).
 ACCENTS = {"hat": "h", "bar": "b", "vec": "v", "dot": "d", "ddot": "e", "tilde": "t"}
+ACCENT_GAP = 60     # the font's: between a character's top and its accent
+
+
+def accent_offset(top, s):
+    """Where the font puts an accent's center and bottom, from the origin
+    of a character at style s whose outline reaches `top` unscaled."""
+    return round(WIDTH[0] / 2 * SCALE[s]), round((top + ACCENT_GAP) * SCALE[s])
+
+
 # One arrow over all of X: an overline raised by its head's half-height,
 # ending in a head (arrow_head). \\vec over two or more letters and nothing
 # else is one too (wide_vecs), in the relaxed notation as well (relaxed.wide_vec).
