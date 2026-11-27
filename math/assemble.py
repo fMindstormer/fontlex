@@ -54,10 +54,13 @@ def final(t):
     """The token's glyphs, slot by slot: G (the character's own), S, A, B,
     C. The font finishes them in the order A, G, C, B, S, so each is made
     from the tracks still unfinished then: A and G may use any, C uses S, B
-    and C, B uses S and B, and S only itself.
+    and C, B uses S and B, and S only itself. An accent's glyph is on A or
+    C before then (accent()).
 
-    Glyphs: ("glyph", char, style, "b" or "m"[, accent]) a character (a
-    base glyph that advances, or a mark in a chain), with an accent over it; ("radical", style, kind, b/m);
+    Glyphs: ("glyph", char, style, "b" or "m") a character (a base glyph
+    that advances, or a mark in a chain); ("acc", code, style, b/m) an
+    accent over the character, on A in flow, C in a chain (accent(), which
+    program.finals adds); ("radical", style, kind, b/m);
     ("space",); ("hid",) nothing; movers ("dx", v), ("dy", w), ("dxy", v,
     w), links of a chain (v in 30s); ("dx@root", v), ("dx@fend", pad) and
     ("at@base",), marks on the glyph that starts or ends a fraction or ends
@@ -81,7 +84,7 @@ def final(t):
             return out
         if kind == "v":              # a virtual token (front.py) outside any construct
             return out
-        out["G"] = ("glyph", t["char"], st, "m" if k else "b")     # its accent comes after (program.finals)
+        out["G"] = ("glyph", t["char"], st, "m" if k else "b")     # its accent: accent()
         extra = 2 * max(0, b[2]) if arg is not None and arg[1] == "second" and b[0] == "e2" else 0
         if k:
             out["S"] = ("dx", P.WIDTH[st] * 2)
@@ -177,6 +180,28 @@ def final(t):
         if move:
             out["G"] = ("dx", move) if k else ("adv", move)
     return out
+
+
+def accent_key(s):
+    """What accent() reads of a token's S: a character's style, and whether
+    it is in a chain."""
+    if s[0] != "T" or s[1] in (" ", "v"):
+        return None
+    return s[2], s[3] > 0
+
+
+def accent(slot, key, code):
+    """The glyph of an accent over a character (key: accent_key; code: the
+    accent, from the character's tag, program.accent_of) that goes on the
+    slot, or None. In flow it is on A, the slot after the character's
+    height (S), and placed from where the pen is once past the character,
+    unattached; in a chain on C, attached to the character. One glyph for
+    each accent, style and mode, not one for each character too: the
+    character's height is the positioning's (mathfont.gpos)."""
+    if key is None or code is None:
+        return None
+    st, chained = key
+    return ("acc", code, st, "m" if chained else "b") if slot == ("C" if chained else "A") else None
 
 
 def slot_key(slot, s):
@@ -296,6 +321,7 @@ def place(toks):
     pen = 0
     link = None          # where the chain's next link attaches
     parent = None        # where the next ink piece hangs
+    char = None          # where the last character's glyph is, which an accent in a chain attaches to
     for t in toks:
         f = {k: t.get(k, NONE) for k in SLOTS}
         if "A" not in t:              # a space
@@ -316,8 +342,11 @@ def place(toks):
                 if mode == "b":
                     pen += L.WIDTH[st]
                 ink.append(("glyph", g[1], st) + pos if kind == "glyph" else ("radical", st, g[2]) + pos)
-                if kind == "glyph" and len(g) > 4:
-                    ink.append(("accent", g[4], st) + pos)
+                char = pos
+            elif kind == "acc":
+                # in flow from the pen, which is past the character; in a chain, on the character
+                _, code, st, mode = g
+                ink.append(("accent", code, st) + ((pen - L.WIDTH[st], y) if mode == "b" else char))
             elif kind in ("root", "qbase", "fendbase", "adv", "hid"):
                 if kind != "hid":
                     base = (pen, y, g)

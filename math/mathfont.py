@@ -46,13 +46,12 @@ import program as P
 import relaxed as R
 
 BASE = os.path.join(HERE, "..", "fonts", "JetBrainsMono-Regular.ttf")
-FINAL = {"glyph", "radical", "space", "hid", "root", "qbase", "fendbase", "adv", "dx", "dy", "dxy",
+FINAL = {"glyph", "acc", "radical", "space", "hid", "root", "qbase", "fendbase", "adv", "dx", "dy", "dxy",
          "dx@root", "dx@fend", "at@base", "y", "ink", "paren", "_"}
 SLOT_INDEX = {t: i for i, t in enumerate(P.ORDER)}
 # Each accent's shape: a character of the base font, and its scale.
 ACCENT_SHAPES = {"h": (0x2C6, 1), "b": (0xAF, 1), "v": (0x2192, 0.5), "d": (0x2D9, 1), "e": (0xA8, 1),
                  "t": (0x2DC, 1)}
-ACCENT_GAP = 60          # between a character's top and its accent
 FILTER = 0x0010
 SKELETON = mp.SKELETON
 
@@ -193,6 +192,9 @@ class Font:
         self.shown[slot] = name
         return slot
 
+    def top(self, ch):
+        return char_top(self.gs, self.cmap[ord(ch)])
+
     def accent(self, code):
         """An accent's glyph (ACCENT_SHAPES), centered on x = 0 with its
         bottom at y = 0, drawing nothing of its own (a component)."""
@@ -223,21 +225,24 @@ class Font:
         if k == "hid":
             return b.empty("_hid", 0, gdef_class=3)
         if k == "glyph":
-            _, ch, st, mode, *acc = v
+            _, ch, st, mode = v
             base = self.cmap[ord(ch)]
-            if st == 0 and mode == "b" and not acc:
+            if st == 0 and mode == "b":
                 return base
             sc = L.SCALE[st]
             scale = (((sc, 0), (0, sc)),) if sc != 1 else ()
-            name = f"{base}.s{st}{mode}" + (f".a{acc[0]}" if acc else "")
-            parts = [(base, 0, 0) + scale]
-            if acc:
-                # the accent centered over the character, ACCENT_GAP above its top
-                bp = BoundsPen(self.gs)
-                self.gs[base].draw(bp)
-                top = bp.bounds[3] if bp.bounds else L.HEIGHT[0]
-                parts.append((self.accent(acc[0]), round(L.WIDTH[0] / 2 * sc), round((top + ACCENT_GAP) * sc)) + scale)
-            return b.composite(name, parts, L.WIDTH[st] if mode == "b" else 0, 1 if mode == "b" else 3)
+            return b.composite(f"{base}.s{st}{mode}", [(base, 0, 0) + scale], L.WIDTH[st] if mode == "b" else 0,
+                               1 if mode == "b" else 3)
+        if k == "acc":
+            # An accent over a character (assemble.accent), its center and
+            # bottom at x = 0, y = 0 in a chain, where it is attached to the
+            # character; in flow, where the pen is past the character, as
+            # far left as the character's center.
+            _, code, st, mode = v
+            sc = L.SCALE[st]
+            scale = (((sc, 0), (0, sc)),) if sc != 1 else ()
+            dx = L.accent_offset(0, st)[0] - L.WIDTH[st] if mode == "b" else 0
+            return b.composite(f"_acc{code}{st}{mode}", [(self.accent(code), dx, 0) + scale], 0, 3)
         if k == "radical":
             _, st, kind, mode = v
             return self.radical(f"_radical{st}{kind}{mode}", st, kind, mode)
@@ -1179,6 +1184,14 @@ def relaxed_initial(font):
 
 # GPOS --------------------------------------------------------------------------
 
+def char_top(gs, name):
+    """How high a glyph's outline reaches: its accent goes above
+    (layout.accent_offset)."""
+    bp = BoundsPen(gs)
+    gs[name].draw(bp)
+    return bp.bounds[3] if bp.bounds else L.HEIGHT[0]
+
+
 def anchor(x, y):
     return otl.buildAnchor(round(x), round(y))
 
@@ -1210,17 +1223,35 @@ def gpos(font):
     flow_bases = [g for g, v in finals.items()
                   if (v[0] in ("glyph", "radical") and v[3] == "b") or v[0] in ("root", "qbase", "fendbase")]
     ys = by_kind["y"]
-    fend_marks = set(by_kind["dx@fend"])    # placed, not attached: below
+    accents = by_kind["acc"]
+    flow_accents = {g for g, v in accents.items() if v[3] == "b"}
+    followers = set(by_kind["dx@fend"]) | flow_accents    # placed, not attached: below
     rules = []
     for g, v in sorted(ys.items()):
         single = lookup(1, [otl.buildSinglePosSubtable({x: otl.buildValue({"YPlacement": v[1]})
-                                                        for x in flow_bases + sorted(fend_marks)}, b.ids)],
+                                                        for x in flow_bases + sorted(followers)}, b.ids)],
                         nested=True)
         rules.append(chain_pos([set(flow_bases)], [{g}], [(0, single)], font))
-        if fend_marks:          # a fraction's end's mark follows its base's height
-            rules.append(chain_pos([fend_marks], [], [(0, single)], font, behind=[{g}]))
+        if followers:           # a fraction's end's mark, or an accent, follows its base's height
+            rules.append(chain_pos([followers], [], [(0, single)], font, behind=[{g}]))
     if rules:
-        lookup(8, rules, 0, set(ys) | set(flow_bases) | fend_marks)
+        lookup(8, rules, 0, set(ys) | set(flow_bases) | followers)
+    # An accent in flow, unattached, as a fraction's end's mark is (below):
+    # raised by as much as its character reaches (layout.accent_offset), a
+    # rule for each height that characters reach. Its glyph is drawn from
+    # where the pen is once past the character (Font.make_final).
+    by_top = defaultdict(set)
+    for g, v in finals.items():
+        if v[0] == "glyph" and v[3] == "b":
+            by_top[font.top(v[1])].add(g)
+    rules = []
+    for height, chars in sorted(by_top.items()) if flow_accents else ():
+        single = lookup(1, [otl.buildSinglePosSubtable(
+            {a: otl.buildValue({"YPlacement": L.accent_offset(height, accents[a][2])[1]}) for a in flow_accents},
+            b.ids)], nested=True)
+        rules.append(chain_pos([flow_accents], [], [(0, single)], font, behind=[chars]))
+    if rules:
+        lookup(8, rules, 0, flow_accents)
     # advances
     adv = {g: otl.buildValue({"XAdvance": v[1] * L.UNIT}) for g, v in by_kind["adv"].items()}
     adv.update({g: otl.buildValue({"XAdvance": 2 * v[1] * L.UNIT}) for g, v in by_kind["fendbase"].items()})
@@ -1286,6 +1317,13 @@ def gpos(font):
     if inks or parens:
         lookup(6, [mark_mark({g: (0, anchor(0, 0)) for g in list(inks) + list(parens)}, ink_parents, gid)], 0,
                set(inks) | set(parens) | set(movers))
+    # an accent in a chain, on its character, which comes first of the token's glyphs
+    chain_accents = {g for g, v in accents.items() if v[3] == "m"}
+    chain_chars = {g: {0: anchor(*L.accent_offset(font.top(v[1]), v[2]))} for g, v in finals.items()
+                   if v[0] == "glyph" and v[3] == "m"}
+    if chain_accents:
+        lookup(6, [mark_mark({g: (0, anchor(0, 0)) for g in chain_accents}, chain_chars, gid)], 0,
+               chain_accents | set(chain_chars))
     t = newTable("GPOS")
     t.table = ot.GPOS()
     t.table.Version = 0x00010000
@@ -1471,6 +1509,10 @@ class Placed:
         self.pl.first_set, self.pl.mark_sets = side["gsub_sets"], []
         self.pl.coverage = lambda glyphs: mp.Pipeline.coverage(self.pl, glyphs)
         self.pl.gid = self.b.gid
+        self.gs, self.cmap = font.getGlyphSet(), font.getBestCmap()
+
+    def top(self, ch):
+        return char_top(self.gs, self.cmap[ord(ch)])
 
 
 def rebuild_gpos(path):

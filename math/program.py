@@ -672,7 +672,8 @@ def fold_accent(c):
 
 def put_accent(g, c):
     """A character's glyph tagged with its accent ("A" and the code), which
-    only the final glyph reads: no pass between multiplies by it."""
+    only the accent's own glyph reads (program.finals): no pass between
+    multiplies by it, and no track holds it."""
     acc = fold_accent(c)
     return (g[0], g[1], (g[2] or "") + "A" + acc) + g[3:] if acc else g
 
@@ -680,28 +681,19 @@ def put_accent(g, c):
 def accentable(relaxed):
     """Which characters an accent can be over: in the relaxed notation,
     letters only (relaxed.plain_accents). Without this the font would make
-    an accented glyph for every character, as nothing tells the compiler
-    what can't happen."""
+    an accent-tagged glyph for every character, as nothing tells the
+    compiler what can't happen."""
     return (lambda ch: ch.isalpha()) if relaxed else (lambda ch: True)
 
 
 def accent_of(g):
     tag = g[2] if len(g) > 2 else None
-    return tag[-1] if tag and len(tag) > 1 and tag[-2] == "A" else None
-
-
-def accent_to_role(s, acc):
-    """Before the finals: the accent (accent_of the glyph) moves to the
-    role, as ("T", kind + code, ...), so the final glyph is made from the
-    role and the glyph is the plain character again."""
-    return (s[0], s[1] + acc) + s[2:] if acc and s[0] == "T" else s
-
-
-def role_accent(s):
-    return s[1][1] if s[0] == "T" and len(s[1]) > 1 else None
+    return tag[-1] if isinstance(tag, str) and len(tag) > 1 and tag[-2] == "A" else None
 
 
 def strip_accent(g):
+    """The character's glyph without its accent's tag, once the accent has
+    its own glyph (finals)."""
     return (g[0], g[1], g[2][:-2] or None) + g[3:] if accent_of(g) else g
 
 
@@ -1297,16 +1289,19 @@ def program(relaxed=False):
             P.append(Context("S", paren_kind, ctx_track="B",
                              targets=lambda v, l=level: is_binom(v) and v[1] == "fend" and v[2] == l and len(v) == 8,
                              ctx_view=lambda v, l=level: v[0] == "fkind" and v[2] == l))
-    P += [Derive("S", ["G"], accent_to_role, keys=[accent_of]), Map("G", strip_accent)]
-    P += finals(accentable(relaxed))
+    P += finals()
     return P
 
 
-def finals(can=lambda ch: True):
+def finals():
     """Each slot's glyph (see assemble.final), in an order that leaves the
     tracks a slot is made from unfinished until then. B is first reduced to
     what the slots need of it, for the token's S (assemble.localize), so
-    the final passes read small values."""
+    the final passes read small values. An accent is a glyph of its own
+    (assemble.accent), made from the tag on the character's glyph
+    (put_accent) while the slot still holds its track's blank: the finals'
+    blank is one glyph for every slot, so a rule for one slot's would
+    match another's."""
     import assemble
 
     def made(slot, s, b=BLANK, c=BLANK, char=None):
@@ -1322,7 +1317,7 @@ def finals(can=lambda ch: True):
 
     def slot(name):
         def fn(target, s, b):
-            if name == "G" and target[0] == "fendbase":
+            if target[0] in ("fendbase", "acc"):      # made before (fend_base, accent)
                 return target
             if name == "G":
                 return made(name, s, b, char=target[1])
@@ -1333,14 +1328,22 @@ def finals(can=lambda ch: True):
         if "B" in sources:
             keys.append(lambda b, n=name: assemble.needed(b, n))
         return keys
+    def accent(name):
+        def fn(target, s, code):
+            acc = assemble.accent(name, s, code)
+            if acc is None:
+                return target
+            assert target == BLANK, (name, target)      # a character's, which no pass has used
+            return acc
+        return fn
     P = [Derive("C", ["S"], fend_width, keys=[lambda s: s[0] == "R" and s[1] == "fend" and s[4] == 0]),
          final(Derive("G", ["C"], fend_base)),
+         Derive("A", ["S", "G"], accent("A"), keys=[assemble.accent_key, accent_of]),
+         Derive("C", ["S", "G"], accent("C"), keys=[assemble.accent_key, accent_of]),
+         Map("G", strip_accent),
          Derive("B", ["S"], lambda b, nc: assemble.localize(b, nc), keys=[assemble.need_class]),
          final(Derive("A", ["S", "B"], slot("A"), keys=keyed("A"))),
          final(Derive("G", ["S", "B"], slot("G"), keys=keyed("G"))),
-         # an accented character's glyph, from the plain one (see accent_to_role)
-         final(Derive("G", ["S"], lambda g, acc: g + (acc,) if acc and g[0] == "glyph" and can(g[1]) else g,
-                      keys=[role_accent])),
          final(Derive("C", ["S", "B"], slot("C"), keys=keyed("C"))),
          final(Derive("B", ["S"], lambda b, s, f=slot("B"): f(b, s, assemble.needed(b, "B")), keys=keyed("B", ("S",)))),
          final(Map("S", lambda v: made("S", v))),

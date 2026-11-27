@@ -202,7 +202,7 @@ checked against 461,327 lines of macOS man pages and READMEs, of which
 311 get a construct, about half of them real math. The first build of this font
 needed 113,000 glyphs, because every combination of the passes' results
 became a glyph of its own. Moving results onto scratch tracks, and giving
-dead values' glyphs to later values and drawn marks, brought it to 50,400 with accents.
+dead values' glyphs to later values and drawn marks, brought it to 47,046 with accents.
 
 ### Learner fonts: data, then compilation
 

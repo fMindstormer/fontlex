@@ -84,9 +84,9 @@ by that width. Results on its 439 lines:
 Typing a formula into a text box key by key ends with the same pixels as
 setting the text at once, in all of these browsers (WebKit: Playwright's).
 
-The font has 45,763 glyphs, 2,413 substitution lookups (2,000 of them
-nested lookups shared by every pass, in 3,727 subtables) and 374
-positioning lookups. It is 11.4 MB as TrueType and 1.3 MB as WOFF2. Most
+The font has 39,335 glyphs, 2,413 substitution lookups (2,000 of them
+nested lookups shared by every pass, in 3,728 subtables) and 417
+positioning lookups. It is 11.0 MB as TrueType and 1.29 MB as WOFF2. Most
 glyphs hold a value on a track for a while, and a glyph id goes on to
 another use once no token can hold its value (`Font.recycle`): a later
 value, a two-step pass's go-between (below), or, at the end, a glyph
@@ -94,9 +94,12 @@ drawn as a mark with no advance, such as a character in a fraction
 (`Font.reuse`). Every glyph is a mark through all of it, so no lookup can
 tell one use from another. Without that the font had 64,916 glyphs with
 constructs of 24 characters, 600 short of OpenType's 65,535; with it,
-39,939, and the room went to 30. Shaping takes about 0.24 ms per
-character in HarfBuzz (9 ms for a 40-character line), a third more than
-with 24.
+39,939, and the room went to 30. Accents had taken a glyph for each
+character, size and accent, 5,070 of them. As 30 marks of their own,
+placed by positioning, they leave the font 6,428 glyphs smaller (it had
+45,763), its WOFF2 4% smaller and its shaping 3% faster. Shaping takes
+about 0.23 ms per character in HarfBuzz (9 ms for a 40-character line), a
+third more than with 24.
 
 ## How it works
 
@@ -131,7 +134,10 @@ does the same with substitutions and positioning:
    attached to the one before it by a mark-to-mark chain. Movers between
    them (empty marks a fixed distance from the link before) carry the chain
    to the numerator, back over the bar, and down to the denominator. Bars
-   and overbars are pieces hung off the chain, in two lengths per rule.
+   and overbars are pieces hung off the chain, in two lengths per rule. An
+   accent is a mark of its own, one for each accent and size: in a fraction
+   it hangs off its character, and outside one it is placed from where the
+   pen is past the character, raised as high as the character reaches.
    `assemble.py` says what each token's glyphs are and emulates GPOS
    placing them, so the simulator checks the whole layout before any font
    is built.
@@ -324,14 +330,15 @@ By screenshot, as for Fontlex Math:
   `verify.py` line is right. Firefox 158 wasn't rechecked; CI checks
   Firefox 160.
 
-The font has 50,400 glyphs (61,886 before its drawn marks and two-step
-passes reused glyph ids, as Fontlex Math's do), 2,183 substitution lookups
-(1,616 of them nested, in 3,223 subtables) and 302 positioning lookups. It
-is 11.5 MB as TrueType and 1.6 MB as WOFF2. Its right-to-left passes run on the few kinds
+The font has 47,046 glyphs (61,886 before its drawn marks and two-step
+passes reused glyph ids, and 50,400 before its accents were marks of
+their own, as Fontlex Math's are), 2,217 substitution lookups (1,650 of
+them nested, in 3,258 subtables) and 345 positioning lookups. It is
+11.1 MB as TrueType and 1.56 MB as WOFF2. Its right-to-left passes run on the few kinds
 of value each tells apart (`keyed_rtl` in `mathfont.py`), so their reverse
 chaining lookups come to 40 KB, not 386 KB, and stay out of extension
-lookups, which DirectWrite ignores them inside. Shaping takes 0.34 ms per character in
-HarfBuzz.
+lookups, which DirectWrite ignores them inside. Shaping takes 0.35 ms per character in
+HarfBuzz, 2% more than before its accents were marks of their own.
 
 ### Its limits
 

@@ -5,9 +5,10 @@
     python math/verify.py --simulate [--n N] [--relaxed]
 
 What a shaped line draws is read back from the glyphs: a character's glyph
-(by name: its base glyph, scaled by style, and its accent), a radical (by
-name), and rules
-(the outline's box). Lines are samples.EDGES and N random ones unless
+(by name: its base glyph, scaled by style), an accent (by name, and over
+the character it sits on: where the font puts an accent over that
+character, layout.accent_offset), a radical (by name), and rules (the
+outline's box). Lines are samples.EDGES and N random ones unless
 given; --simulate checks the passes in Python, before any font is built.
 With --relaxed, the relaxed notation (relaxed.py: samples.RELAXED_EDGES
 and random lines of it), against relaxed.layout.
@@ -21,6 +22,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 
+from fontTools.pens.boundsPen import BoundsPen
 from fontTools.ttLib import TTFont
 
 import layout as L
@@ -36,13 +38,25 @@ class Reader:
         for cp, name in f.getBestCmap().items():
             self.char_of.setdefault(name, chr(cp))
         self.data = open(path, "rb").read()
+        self.gs, self.cmap = f.getGlyphSet(), f.getBestCmap()
+        self.tops = {}
+
+    def top(self, ch):
+        """How high the character's outline reaches."""
+        if ch not in self.tops:
+            bp = BoundsPen(self.gs)
+            self.gs[self.cmap[ord(ch)]].draw(bp)
+            self.tops[ch] = bp.bounds[3] if bp.bounds else L.HEIGHT[0]
+        return self.tops[ch]
 
     def ink(self, name, x, y):
         """What the glyph draws at (x, y), as layout.py describes it."""
-        m = re.fullmatch(r"(.+)\.s(\d)([bm])(?:\.a(\w))?", name)
+        m = re.fullmatch(r"(.+)\.s(\d)([bm])", name)
         if m and m.group(1) in self.char_of:
-            out = ("glyph", self.char_of[m.group(1)], int(m.group(2)), x, y)
-            return [out, ("accent", m.group(4), int(m.group(2)), x, y)] if m.group(4) else out
+            return ("glyph", self.char_of[m.group(1)], int(m.group(2)), x, y)
+        m = re.fullmatch(r"_acc([a-z])(\d)([bm])", name)
+        if m:           # where its character is: draw() says
+            return ("acc", m.group(1), int(m.group(2)), m.group(3), x, y)
         m = re.fullmatch(r"_radical(\d)(\d)([bm])", name)
         if m:
             return ("radical", int(m.group(1)), int(m.group(2)), x, y)
@@ -82,7 +96,31 @@ class Reader:
                 ink += r
             elif r is not None:
                 ink.append(r)
-        return sorted(L.merge(ink)), round(width)
+        return sorted(L.merge(self.accents(ink))), round(width)
+
+    def accents(self, ink):
+        """Each accent glyph as the accent over the character it sits on: a
+        character of its style, for which it is exactly where the font puts
+        an accent (from the character's origin in a chain, from past its
+        advance in flow). Any other is stray."""
+        chars = {}
+        for r in ink:
+            if r[0] == "glyph":
+                chars.setdefault((r[2], r[3]), []).append(r)
+        out = []
+        for r in ink:
+            if r[0] != "acc":
+                out.append(r)
+                continue
+            _, code, st, mode, ax, ay = r
+            dx = L.WIDTH[st] if mode == "b" else L.accent_offset(0, st)[0]
+            on = [c for c in chars.get((st, ax - dx), []) if c[4] + L.accent_offset(self.top(c[1]), st)[1] == ay]
+            if on:
+                chars[(st, ax - dx)].remove(on[0])
+                out.append(("accent", code, st, on[0][3], on[0][4]))
+            else:
+                out.append(("stray accent", code, st, mode, ax, ay))
+        return out
 
 
 def main():
