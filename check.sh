@@ -180,6 +180,10 @@ if wants extension; then
 fi
 
 if wants theory; then
+    echo "== theory: checked synthesis from JSON, both font encodings ($shapers)"
+    synthesis_dir=$(mktemp -d)
+    trap 'rm -rf "$synthesis_dir"' 0
+    "$PY" theory/synthesize.py compile theory/examples/reset-six.json --out "$synthesis_dir/run" $shapers
     echo "== theory: bracket matching as deep as the rounds ($shapers)"
     "$PY" theory/depth.py --distinct --rounds 10 300 $shapers
     echo "== theory: splitting the link-tail recognizers into passes, every split built and checked ($shapers)"

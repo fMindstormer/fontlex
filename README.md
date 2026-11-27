@@ -381,8 +381,11 @@ page byte for byte, so `git status` afterwards shows nothing.
   bounded context recognize? This relates to locally testable languages
   and sliding-window automata.
 - **Which cut is cheapest?** `theory/split.py` and `theory/cascade.py`
-  search the ways to cut a machine into passes for small machines. Larger
-  ones, like Markdown's raw HTML, need a heuristic.
+  search ways to cut a machine into passes. The [automated compiler](theory/COMPILER.md)
+  searches congruences including joins, checks machine equivalence, and
+  measures both font encodings against flat baselines. Complete small
+  searches establish the best state sum in this architecture; cheapest
+  fonts and larger machines, like Markdown's raw HTML, remain open.
 - **Fewer glyphs per state.** Almost all variants belong to states that any
   character can enter. Moving state onto glyphs of its own (companion marks,
   a pass per independent counter) took Fontlex Markdown from 63,367 glyphs to

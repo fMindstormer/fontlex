@@ -193,11 +193,18 @@ runs the machine as two passes:
 - The **back** reads that and follows the state within its block, so it
   needs only as many states as the largest block has.
 
-Every such partition is a union of closures of pairs of states.
-`cascade.py serial` computes the closure of every pair in the one-pass
-link-tail machine and builds the cheapest cascade, the one with the fewest
-states in front and back together. There are 423 partitions, found in about
-a minute on eight cores.
+Every such partition is a **join** of closures of pairs of states. Pair
+closures alone do not enumerate every partition. The original experiment
+found 423 non-universal pair closures in the one-pass link-tail machine;
+the measurements below describe the best of those, not a proof of global
+optimality.
+
+`cascade.py serial` now also searches joins, with explicit limits, and
+reports whether the search completed. Before compilation, a reachable-product
+check proves that the selected cascade emits the same annotations as the
+source machine on every finite input word. The [automated compiler](COMPILER.md)
+accepts other machines as JSON, compares variants and slots against flat
+baselines, and exports the selected font with a machine-readable report.
 
 *Measured* (`cascade.py serial`; checked, counted and timed as in the
 previous section):
@@ -556,7 +563,10 @@ beat one large one.
   of them for states in variants of characters. On slots most of them
   would be free, at a cost in time that the passes would need measuring
   for, and with spaces kept to one glyph for WebKit.
-- **Cascade search at scale.** Pair closures are quadratic in the states:
+- **Cascade search at scale.** There are quadratically many pairs, and
+  closing their congruences under joins can produce exponentially many
+  candidates. The [bounded search](COMPILER.md) reports partial results
+  honestly; it does not solve scaling. In the original pair-only experiment,
   364 states take a minute, and raw HTML's single pass of 14,993 would take
   1,700 times as many. Larger machines need closures computed from
   structure (the product they came from) or a heuristic. The back pass
@@ -576,6 +586,7 @@ python theory/cascade.py --shaper harfbuzz --shaper coretext serial             
 python theory/cascade.py --shaper harfbuzz --shaper coretext slots html
 python theory/cascade.py --shaper harfbuzz --shaper coretext ruler 280 - 10 4x7 2x2x2x5
 python theory/cascade.py --shaper harfbuzz --shaper coretext iban
+python theory/synthesize.py compile theory/examples/reset-six.json --out /tmp/fontlex-reset-six
 ```
 
 `./check.sh theory` runs them at small sizes (`split.py` on the link tails,
